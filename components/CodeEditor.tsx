@@ -12,8 +12,18 @@ interface CodeEditorProps {
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMode, environmentMode, sessionId }) => {
-  // Construct a deterministic path based on the sessionId.
-  const modelPath = useMemo(() => `sandbox-session-${sessionId}.js`, [sessionId]);
+  // Construct a deterministic path based on the sessionId and environment mode.
+  // Using the correct file extension (.ts/.tsx) is crucial for Monaco to enable 
+  // relevant TypeScript language features and error reporting.
+  const modelPath = useMemo(() => {
+    switch (environmentMode) {
+      case 'typescript': return `sandbox-session-${sessionId}.ts`;
+      case 'react-ts': return `sandbox-session-${sessionId}.tsx`;
+      case 'react': return `sandbox-session-${sessionId}.jsx`;
+      case 'p5': return `sandbox-session-${sessionId}.js`;
+      default: return `sandbox-session-${sessionId}.js`;
+    }
+  }, [sessionId, environmentMode]);
 
   const language = useMemo(() => {
     if (environmentMode === 'typescript' || environmentMode === 'react-ts') return 'typescript';
@@ -23,14 +33,27 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMod
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();
     
-    // Optional: Configure compiler options for TS if strict checks are desired in the editor
+    // Configure compiler options for TS
     if (language === 'typescript') {
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
             jsx: monaco.languages.typescript.JsxEmit.React,
             target: monaco.languages.typescript.ScriptTarget.ES2020,
             allowNonTsExtensions: true,
-            noLib: false // Include default libs
+            moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+            noLib: false 
         });
+        
+        // Add a basic shim for React types to prevent "Cannot find module 'react'" 
+        // which can be distracting when the environment supports it via CDN.
+        if (environmentMode === 'react-ts') {
+             monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                `
+                declare module 'react' { var x: any; export = x; }
+                declare module 'react-dom/client' { var x: any; export = x; }
+                `,
+                'react-shim.d.ts'
+             );
+        }
     }
   };
 
