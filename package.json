@@ -1,0 +1,40 @@
+{
+  "name": "code-shoebox",
+  "version": "1.0.0",
+  "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
+  "main": "dist/export.js",
+  "module": "dist/export.mjs",
+  "types": "dist/export.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsup export.ts --format cjs,esm --dts --clean",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "lucide-react": "^0.292.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "react",
+    "code-editor",
+    "sandbox",
+    "monaco",
+    "playground",
+    "p5.js"
+  ],
+  "author": "",
+  "license": "MIT"
+}

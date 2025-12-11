@@ -1,0 +1,5 @@
+{
+  "name": "CodeShoebox",
+  "description": "A secure, client-side code playground for education featuring a Monaco editor and sandboxed execution environment.",
+  "requestFramePermissions": []
+}
