@@ -1,3 +1,4 @@
+
 export interface ExecutionMessage {
   type: 'EXECUTE_CODE';
   payload: string;
@@ -5,7 +6,7 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'dom' | 'p5' | 'react';
+export type EnvironmentMode = 'dom' | 'p5' | 'react' | 'typescript' | 'react-ts';
 
 export interface EditorProps {
   initialCode: string;

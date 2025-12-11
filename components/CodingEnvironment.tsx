@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Play, CheckCircle2, FileCode, Book, HelpCircle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
@@ -37,8 +38,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   }, [environmentMode, hasDocs]);
 
   let fileName = 'script.js';
-  if (environmentMode === 'p5') fileName = 'sketch.js';
-  if (environmentMode === 'react') fileName = 'App.jsx';
+  switch (environmentMode) {
+    case 'p5': fileName = 'sketch.js'; break;
+    case 'react': fileName = 'App.jsx'; break;
+    case 'typescript': fileName = 'script.ts'; break;
+    case 'react-ts': fileName = 'App.tsx'; break;
+    default: fileName = 'script.js';
+  }
 
   return (
     <main className="flex-1 overflow-hidden flex flex-col relative">
@@ -88,6 +94,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
               code={code} 
               onChange={(val) => onChange(val || '')} 
               themeMode={themeMode}
+              environmentMode={environmentMode}
               sessionId={sessionId}
             />
           </section>

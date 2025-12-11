@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Box, Code2, Palette, Sun, Moon, RotateCcw } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
@@ -5,7 +6,14 @@ import { Button } from './components/Button';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { themes, Theme } from './theme';
 import { ThemeMode, EnvironmentMode } from './types';
-import { STARTER_CODE, P5_STARTER_CODE, REACT_STARTER_CODE, APP_NAME } from './constants';
+import { 
+  STARTER_CODE, 
+  P5_STARTER_CODE, 
+  REACT_STARTER_CODE, 
+  TYPESCRIPT_STARTER_CODE,
+  REACT_TS_STARTER_CODE,
+  APP_NAME 
+} from './constants';
 
 const App: React.FC = () => {
   // -- State --
@@ -33,6 +41,8 @@ const App: React.FC = () => {
     switch (mode) {
       case 'p5': return P5_STARTER_CODE;
       case 'react': return REACT_STARTER_CODE;
+      case 'typescript': return TYPESCRIPT_STARTER_CODE;
+      case 'react-ts': return REACT_TS_STARTER_CODE;
       default: return STARTER_CODE;
     }
   };
@@ -115,8 +125,10 @@ const App: React.FC = () => {
                 className="bg-transparent border-none outline-none appearance-none cursor-pointer pr-4 font-medium"
               >
                 <option value="dom" className="text-black">DOM / JS</option>
+                <option value="typescript" className="text-black">TypeScript</option>
                 <option value="p5" className="text-black">p5.js</option>
-                <option value="react" className="text-black">React (Babel)</option>
+                <option value="react" className="text-black">React (JS)</option>
+                <option value="react-ts" className="text-black">React (TS)</option>
               </select>
             </div>
           </div>

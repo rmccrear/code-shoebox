@@ -1,22 +1,37 @@
+
 import React, { useMemo } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
-import { ThemeMode } from '../types';
+import { ThemeMode, EnvironmentMode } from '../types';
 
 interface CodeEditorProps {
   code: string;
   onChange: (value: string | undefined) => void;
   themeMode: ThemeMode;
+  environmentMode: EnvironmentMode;
   sessionId: number;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMode, sessionId }) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMode, environmentMode, sessionId }) => {
   // Construct a deterministic path based on the sessionId.
-  // When sessionId changes (on reset/mode switch), this path changes,
-  // guaranteeing a fresh model in Monaco.
   const modelPath = useMemo(() => `sandbox-session-${sessionId}.js`, [sessionId]);
+
+  const language = useMemo(() => {
+    if (environmentMode === 'typescript' || environmentMode === 'react-ts') return 'typescript';
+    return 'javascript';
+  }, [environmentMode]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();
+    
+    // Optional: Configure compiler options for TS if strict checks are desired in the editor
+    if (language === 'typescript') {
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+            jsx: monaco.languages.typescript.JsxEmit.React,
+            target: monaco.languages.typescript.ScriptTarget.ES2020,
+            allowNonTsExtensions: true,
+            noLib: false // Include default libs
+        });
+    }
   };
 
   return (
@@ -25,10 +40,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMod
         key={modelPath} // Force full re-render of Editor component when path changes
         height="100%"
         path={modelPath}
-        defaultLanguage="javascript"
+        defaultLanguage={language}
         theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
-        // Use defaultValue instead of value to make it "uncontrolled" during its lifecycle.
-        // We rely on remounting (via key/path change) to handle resets.
         defaultValue={code}
         onChange={onChange}
         onMount={handleEditorDidMount}
