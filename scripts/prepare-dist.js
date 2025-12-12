@@ -1,10 +1,10 @@
-
 const fs = require('fs');
 const path = require('path');
 
-const distDir = path.join(__dirname, '../dist');
-const pkgPath = path.join(__dirname, '../package.json');
-const readmePath = path.join(__dirname, '../README.md');
+const rootDir = path.resolve(__dirname, '..');
+const distDir = path.resolve(rootDir, 'dist');
+const packageJsonPath = path.resolve(rootDir, 'package.json');
+const readmePath = path.resolve(rootDir, 'README.md');
 
 // Ensure dist exists
 if (!fs.existsSync(distDir)) {
@@ -17,27 +17,29 @@ if (fs.existsSync(readmePath)) {
     fs.copyFileSync(readmePath, path.join(distDir, 'README.md'));
 }
 
-// Read and Patch Package.json
-const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+// 1. Read the current package.json
+const packageJson = require(packageJsonPath);
 
-// Update paths to remove 'dist/' prefix since these files are now in root of the package
-// when published from the dist branch/folder
-if (pkg.main) pkg.main = pkg.main.replace('dist/', '');
-if (pkg.module) pkg.module = pkg.module.replace('dist/', '');
-if (pkg.types) pkg.types = pkg.types.replace('dist/', '');
+// 2. STRIP "dist/" from the paths
+// The files will be at the root of the repo on the dist branch
+packageJson.main = "export.js";
+packageJson.module = "export.mjs";
+packageJson.types = "export.d.ts";
 
-// CRITICAL FIX: Remove the "files" allowlist. 
-// In the source package.json, "files": ["dist"] tells npm to only include the dist folder.
-// However, in the published 'dist' branch, the content IS the dist folder (flattened).
-// There is no nested 'dist' folder anymore. 
-// Leaving "files": ["dist"] causes npm to ignore the flattened .js/.d.ts files.
-delete pkg.files;
+// 3. FIX the "files" whitelist
+// Since there is no "dist" folder anymore (we are inside it),
+// we remove this restriction so NPM picks up the root files.
+delete packageJson.files;
 
-// Optional: Clean up scripts that aren't needed in the consumer
-delete pkg.scripts;
-delete pkg.devDependencies;
+// 4. Remove 'scripts' and 'devDependencies' to keep the install clean
+delete packageJson.scripts;
+delete packageJson.devDependencies;
 
-// Write to dist
-fs.writeFileSync(path.join(distDir, 'package.json'), JSON.stringify(pkg, null, 2));
+// 5. Write the modified package.json into the dist folder
+// This is the file that will be pushed to the dist branch
+fs.writeFileSync(
+  path.join(distDir, 'package.json'),
+  JSON.stringify(packageJson, null, 2)
+);
 
-console.log('Dist folder prepared for publishing.');
+console.log('✅ Created modified package.json in dist/');
