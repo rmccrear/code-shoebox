@@ -19,13 +19,23 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
+To install version **v1.0.5**:
+
 ```bash
-npm install code-shoebox
+npm install github:rmccrear/code-shoebox#v1.0.5
 # or
-yarn add code-shoebox
+yarn add github:rmccrear/code-shoebox#v1.0.5
 ```
 
-**Note:** This library relies on [Tailwind CSS](https://tailwindcss.com/) for styling. Ensure your project has Tailwind configured or that you import the necessary utility classes.
+## Styling Setup
+
+CodeShoebox ships with a compiled CSS file that includes all necessary layout styles. **You must import this file in your application.**
+
+In your root file (e.g., `main.tsx`, `App.tsx`, or `_app.tsx`):
+
+```tsx
+import 'code-shoebox/styles.css';
+```
 
 ## Usage
 
@@ -36,6 +46,7 @@ The easiest way to use CodeShoebox is with the provided `useSandboxState` hook. 
 ```tsx
 import React from 'react';
 import { CodeShoebox, useSandboxState, themes } from 'code-shoebox';
+import 'code-shoebox/styles.css'; // Don't forget the styles!
 
 const MyEditor = () => {
   // Pass a unique ID to enable persistence (saves to localStorage).
@@ -82,6 +93,7 @@ You can also manage the state yourself if you have custom requirements (e.g., sa
 ```tsx
 import React, { useState } from 'react';
 import { CodeShoebox, themes } from 'code-shoebox';
+import 'code-shoebox/styles.css';
 
 const MyCustomEditor = () => {
   const [code, setCode] = useState('console.log("Hello World");');
