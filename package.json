@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsup export.ts --format cjs,esm --dts --clean",
+    "prepublishOnly": "npm run build",
+    "publish:dist": "npm run build && node scripts/prepare-dist.js && npx gh-pages -d dist -b dist",
     "lint": "eslint ."
   },
   "peerDependencies": {
@@ -25,7 +27,8 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "gh-pages": "^6.1.1"
   },
   "keywords": [
     "react",

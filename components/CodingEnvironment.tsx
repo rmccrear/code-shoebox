@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle2, FileCode, Book, Brain, Lock } from 'lucide-react';
+import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
@@ -21,6 +21,8 @@ interface CodingEnvironmentProps {
   predictionPrompt?: string;
 }
 
+type LayoutDirection = 'horizontal' | 'vertical';
+
 export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({ 
   code, 
   onChange, 
@@ -35,6 +37,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
+  const [layout, setLayout] = useState<LayoutDirection>('horizontal');
   
   const hasDocs = !!getDocsForMode(environmentMode);
 
@@ -57,6 +60,10 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         setIsPredictionLocked(true);
     }
     onRun();
+  };
+
+  const toggleLayout = () => {
+    setLayout(prev => prev === 'horizontal' ? 'vertical' : 'horizontal');
   };
 
   let fileName = 'script.js';
@@ -133,6 +140,26 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
          {/* Right: Actions */}
          <div className="flex items-center gap-3">
+            {/* Layout Toggle */}
+            <div className="hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
+                <button
+                    onClick={() => setLayout('horizontal')}
+                    className={`p-1.5 rounded ${layout === 'horizontal' ? (themeMode === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'opacity-50 hover:opacity-100'}`}
+                    title="Split Screen (Side by Side)"
+                >
+                    <Columns className="w-3.5 h-3.5" />
+                </button>
+                <button
+                    onClick={() => setLayout('vertical')}
+                    className={`p-1.5 rounded ${layout === 'vertical' ? (themeMode === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'opacity-50 hover:opacity-100'}`}
+                    title="Vertical Split (Stacked)"
+                >
+                    <Rows className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            <div className={`h-4 w-px mx-1 ${themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
+
             {hasDocs && (
               <Button
                 variant="ghost"
@@ -144,8 +171,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 <span className="hidden sm:inline text-xs ml-2">Help</span>
               </Button>
             )}
-
-            <div className={`h-4 w-px mx-1 ${themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
 
             <Button 
                 onClick={handleRunClick} 
@@ -162,9 +187,15 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       <div className="flex-1 flex overflow-hidden">
         
         {/* Editor & Output Container */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0">
+        <div className={`flex-1 flex overflow-hidden min-w-0 ${layout === 'horizontal' ? 'flex-col md:flex-row' : 'flex-col'}`}>
           {/* Editor Pane */}
-          <section className={`flex-1 flex flex-col min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r relative group transition-colors duration-300 ${themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+          <section className={`
+             flex-1 flex flex-col relative group transition-colors duration-300
+             ${layout === 'horizontal' 
+                ? 'min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r' 
+                : 'min-h-[40%] border-b'}
+             ${themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'}
+          `}>
             <CodeEditor 
               code={code} 
               onChange={(val) => onChange(val || '')} 
