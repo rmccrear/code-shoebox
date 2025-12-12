@@ -84,10 +84,19 @@ export const CONSOLE_INTERCEPTOR = `
         line.className = type;
         line.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
         line.style.padding = '2px 0';
-        line.textContent = '> ' + (typeof msg === 'object' ? JSON.stringify(msg, null, 2) : String(msg));
+        
+        const textContent = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : String(msg);
+        line.textContent = '> ' + textContent;
+        
         consoleOutput.appendChild(line);
         // Auto scroll to bottom
         consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+        // Notify parent window (React app) about the log/error
+        window.parent.postMessage({ 
+            type: type === 'error' ? 'RUNTIME_ERROR' : 'CONSOLE_LOG',
+            payload: textContent
+        }, '*');
     }
 
     const originalLog = console.log;

@@ -1,3 +1,4 @@
+
 # CodeShoebox
 
 CodeShoebox is a self-contained, secure code playground component for React. It features a Monaco editor, a sandboxed execution environment (iframe), and support for multiple runtime modes (DOM, p5.js, React).
@@ -8,8 +9,11 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 - **Monaco Editor**: Full-featured code editing experience via `@monaco-editor/react`.
 - **Multiple Environments**:
   - `dom`: Standard JavaScript manipulation.
+  - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
+  - `react-ts`: React with TypeScript support.
+  - `express`: Mocked Node.js/Express environment for testing API routes.
 - **Themable**: Full support for light/dark modes and custom color themes.
 
 ## Installation
@@ -52,7 +56,7 @@ const MyEditor = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
+| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier (e.g., timestamp or counter). Changing this prop will hard-reset the internal editor state and undo history. |
