@@ -1,3 +1,4 @@
+
 import { BASE_HTML_WRAPPER } from "./common";
 
 const REACT_CDNS = `
@@ -62,6 +63,6 @@ const REACT_EXECUTION_LOGIC = `
     };
 `;
 
-export const generateReactHtml = () => {
-    return BASE_HTML_WRAPPER(REACT_CDNS, REACT_EXECUTION_LOGIC);
+export const generateReactHtml = (showPlaceholder: boolean = true) => {
+    return BASE_HTML_WRAPPER(REACT_CDNS, REACT_EXECUTION_LOGIC, showPlaceholder);
 };

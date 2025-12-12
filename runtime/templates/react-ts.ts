@@ -53,6 +53,6 @@ const REACT_TS_EXECUTION_LOGIC = `
     };
 `;
 
-export const generateReactTsHtml = () => {
-    return BASE_HTML_WRAPPER(REACT_TS_CDNS, REACT_TS_EXECUTION_LOGIC);
+export const generateReactTsHtml = (showPlaceholder: boolean = true) => {
+    return BASE_HTML_WRAPPER(REACT_TS_CDNS, REACT_TS_EXECUTION_LOGIC, showPlaceholder);
 };

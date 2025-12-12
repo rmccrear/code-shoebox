@@ -1,17 +1,19 @@
 
 import React, { useState } from 'react';
-import { Box, Code2, Palette, Sun, Moon, RotateCcw } from 'lucide-react';
+import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Button } from './components/Button';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { themes, Theme } from './theme';
 import { ThemeMode, EnvironmentMode } from './types';
+import { getPredictionPrompt } from './prompts';
 import { 
   STARTER_CODE, 
   P5_STARTER_CODE, 
   REACT_STARTER_CODE, 
   TYPESCRIPT_STARTER_CODE,
   REACT_TS_STARTER_CODE,
+  EXPRESS_STARTER_CODE,
   APP_NAME 
 } from './constants';
 
@@ -20,6 +22,7 @@ const App: React.FC = () => {
   const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>('dom');
   const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
   const [activeTheme, setActiveTheme] = useState<Theme>(themes[0]);
+  const [isPredictionMode, setIsPredictionMode] = useState(false);
   
   // Code State
   // We initialize with the starter code for the default mode (dom)
@@ -43,6 +46,7 @@ const App: React.FC = () => {
       case 'react': return REACT_STARTER_CODE;
       case 'typescript': return TYPESCRIPT_STARTER_CODE;
       case 'react-ts': return REACT_TS_STARTER_CODE;
+      case 'express': return EXPRESS_STARTER_CODE;
       default: return STARTER_CODE;
     }
   };
@@ -129,6 +133,7 @@ const App: React.FC = () => {
                 <option value="p5" className="text-black">p5.js</option>
                 <option value="react" className="text-black">React (JS)</option>
                 <option value="react-ts" className="text-black">React (TS)</option>
+                <option value="express" className="text-black">Node / Express</option>
               </select>
             </div>
           </div>
@@ -152,6 +157,16 @@ const App: React.FC = () => {
           </div>
 
           <div className="h-6 w-px bg-current opacity-10 mx-1" />
+
+          {/* Prediction Toggle (For Demo Purposes) */}
+          <Button 
+            variant="ghost" 
+            onClick={() => setIsPredictionMode(!isPredictionMode)}
+            className={isPredictionMode ? (themeMode === 'dark' ? 'text-purple-400 bg-purple-500/10' : 'text-purple-600 bg-purple-100') : ''}
+            title="Toggle Prediction Mode (Demo)"
+          >
+            <Brain className="w-4 h-4" />
+          </Button>
 
           {/* Theme Toggle */}
           <Button
@@ -183,6 +198,7 @@ const App: React.FC = () => {
           themeMode={themeMode}
           theme={activeTheme}
           sessionId={sessionId}
+          prediction_prompt={isPredictionMode ? getPredictionPrompt(environmentMode) : undefined}
         />
       </div>
 

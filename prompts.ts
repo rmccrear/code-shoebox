@@ -1,0 +1,21 @@
+
+import { EnvironmentMode } from './types';
+
+export const getPredictionPrompt = (mode: EnvironmentMode): string => {
+  switch (mode) {
+    case 'dom':
+      return "Examine the code below. What specific message will appear in the alert box when the button is clicked?";
+    case 'p5':
+      return "Look at the conditional statement in the draw loop. What color will the shape fill with when the mouse is pressed?";
+    case 'react':
+      return "What is the starting value of the 'count' state variable rendered on the screen?";
+    case 'react-ts':
+      return "If you click the '+' button twice, what will the final number displayed be?";
+    case 'typescript':
+      return "What property is being accessed on the 'currentUser' object to display the header text?";
+    case 'express':
+      return "What HTTP status code will the server return if you send a GET request to '/users/99'?";
+    default:
+      return "Predict the output of the code below.";
+  }
+};

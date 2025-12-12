@@ -9,30 +9,36 @@ import { generateP5Html } from "./templates/p5";
 import { generateReactHtml } from "./templates/react";
 import { generateTsHtml } from "./templates/typescript";
 import { generateReactTsHtml } from "./templates/react-ts";
+import { generateExpressHtml } from "./templates/express";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 
 /**
  * Creates a Blob URL for the sandbox HTML.
  */
-export const createSandboxUrl = (mode: EnvironmentMode = 'dom'): string => {
+export const createSandboxUrl = (mode: EnvironmentMode = 'dom', isPredictionMode: boolean = false): string => {
   let html = '';
+  // If in prediction mode, we do NOT want to show the placeholder text
+  const showPlaceholder = !isPredictionMode;
   
   switch (mode) {
     case 'p5':
-      html = generateP5Html();
+      html = generateP5Html(showPlaceholder);
       break;
     case 'react':
-      html = generateReactHtml();
+      html = generateReactHtml(showPlaceholder);
       break;
     case 'typescript':
-      html = generateTsHtml();
+      html = generateTsHtml(showPlaceholder);
       break;
     case 'react-ts':
-      html = generateReactTsHtml();
+      html = generateReactTsHtml(showPlaceholder);
+      break;
+    case 'express':
+      html = generateExpressHtml(showPlaceholder);
       break;
     default:
-      html = generateDomHtml();
+      html = generateDomHtml(showPlaceholder);
   }
 
   const blob = new Blob([html], { type: 'text/html' });

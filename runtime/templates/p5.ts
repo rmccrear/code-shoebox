@@ -1,3 +1,4 @@
+
 import { BASE_HTML_WRAPPER } from "./common";
 
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
@@ -61,6 +62,6 @@ const P5_EXECUTION_LOGIC = `
     };
 `;
 
-export const generateP5Html = () => {
-    return BASE_HTML_WRAPPER(P5_CDN, P5_EXECUTION_LOGIC);
+export const generateP5Html = (showPlaceholder: boolean = true) => {
+    return BASE_HTML_WRAPPER(P5_CDN, P5_EXECUTION_LOGIC, showPlaceholder);
 };

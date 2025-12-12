@@ -26,6 +26,6 @@ const TS_EXECUTION_LOGIC = `
     };
 `;
 
-export const generateTsHtml = () => {
-    return BASE_HTML_WRAPPER(BABEL_CDN, TS_EXECUTION_LOGIC);
+export const generateTsHtml = (showPlaceholder: boolean = true) => {
+    return BASE_HTML_WRAPPER(BABEL_CDN, TS_EXECUTION_LOGIC, showPlaceholder);
 };

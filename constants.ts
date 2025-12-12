@@ -152,3 +152,41 @@ if (container) {
   root.render(<Counter start={10} />);
 }
 `;
+
+export const EXPRESS_STARTER_CODE = `// Welcome to the Express.js Simulator!
+// We've mocked 'express' so you can write server-side code in the browser.
+
+const app = express();
+const port = 3000;
+
+// Database simulation
+const users = [
+  { id: 1, name: 'Alice', role: 'engineer' },
+  { id: 2, name: 'Bob', role: 'designer' }
+];
+
+// Define your routes below
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to the mock API!' });
+});
+
+app.get('/users', (req, res) => {
+  res.json(users);
+});
+
+app.get('/users/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const user = users.find(u => u.id === id);
+  
+  if (user) {
+    res.json(user);
+  } else {
+    res.status(404).json({ error: 'User not found' });
+  }
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(\`Mock server listening on port \${port}\`);
+});
+`;

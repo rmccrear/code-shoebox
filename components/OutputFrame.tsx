@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { createSandboxUrl, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
 import { ThemeMode, EnvironmentMode } from '../types';
@@ -8,26 +9,31 @@ interface OutputFrameProps {
   code: string;
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
+  isBlurred?: boolean;
+  isPredictionMode?: boolean;
 }
 
-export const OutputFrame: React.FC<OutputFrameProps> = ({ runTrigger, code, themeMode, environmentMode }) => {
+export const OutputFrame: React.FC<OutputFrameProps> = ({ 
+  runTrigger, 
+  code, 
+  themeMode, 
+  environmentMode,
+  isBlurred = false,
+  isPredictionMode = false
+}) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [sandboxSrc, setSandboxSrc] = useState<string>('');
 
-  // Re-generate the sandbox URL whenever the Environment Mode changes.
-  // We do NOT depend on runTrigger here, because we don't want to reload the iframe
-  // when the user clicks Run.
-  // Note: Full resets (Start Over) are handled by the parent component (App.tsx) 
-  // forcing a re-mount of this component via the 'key' prop.
+  // Re-generate the sandbox URL whenever the Environment Mode or Prediction Mode changes.
   useEffect(() => {
-    const url = createSandboxUrl(environmentMode);
+    const url = createSandboxUrl(environmentMode, isPredictionMode);
     setSandboxSrc(url);
 
     // Cleanup: revoke the URL when the component unmounts or mode changes
     return () => {
         URL.revokeObjectURL(url);
     };
-  }, [environmentMode]); 
+  }, [environmentMode, isPredictionMode]); 
 
   // Sync Theme
   useEffect(() => {
@@ -52,15 +58,21 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({ runTrigger, code, them
   };
 
   return (
-    <PreviewContainer themeMode={themeMode} isReady={runTrigger > 0}>
-      <iframe
-        ref={iframeRef}
-        src={sandboxSrc}
-        title="Code Output"
-        sandbox={SANDBOX_ATTRIBUTES} 
-        className="w-full h-full border-none"
-        onLoad={handleIframeLoad}
-      />
+    <PreviewContainer 
+      themeMode={themeMode} 
+      isReady={runTrigger > 0}
+      overlayMessage={isBlurred ? "Make your Prediction" : undefined}
+    >
+      <div className="w-full h-full relative">
+        <iframe
+          ref={iframeRef}
+          src={sandboxSrc}
+          title="Code Output"
+          sandbox={SANDBOX_ATTRIBUTES} 
+          className="w-full h-full border-none"
+          onLoad={handleIframeLoad}
+        />
+      </div>
     </PreviewContainer>
   );
 };

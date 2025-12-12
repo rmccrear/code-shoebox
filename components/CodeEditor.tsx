@@ -9,9 +9,17 @@ interface CodeEditorProps {
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
   sessionId: number;
+  readOnly?: boolean;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMode, environmentMode, sessionId }) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({ 
+  code, 
+  onChange, 
+  themeMode, 
+  environmentMode, 
+  sessionId,
+  readOnly = false 
+}) => {
   // Construct a deterministic path based on the sessionId and environment mode.
   // Using the correct file extension (.ts/.tsx) is crucial for Monaco to enable 
   // relevant TypeScript language features and error reporting.
@@ -69,6 +77,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMod
         onChange={onChange}
         onMount={handleEditorDidMount}
         options={{
+          readOnly: readOnly,
           minimap: { enabled: false },
           fontSize: 14,
           wordWrap: 'on',
@@ -76,6 +85,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ code, onChange, themeMod
           padding: { top: 16, bottom: 16 },
           scrollBeyondLastLine: false,
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+          fixedOverflowWidgets: true,
+          renderValidationDecorations: 'on',
         }}
       />
     </div>

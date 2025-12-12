@@ -1,3 +1,4 @@
+
 import { BASE_HTML_WRAPPER } from "./common";
 
 const DOM_EXECUTION_LOGIC = `
@@ -13,6 +14,6 @@ const DOM_EXECUTION_LOGIC = `
     };
 `;
 
-export const generateDomHtml = () => {
-    return BASE_HTML_WRAPPER('', DOM_EXECUTION_LOGIC);
+export const generateDomHtml = (showPlaceholder: boolean = true) => {
+    return BASE_HTML_WRAPPER('', DOM_EXECUTION_LOGIC, showPlaceholder);
 };

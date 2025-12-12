@@ -1,3 +1,4 @@
+
 /**
  * Shared HTML/CSS/JS for the sandbox environment.
  */
@@ -111,7 +112,7 @@ export const CONSOLE_INTERCEPTOR = `
     });
 `;
 
-export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string) => `
+export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string, showPlaceholder: boolean = true) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -124,7 +125,7 @@ export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string) =>
 <body>
     <div id="root">
         <!-- User output goes here -->
-        <p id="placeholder" style="color: #666; font-style: italic; align-self: flex-start;">Output will appear here...</p>
+        ${showPlaceholder ? '<p id="placeholder" style="color: #666; font-style: italic; align-self: flex-start;">Output will appear here...</p>' : ''}
     </div>
     
     <!-- Console sits at the bottom due to flex layout -->

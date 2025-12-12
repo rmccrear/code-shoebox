@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { CodingEnvironment } from './CodingEnvironment';
 import { Theme } from '../theme';
@@ -19,6 +20,11 @@ export interface CodeShoeboxProps {
    * Changing this value forces the editor to reset (clearing history/undo stack).
    */
   sessionId?: number;
+  /**
+   * Optional prompt to display in a prediction panel.
+   * If present, code editing is disabled and output is blurred until user enters a prediction.
+   */
+  prediction_prompt?: string;
 }
 
 export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
@@ -27,7 +33,8 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   environmentMode,
   theme,
   themeMode,
-  sessionId = 0
+  sessionId = 0,
+  prediction_prompt
 }) => {
   // Internal state for execution coordination between Editor and Output
   const [runTrigger, setRunTrigger] = useState<number>(0);
@@ -85,6 +92,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
         runTrigger={runTrigger}
         themeMode={themeMode}
         environmentMode={environmentMode}
+        predictionPrompt={prediction_prompt}
       />
     </div>
   );
