@@ -20,16 +20,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   sessionId,
   readOnly = false 
 }) => {
-  // Construct a deterministic path based on the sessionId and environment mode.
-  // Using the correct file extension (.ts/.tsx) is crucial for Monaco to enable 
-  // relevant TypeScript language features and error reporting.
+  // Construct a deterministic path.
+  // We include 'environmentMode' in the path to ensure that switching modes (e.g. DOM -> p5) 
+  // generates a unique model URI even if the sessionId (0) stays the same.
   const modelPath = useMemo(() => {
+    const basePath = `sandbox-${environmentMode}-${sessionId}`;
     switch (environmentMode) {
-      case 'typescript': return `sandbox-session-${sessionId}.ts`;
-      case 'react-ts': return `sandbox-session-${sessionId}.tsx`;
-      case 'react': return `sandbox-session-${sessionId}.jsx`;
-      case 'p5': return `sandbox-session-${sessionId}.js`;
-      default: return `sandbox-session-${sessionId}.js`;
+      case 'typescript': return `${basePath}.ts`;
+      case 'react-ts': return `${basePath}.tsx`;
+      case 'react': return `${basePath}.jsx`;
+      case 'p5': return `${basePath}.js`;
+      default: return `${basePath}.js`;
     }
   }, [sessionId, environmentMode]);
 
@@ -51,8 +52,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             noLib: false 
         });
         
-        // Add a basic shim for React types to prevent "Cannot find module 'react'" 
-        // which can be distracting when the environment supports it via CDN.
+        // Add a basic shim for React types
         if (environmentMode === 'react-ts') {
              monaco.languages.typescript.typescriptDefaults.addExtraLib(
                 `
@@ -73,7 +73,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         path={modelPath}
         defaultLanguage={language}
         theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
-        defaultValue={code}
+        
+        // Use 'value' instead of 'defaultValue' to ensure the editor content 
+        // always reflects the current state, even if the sessionId doesn't change.
+        value={code}
+        
         onChange={onChange}
         onMount={handleEditorDidMount}
         options={{
