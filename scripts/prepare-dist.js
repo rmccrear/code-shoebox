@@ -26,10 +26,16 @@ packageJson.main = "export.js";
 packageJson.module = "export.mjs";
 packageJson.types = "export.d.ts";
 
+// Add the style definition so bundlers find the CSS
+packageJson.style = "styles.css";
+
 // 3. FIX the "files" whitelist
 // Since there is no "dist" folder anymore (we are inside it),
 // we remove this restriction so NPM picks up the root files.
-delete packageJson.files;
+if (packageJson.files) {
+    delete packageJson.files;
+    console.log('✅ Removed "files" allowlist from package.json to ensure all files are included.');
+}
 
 // 4. Remove 'scripts' and 'devDependencies' to keep the install clean
 delete packageJson.scripts;
