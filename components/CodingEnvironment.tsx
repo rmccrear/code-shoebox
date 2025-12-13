@@ -190,7 +190,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         <div className={`flex-1 flex overflow-hidden min-w-0 ${layout === 'horizontal' ? 'flex-col md:flex-row' : 'flex-col'}`}>
           {/* Editor Pane */}
           <section className={`
-             flex-1 flex flex-col relative group transition-colors duration-300
+             flex-1 flex flex-col relative group transition-colors duration-300 min-w-0
              ${layout === 'horizontal' 
                 ? 'min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r' 
                 : 'min-h-[40%] border-b'}
@@ -207,7 +207,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           </section>
 
           {/* Output Pane */}
-          <section className={`flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <section className={`flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <div className="flex-1 p-2 md:p-4 h-full overflow-hidden">
               {environmentMode === 'express' ? (
                 <ServerOutput
