@@ -66,7 +66,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="monaco-editor-container h-full w-full overflow-hidden">
       <Editor
         key={modelPath} // Force full re-render of Editor component when path changes
         height="100%"
@@ -80,6 +80,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         
         onChange={onChange}
         onMount={handleEditorDidMount}
+        
+        // Ensure loader is configured (optional, helps if CDN is slow)
+        loading={<div className="h-full w-full flex items-center justify-center text-sm opacity-50">Loading Editor...</div>}
+        
         options={{
           readOnly: readOnly,
           minimap: { enabled: false },
@@ -91,6 +95,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
           fixedOverflowWidgets: true,
           renderValidationDecorations: 'on',
+          // Improve styling consistency
+          lineHeight: 24,
         }}
       />
     </div>
