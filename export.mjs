@@ -1177,7 +1177,7 @@ var CodingEnvironment = ({
     /* @__PURE__ */ jsxs5("div", { className: "flex-1 flex overflow-hidden", children: [
       /* @__PURE__ */ jsxs5("div", { className: `flex-1 flex overflow-hidden min-w-0 ${layout === "horizontal" ? "flex-col md:flex-row" : "flex-col"}`, children: [
         /* @__PURE__ */ jsx7("section", { className: `
-             flex-1 flex flex-col relative group transition-colors duration-300
+             flex-1 flex flex-col relative group transition-colors duration-300 min-w-0
              ${layout === "horizontal" ? "min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r" : "min-h-[40%] border-b"}
              ${themeMode === "dark" ? "border-gray-800" : "border-gray-200"}
           `, children: /* @__PURE__ */ jsx7(
@@ -1191,7 +1191,7 @@ var CodingEnvironment = ({
             readOnly: hasPredictionTask
           }
         ) }),
-        /* @__PURE__ */ jsx7("section", { className: `flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}`, children: /* @__PURE__ */ jsx7("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: environmentMode === "express" ? /* @__PURE__ */ jsx7(
+        /* @__PURE__ */ jsx7("section", { className: `flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}`, children: /* @__PURE__ */ jsx7("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: environmentMode === "express" ? /* @__PURE__ */ jsx7(
           ServerOutput,
           {
             runTrigger,
