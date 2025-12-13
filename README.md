@@ -19,12 +19,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.5**:
+To install version **v1.0.6**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.5
+npm install github:rmccrear/code-shoebox#v1.0.6
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.5
+yarn add github:rmccrear/code-shoebox#v1.0.6
 ```
 
 ## Styling Setup
@@ -35,6 +35,23 @@ In your root file (e.g., `main.tsx`, `App.tsx`, or `_app.tsx`):
 
 ```tsx
 import 'code-shoebox/styles.css';
+```
+
+## Layout Requirements
+
+**Important:** The `CodeShoebox` component is designed to fill its parent container (`height: 100%`). 
+You must ensure the parent element has a defined height (e.g., a fixed pixel height like `500px` or a flex grow container like `h-screen`). If the parent has no height, the editor will collapse to 0px.
+
+```tsx
+// ✅ Correct
+<div style={{ height: '80vh' }}>
+  <CodeShoebox ... />
+</div>
+
+// ❌ Incorrect (Editor will be invisible)
+<div>
+  <CodeShoebox ... />
+</div>
 ```
 
 ## Usage
@@ -71,6 +88,8 @@ const MyEditor = () => {
       <select value={environmentMode} onChange={e => setEnvironmentMode(e.target.value)}>
         <option value="dom">JavaScript</option>
         <option value="react">React</option>
+        <option value="p5">p5.js</option>
+        <option value="express">Node/Express</option>
       </select>
 
       <CodeShoebox 
@@ -110,6 +129,93 @@ const MyCustomEditor = () => {
     </div>
   );
 };
+```
+
+### 3. Environment Specific Examples
+
+CodeShoebox supports multiple execution environments. When manually managing state, ensure you pass the correct `environmentMode` and compatible code.
+
+#### React Mode
+Renders a React component tree. The environment includes `react`, `react-dom`, and `babel` for in-browser transpilation.
+
+```tsx
+<CodeShoebox 
+  code={`
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    
+    function App() { 
+      return (
+        <div style={{ textAlign: 'center', marginTop: 50 }}>
+          <h1>Hello React</h1>
+          <p>Live rendering in the browser!</p>
+        </div>
+      );
+    }
+    
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  `}
+  onCodeChange={handleCodeChange}
+  environmentMode="react"
+  theme={activeTheme}
+  themeMode="dark"
+/>
+```
+
+#### p5.js Mode
+Automatically detects the global `setup` and `draw` functions and moves the created canvas into the output window.
+
+```tsx
+<CodeShoebox 
+  code={`
+    function setup() {
+      createCanvas(400, 400);
+      background(220);
+    }
+    
+    function draw() {
+      if (mouseIsPressed) {
+        fill(0);
+      } else {
+        fill(255);
+      }
+      ellipse(mouseX, mouseY, 50, 50);
+    }
+  `}
+  onCodeChange={handleCodeChange}
+  environmentMode="p5"
+  theme={activeTheme}
+  themeMode="light"
+/>
+```
+
+#### Express (Node.js) Mode
+Simulates a Node.js Express server environment. The output pane becomes a console and API testing tool (Postman-lite).
+
+```tsx
+<CodeShoebox 
+  code={`
+    const app = express();
+    const port = 3000;
+    
+    app.get('/', (req, res) => {
+      res.json({ status: 'active', message: 'Mock server running' });
+    });
+    
+    app.get('/hello/:name', (req, res) => {
+      res.json({ greeting: 'Hello ' + req.params.name });
+    });
+    
+    app.listen(port, () => {
+      console.log('Server ready on port ' + port);
+    });
+  `}
+  onCodeChange={handleCodeChange}
+  environmentMode="express"
+  theme={activeTheme}
+  themeMode="dark"
+/>
 ```
 
 ## Persistence Strategy
@@ -158,6 +264,59 @@ const ExerciseComponent = () => {
 ```
 
 **Note:** If you change the `promptText` or `starterCode`, the hash will change, and the user's saved code for that exercise will be reset (treated as a new exercise). Ensure your prompts are stable before releasing content.
+
+## Cookbook
+
+Here are some minimal examples demonstrating the versatility of CodeShoebox.
+
+### 1. The "Pop Quiz" (Prediction Mode)
+Force students to read and understand code before running it. The editor is read-only and the output is blurred until they enter a prediction.
+
+```tsx
+<CodeShoebox 
+  code="console.log(2 + 2);"
+  onCodeChange={() => {}} 
+  environmentMode="dom"
+  theme={themes[0]}
+  themeMode="dark"
+  prediction_prompt="What will be logged to the console?"
+/>
+```
+
+### 2. Custom Branding (Theming)
+CodeShoebox uses HSL values for theming. You can inject your own brand colors easily.
+
+```tsx
+const matrixTheme = {
+  name: "Matrix",
+  light: { 
+     primary: "120 100% 25%", 
+     primaryForeground: "0 0% 100%", 
+     ring: "120 100% 25%", 
+     sidebarPrimary: "120 100% 25%",
+     sidebarPrimaryForeground: "0 0% 100%", 
+     sidebarRing: "120 100% 25%" 
+  },
+  dark: {
+    primary: "120 100% 50%", // Bright Green
+    primaryForeground: "0 0% 0%",
+    ring: "120 100% 50%",
+    sidebarPrimary: "120 100% 50%",
+    sidebarPrimaryForeground: "0 0% 0%", 
+    sidebarRing: "120 100% 50%",
+    background: "0 0% 0%", // Pure Black
+    foreground: "120 100% 50%"
+  }
+};
+
+<CodeShoebox 
+  code="// Welcome to the real world."
+  onCodeChange={setCode}
+  environmentMode="dom"
+  theme={matrixTheme}
+  themeMode="dark"
+/>
+```
 
 ## Props
 

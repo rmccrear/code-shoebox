@@ -1592,6 +1592,22 @@ video {
   transition-duration: 300ms;
 }
 
+/* 
+  Defensive styles for Monaco Editor.
+  Tailwind's preflight (reset) can sometimes interfere with Monaco's internal alignment.
+*/
+
+.monaco-editor-container .monaco-editor,
+.monaco-editor-container .monaco-editor .inputarea {
+  text-align: left !important;
+}
+
+/* Ensure z-index context is correct for widgets/hovers */
+
+.monaco-editor-container {
+  isolation: isolate;
+}
+
 .hover\:bg-black\/10:hover {
   background-color: rgb(0 0 0 / 0.1);
 }

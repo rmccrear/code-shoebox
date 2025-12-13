@@ -99,7 +99,7 @@ var CodeEditor = ({
       }
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
     import_react2.default,
     {
       height: "100%",
@@ -109,6 +109,7 @@ var CodeEditor = ({
       value: code,
       onChange,
       onMount: handleEditorDidMount,
+      loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
       options: {
         readOnly,
         minimap: { enabled: false },
@@ -119,7 +120,9 @@ var CodeEditor = ({
         scrollBeyondLastLine: false,
         fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
         fixedOverflowWidgets: true,
-        renderValidationDecorations: "on"
+        renderValidationDecorations: "on",
+        // Improve styling consistency
+        lineHeight: 24
       }
     },
     modelPath

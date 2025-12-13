@@ -57,7 +57,7 @@ var CodeEditor = ({
       }
     }
   };
-  return /* @__PURE__ */ jsx("div", { className: "h-full w-full overflow-hidden", children: /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsx("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ jsx(
     Editor,
     {
       height: "100%",
@@ -67,6 +67,7 @@ var CodeEditor = ({
       value: code,
       onChange,
       onMount: handleEditorDidMount,
+      loading: /* @__PURE__ */ jsx("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
       options: {
         readOnly,
         minimap: { enabled: false },
@@ -77,7 +78,9 @@ var CodeEditor = ({
         scrollBeyondLastLine: false,
         fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
         fixedOverflowWidgets: true,
-        renderValidationDecorations: "on"
+        renderValidationDecorations: "on",
+        // Improve styling consistency
+        lineHeight: 24
       }
     },
     modelPath
