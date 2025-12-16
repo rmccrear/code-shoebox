@@ -1,10 +1,11 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Send, Server, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Send, Server, Clock, AlertCircle, XCircle, GripHorizontal } from 'lucide-react';
 import { createSandboxUrl, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
 import { ThemeMode, EnvironmentMode } from '../types';
 import { PreviewContainer } from './PreviewContainer';
 import { Button } from './Button';
+import { Console, LogEntry } from './Console';
 
 interface ServerOutputProps {
   runTrigger: number;
@@ -29,7 +30,9 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   isBlurred = false
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [sandboxSrc, setSandboxSrc] = useState<string>('');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   
   // Postman UI State
   const [route, setRoute] = useState('/');
@@ -38,6 +41,10 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [serverReady, setServerReady] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+
+  // Console Resize State
+  const [consoleHeight, setConsoleHeight] = useState(150);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Setup Sandbox
   useEffect(() => {
@@ -52,6 +59,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
       setServerReady(false); // Reset ready state
       setResponse(null);     // Clear previous output
       setRuntimeError(null); // Clear errors
+      setLogs([]);           // Clear console
       executeCodeInSandbox(iframeRef.current.contentWindow, code);
     }
   }, [runTrigger, code]);
@@ -67,19 +75,28 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const { type, payload } = event.data;
+      
       if (type === 'SERVER_READY') {
         setServerReady(true);
-        setRuntimeError(null); // Clear any startup errors if server manages to signal ready
+        setRuntimeError(null); 
+        setLogs(prev => [...prev, { type: 'log', content: '[System] Server listening...', timestamp: Date.now() }]);
       }
-      if (type === 'REQUEST_COMPLETE') {
+      else if (type === 'REQUEST_COMPLETE') {
         setResponse(payload);
         setIsLoading(false);
       }
-      if (type === 'RUNTIME_ERROR') {
+      else if (type === 'RUNTIME_ERROR') {
         setRuntimeError(payload);
         setIsLoading(false);
-        // If error happens during startup, server might not be ready
+        setLogs(prev => [...prev, { type: 'error', content: payload, timestamp: Date.now() }]);
         if (!serverReady) setServerReady(false); 
+      }
+      else if (type === 'CONSOLE_LOG' || type === 'CONSOLE_WARN') {
+         setLogs(prev => [...prev, {
+             type: type === 'CONSOLE_WARN' ? 'warn' : 'log',
+             content: payload,
+             timestamp: Date.now()
+         }]);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -101,11 +118,51 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
     }, 300);
   };
 
+  // --- Resize Logic ---
+  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeY = e.clientY - containerRect.top;
+    const newHeight = containerRect.height - relativeY;
+    const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
+    setConsoleHeight(clampedHeight);
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   const isReady = runTrigger > 0;
 
   return (
     <div className="flex flex-col h-full w-full gap-2">
-      {/* Postman Controls - Rendered OUTSIDE the iframe container */}
+      {/* Postman Controls */}
       <div className={`
         flex items-center gap-2 p-2 rounded-md border transition-colors
         ${themeMode === 'dark' ? 'bg-[#252526] border-white/10' : 'bg-white border-gray-200'}
@@ -141,9 +198,9 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
         isReady={isReady}
         overlayMessage={isBlurred ? "Make your Prediction" : undefined}
       >
-        <div className="flex flex-col h-full relative">
+        <div ref={containerRef} className="flex flex-col h-full relative">
             
-            {/* Server Status Indicator (Overlay) */}
+            {/* Server Status Indicators (Overlay) */}
             {isReady && !serverReady && !runtimeError && !isBlurred && (
                  <div className="absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs">
                     <Clock className="w-3 h-3 animate-pulse" />
@@ -165,7 +222,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
                  </div>
             )}
 
-            {/* Response Viewer or Error Display */}
+            {/* Response Viewer (Top Pane) */}
             <div className={`flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-gray-50'}`}>
                 {runtimeError ? (
                     <div className="animate-in fade-in zoom-in-95 duration-300 p-4 border border-red-500/20 rounded bg-red-500/5">
@@ -176,9 +233,6 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
                         <pre className="whitespace-pre-wrap break-all text-red-400 opacity-90">
                             {runtimeError}
                         </pre>
-                        <p className="mt-4 text-xs text-gray-500">
-                            Check the console log below for more details.
-                        </p>
                     </div>
                 ) : response ? (
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -200,17 +254,35 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
                 )}
             </div>
 
-            {/* Hidden Iframe (Kept for console logs) */}
-            <div className="h-1/3 border-t border-gray-500/20 relative">
-                 <iframe
-                    ref={iframeRef}
-                    src={sandboxSrc}
-                    title="Server Console"
-                    sandbox={SANDBOX_ATTRIBUTES} 
-                    className="w-full h-full border-none"
-                    // We don't need onLoad sync here as we do it in useEffect
-                  />
+            {/* Resizer */}
+            <div 
+                onMouseDown={handleMouseDown}
+                className={`
+                    h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
+                    ${themeMode === 'dark' ? 'bg-[#252526] text-gray-600 border-t border-b border-black/20' : 'bg-gray-100 text-gray-400 border-t border-b border-gray-200'}
+                    ${isDragging ? '!bg-blue-600 !text-white' : ''}
+                `}
+            >
+                 <GripHorizontal className="w-3 h-3" />
             </div>
+
+            {/* Console Log Area */}
+            <div style={{ height: consoleHeight }} className="shrink-0 min-h-0">
+                 <Console 
+                    logs={logs} 
+                    onClear={() => setLogs([])} 
+                    themeMode={themeMode} 
+                />
+            </div>
+
+            {/* Hidden Iframe for execution */}
+            <iframe
+                ref={iframeRef}
+                src={sandboxSrc}
+                title="Server Execution"
+                sandbox={SANDBOX_ATTRIBUTES} 
+                className="hidden"
+            />
         </div>
       </PreviewContainer>
     </div>

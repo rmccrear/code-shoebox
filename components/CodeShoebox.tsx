@@ -23,8 +23,9 @@ export interface CodeShoeboxProps {
   /**
    * Optional prompt to display in a prediction panel.
    * If present, code editing is disabled and output is blurred until user enters a prediction.
+   * Accepts text or JSX elements.
    */
-  prediction_prompt?: string;
+  prediction_prompt?: React.ReactNode;
 }
 
 export const CodeShoebox: React.FC<CodeShoeboxProps> = ({

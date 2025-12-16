@@ -1,4 +1,5 @@
 
+
 /**
  * Shared HTML/CSS/JS for the sandbox environment.
  */
@@ -17,7 +18,7 @@ export const BASE_STYLES = `
         background: #fff;
         transition: background-color 0.3s, color 0.3s;
         
-        /* Flex layout to pin console to bottom */
+        /* Flex layout */
         display: flex;
         flex-direction: column;
     }
@@ -45,26 +46,6 @@ export const BASE_STYLES = `
         flex-shrink: 0; /* Prevent squishing */
     }
 
-    #console-output {
-        flex-shrink: 0;
-        max-height: 35%; /* Cap console height */
-        overflow-y: auto;
-        background: #f4f4f4;
-        border-top: 1px solid #ccc; /* Separator line */
-        padding: 0.5rem 1rem;
-        font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-        font-size: 13px;
-        white-space: pre-wrap;
-        display: none; /* Hidden until logs exist */
-        width: 100%;
-        box-sizing: border-box;
-    }
-    body.dark #console-output { background: #222; border-color: #444; }
-    
-    .error { color: #ef4444; }
-    .log { color: #333; }
-    body.dark .log { color: #ccc; }
-
     /* p5 canvas styling */
     canvas {
         display: block;
@@ -76,7 +57,6 @@ export const BASE_STYLES = `
 
 export const CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
-    const consoleOutput = document.getElementById('console-output');
     
     function formatMessage(msg) {
         if (msg instanceof Error) {
@@ -93,18 +73,7 @@ export const CONSOLE_INTERCEPTOR = `
     }
 
     function logToScreen(msg, type = 'log') {
-        consoleOutput.style.display = 'block';
-        const line = document.createElement('div');
-        line.className = type;
-        line.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-        line.style.padding = '2px 0';
-        
         const textContent = formatMessage(msg);
-        line.textContent = '> ' + textContent;
-        
-        consoleOutput.appendChild(line);
-        // Auto scroll to bottom
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
 
         // Notify parent window (React app) about the log/error
         window.parent.postMessage({ 
@@ -124,12 +93,18 @@ export const CONSOLE_INTERCEPTOR = `
         originalError.apply(console, args);
         args.forEach(arg => logToScreen(arg, 'error'));
     };
+    
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        args.forEach(arg => logToScreen(arg, 'warn'));
+    };
 
     // Support console.table specifically for array/object data visualization
     const originalTable = console.table;
     console.table = function(data) {
         originalTable.apply(console, [data]);
-        logToScreen(data, 'log'); // We just log the JSON for now in the small console
+        logToScreen(data, 'log'); // We just log the JSON for now
     };
 
     window.onerror = function(message, source, lineno, colno, error) {
@@ -157,9 +132,6 @@ export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string, sh
         <!-- User output goes here -->
         ${showPlaceholder ? '<p id="placeholder" style="color: #666; font-style: italic; align-self: flex-start;">Output will appear here...</p>' : ''}
     </div>
-    
-    <!-- Console sits at the bottom due to flex layout -->
-    <div id="console-output"></div>
 
     <script>
         ${CONSOLE_INTERCEPTOR}
@@ -172,9 +144,8 @@ export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string, sh
                 const placeholder = document.getElementById('placeholder');
                 if (placeholder) placeholder.style.display = 'none';
                 
-                // Clear console for new run
-                consoleOutput.innerHTML = '';
-                consoleOutput.style.display = 'none';
+                // Clear root
+                // Note: We don't clear the parent console here, that's handled by the React component
                 
                 // Invoke specific runner logic
                 if (window.runMode) {

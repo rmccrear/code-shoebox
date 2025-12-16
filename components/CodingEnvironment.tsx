@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows, GripVertical, GripHorizontal } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
@@ -18,7 +18,7 @@ interface CodingEnvironmentProps {
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
   sessionId: number;
-  predictionPrompt?: string;
+  predictionPrompt?: React.ReactNode;
 }
 
 type LayoutDirection = 'horizontal' | 'vertical';
@@ -39,9 +39,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
   const [layout, setLayout] = useState<LayoutDirection>('horizontal');
   
-  const hasDocs = !!getDocsForMode(environmentMode);
+  // Resizing State
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [editorRatio, setEditorRatio] = useState(0.5); // 0.0 to 1.0
+  const [isDragging, setIsDragging] = useState(false);
 
-  const hasPredictionTask = !!predictionPrompt;
+  const hasDocs = !!getDocsForMode(environmentMode);
+  const hasPredictionTask = predictionPrompt !== undefined && predictionPrompt !== null && predictionPrompt !== '';
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
 
   // Reset local state when session changes
@@ -62,9 +66,59 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
     onRun();
   };
 
-  const toggleLayout = () => {
-    setLayout(prev => prev === 'horizontal' ? 'vertical' : 'horizontal');
+  // --- Resizing Logic ---
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    let newRatio = 0.5;
+
+    if (layout === 'horizontal') {
+      const relativeX = e.clientX - containerRect.left;
+      newRatio = relativeX / containerRect.width;
+    } else {
+      const relativeY = e.clientY - containerRect.top;
+      newRatio = relativeY / containerRect.height;
+    }
+
+    // Clamp ratio between 10% and 90%
+    newRatio = Math.max(0.1, Math.min(0.9, newRatio));
+    setEditorRatio(newRatio);
+  }, [isDragging, layout]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      // Prevent selection during drag
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = layout === 'horizontal' ? 'col-resize' : 'row-resize';
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp, layout]);
+
+  // --- End Resizing Logic ---
 
   let fileName = 'script.js';
   switch (environmentMode) {
@@ -94,16 +148,16 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
              </div>
              <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <h3 className={`text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === 'dark' ? 'text-purple-400' : 'text-purple-700'}`}>
                         Predict
                     </h3>
-                    <p className={`text-sm leading-relaxed ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>
+                    <div className={`text-sm leading-relaxed ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>
                         {predictionPrompt}
-                    </p>
+                    </div>
                   </div>
                   {isPredictionLocked && (
-                      <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ${themeMode === 'dark' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                      <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ml-4 ${themeMode === 'dark' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-green-100 text-green-700 border-green-200'}`}>
                           <Lock className="w-3 h-3" />
                           Locked
                       </div>
@@ -190,15 +244,20 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       <div className="flex-1 flex overflow-hidden">
         
         {/* Editor & Output Container */}
-        <div className={`flex-1 flex overflow-hidden min-w-0 ${layout === 'horizontal' ? 'flex-col md:flex-row' : 'flex-col'}`}>
+        <div 
+            ref={containerRef}
+            className={`flex-1 flex overflow-hidden min-w-0 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}
+        >
           {/* Editor Pane */}
-          <section className={`
-             flex-1 flex flex-col relative group transition-colors duration-300 min-w-0
-             ${layout === 'horizontal' 
-                ? 'min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r' 
-                : 'min-h-[40%] border-b'}
+          <section 
+            style={{ 
+                [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` 
+            }}
+            className={`
+             flex flex-col relative group transition-colors duration-300 min-w-0
              ${themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'}
-          `}>
+            `}
+          >
             <CodeEditor 
               code={code} 
               onChange={(val) => onChange(val || '')} 
@@ -209,8 +268,36 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
             />
           </section>
 
+          {/* Resizer Handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className={`
+                z-20 flex items-center justify-center shrink-0 hover:bg-blue-500 hover:text-white transition-colors
+                ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-600 border-black/20' : 'bg-gray-100 text-gray-400 border-white'}
+                ${isDragging ? '!bg-blue-600 !text-white' : ''}
+                ${layout === 'horizontal' 
+                    ? 'w-3 h-full cursor-col-resize border-l border-r' 
+                    : 'h-3 w-full cursor-row-resize border-t border-b'
+                }
+            `}
+          >
+            {layout === 'horizontal' 
+                ? <GripVertical className="w-3 h-3" /> 
+                : <GripHorizontal className="w-3 h-3" />
+            }
+          </div>
+
           {/* Output Pane */}
-          <section className={`flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <section 
+            style={{ 
+                [layout === 'horizontal' ? 'width' : 'height']: `${(1 - editorRatio) * 100}%` 
+            }}
+            className={`
+                flex flex-col relative transition-colors duration-300 min-w-0 
+                ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}
+                ${isDragging ? 'pointer-events-none' : ''} /* Prevent iframe stealing mouse events */
+            `}
+          >
             <div className="flex-1 p-2 md:p-4 h-full overflow-hidden">
               {isServerMode ? (
                 <ServerOutput
