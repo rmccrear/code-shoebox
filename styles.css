@@ -685,6 +685,10 @@ video {
   display: flex;
 }
 
+.table {
+  display: table;
+}
+
 .hidden {
   display: none;
 }
@@ -795,6 +799,10 @@ video {
 
 .shrink-0 {
   flex-shrink: 0;
+}
+
+.border-collapse {
+  border-collapse: collapse;
 }
 
 .scale-100 {

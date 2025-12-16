@@ -66,6 +66,8 @@ var CodeEditor = ({
         return `${basePath}.ts`;
       case "react-ts":
         return `${basePath}.tsx`;
+      case "express-ts":
+        return `${basePath}.ts`;
       case "react":
         return `${basePath}.jsx`;
       case "p5":
@@ -75,7 +77,7 @@ var CodeEditor = ({
     }
   }, [sessionId, environmentMode]);
   const language = (0, import_react.useMemo)(() => {
-    if (environmentMode === "typescript" || environmentMode === "react-ts") return "typescript";
+    if (environmentMode === "typescript" || environmentMode === "react-ts" || environmentMode === "express-ts") return "typescript";
     return "javascript";
   }, [environmentMode]);
   const handleEditorDidMount = (editor, monaco) => {
@@ -86,7 +88,8 @@ var CodeEditor = ({
         target: monaco.languages.typescript.ScriptTarget.ES2020,
         allowNonTsExtensions: true,
         moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        noLib: false
+        noLib: false,
+        esModuleInterop: true
       });
       if (environmentMode === "react-ts") {
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
@@ -95,6 +98,34 @@ var CodeEditor = ({
                 declare module 'react-dom/client' { var x: any; export = x; }
                 `,
           "react-shim.d.ts"
+        );
+      }
+      if (environmentMode === "express-ts") {
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(
+          `
+                declare module 'express' {
+                    export interface Request {
+                        params: any;
+                        query: any;
+                        body: any;
+                        method: string;
+                        url: string;
+                    }
+                    export interface Response {
+                        status(code: number): this;
+                        json(data: any): void;
+                        send(data: any): void;
+                    }
+                    export interface Application {
+                        get(path: string, handler: (req: Request, res: Response) => void): void;
+                        post(path: string, handler: (req: Request, res: Response) => void): void;
+                        listen(port: number, cb?: () => void): void;
+                    }
+                    function express(): Application;
+                    export default express;
+                }
+                `,
+          "express.d.ts"
         );
       }
     }
@@ -207,6 +238,20 @@ var CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
     const consoleOutput = document.getElementById('console-output');
     
+    function formatMessage(msg) {
+        if (msg instanceof Error) {
+            return msg.toString();
+        }
+        if (typeof msg === 'object' && msg !== null) {
+            try {
+                return JSON.stringify(msg, null, 2);
+            } catch (e) {
+                return '[Circular Object]';
+            }
+        }
+        return String(msg);
+    }
+
     function logToScreen(msg, type = 'log') {
         consoleOutput.style.display = 'block';
         const line = document.createElement('div');
@@ -214,7 +259,7 @@ var CONSOLE_INTERCEPTOR = `
         line.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
         line.style.padding = '2px 0';
         
-        const textContent = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : String(msg);
+        const textContent = formatMessage(msg);
         line.textContent = '> ' + textContent;
         
         consoleOutput.appendChild(line);
@@ -238,6 +283,13 @@ var CONSOLE_INTERCEPTOR = `
     console.error = function(...args) {
         originalError.apply(console, args);
         args.forEach(arg => logToScreen(arg, 'error'));
+    };
+
+    // Support console.table specifically for array/object data visualization
+    const originalTable = console.table;
+    console.table = function(data) {
+        originalTable.apply(console, [data]);
+        logToScreen(data, 'log'); // We just log the JSON for now in the small console
     };
 
     window.onerror = function(message, source, lineno, colno, error) {
@@ -533,7 +585,7 @@ var generateReactTsHtml = (showPlaceholder = true) => {
 };
 
 // runtime/templates/express.ts
-var EXPRESS_SHIM = `
+var EXPRESS_MOCK_SETUP = `
     // --- Mock Express & Response Objects ---
 
     class MockResponse {
@@ -570,39 +622,26 @@ var EXPRESS_SHIM = `
         }
 
         get(path, handler) {
-            // Convert Express path params (e.g. /users/:id) to regex for simple matching
-            // This is a basic implementation.
             const regexPath = path.replace(/:[^/]+/g, '([^/]+)');
             this.routes.GET[regexPath] = { originalPath: path, handler };
         }
 
         listen(port, cb) {
             if (cb) cb();
-            // Notify parent that app is ready
             window.parent.postMessage({ type: 'SERVER_READY' }, '*');
         }
 
-        // Internal method to process incoming requests from the UI
         async _handleRequest(method, url) {
             console.log(\`Incoming Request: \${method} \${url}\`);
             
             const methodRoutes = this.routes[method] || {};
             
-            // Find matching route
             for (const routeRegex in methodRoutes) {
                 const match = new RegExp(\`^\${routeRegex}$\`).exec(url);
                 if (match) {
                     const { handler } = methodRoutes[routeRegex];
                     
-                    // Extract params
                     const params = {};
-                    // This is a simplification. A real router tracks param names.
-                    // For this mock, we support basic direct matching or single param.
-                    // If user used :id, we'd need to map match[1] to 'id'.
-                    // For now, let's just expose a basic req object.
-                    
-                    // Improved Param Parsing for simple cases like /users/:id
-                    // We need to know the param keys from originalPath
                     const originalPath = methodRoutes[routeRegex].originalPath;
                     const paramKeys = (originalPath.match(/:([^/]+)/g) || []).map(k => k.substring(1));
                     
@@ -612,12 +651,7 @@ var EXPRESS_SHIM = `
                        });
                     }
 
-                    const req = { 
-                        method, 
-                        url, 
-                        params, 
-                        query: {} // Query parsing omitted for brevity
-                    };
+                    const req = { method, url, params, query: {} };
 
                     return new Promise(resolve => {
                         const res = new MockResponse(resolve);
@@ -637,24 +671,15 @@ var EXPRESS_SHIM = `
 
     // --- Global Shim ---
     const appInstance = new MockApp();
+    
+    // For JS mode: const app = express();
+    // For TS mode shim: require('express') returns window.express
     window.express = function() {
         return appInstance;
     };
-
-    window.runMode = function(code, root) {
-        // Express Mode
-        // We don't use 'root' for visual output, but we clear it to be clean
-        root.innerHTML = '';
-        
-        // Reset routes on re-run
-        appInstance.routes = { GET: {} };
-
-        try {
-            window.eval(code);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    
+    // Expose instance for reset logic
+    window.appInstance = appInstance;
 
     // --- Message Listener for Test Requests ---
     window.addEventListener('message', async (event) => {
@@ -662,8 +687,6 @@ var EXPRESS_SHIM = `
         if (type === 'SIMULATE_REQUEST') {
             const { method, url } = payload;
             const response = await appInstance._handleRequest(method, url);
-            
-            // Send result back to parent
             window.parent.postMessage({
                 type: 'REQUEST_COMPLETE',
                 payload: response
@@ -671,8 +694,75 @@ var EXPRESS_SHIM = `
         }
     });
 `;
+var EXPRESS_JS_RUNNER = `
+    window.runMode = function(code, root) {
+        // Express Mode (JS)
+        root.innerHTML = '';
+        
+        // Reset routes on re-run
+        if (window.appInstance) {
+            window.appInstance.routes = { GET: {} };
+        }
+
+        try {
+            window.eval(code);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+`;
 var generateExpressHtml = (showPlaceholder = true) => {
-  return BASE_HTML_WRAPPER("", EXPRESS_SHIM, false);
+  const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
+  return BASE_HTML_WRAPPER("", script, false);
+};
+
+// runtime/templates/express-ts.ts
+var BABEL_CDN2 = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+var EXPRESS_TS_RUNNER = `
+    // 1. Shim 'require' to support standard imports transpiled by Babel
+    window.require = function(module) {
+        if (module === 'express') {
+            // In TS/ESM: import express from 'express'; express() -> app
+            // Babel 'env' preset might treat default export as module.default depending on config,
+            // or just module() if it's commonjs interop.
+            // Our window.express is the function.
+            // Let's ensure common default import patterns work.
+            const exp = window.express;
+            exp.default = exp;
+            return exp;
+        }
+        throw new Error('Module not found: ' + module);
+    };
+
+    window.runMode = function(code, root) {
+        // Express TS Mode
+        root.innerHTML = '';
+        
+        // Reset routes on re-run
+        if (window.appInstance) {
+             window.appInstance.routes = { GET: {} };
+        }
+
+        try {
+             // Transpile with 'typescript' and 'env' presets
+             // 'env' will convert import/export to require/module.exports (CommonJS)
+             const transpiled = Babel.transform(code, {
+                presets: ['env', 'typescript'],
+                filename: 'server.ts'
+            }).code;
+
+            // Execute in an IIFE
+            (function() {
+                eval(transpiled);
+            })();
+        } catch (err) {
+            console.error(err);
+        }
+    };
+`;
+var generateExpressTsHtml = (showPlaceholder = false) => {
+  const script = EXPRESS_MOCK_SETUP + EXPRESS_TS_RUNNER;
+  return BASE_HTML_WRAPPER(BABEL_CDN2, script, false);
 };
 
 // runtime/runner.ts
@@ -695,6 +785,9 @@ var createSandboxUrl = (mode = "dom", isPredictionMode = false) => {
       break;
     case "express":
       html = generateExpressHtml(showPlaceholder);
+      break;
+    case "express-ts":
+      html = generateExpressTsHtml(showPlaceholder);
       break;
     default:
       html = generateDomHtml(showPlaceholder);
@@ -1127,9 +1220,13 @@ var CodingEnvironment = ({
     case "express":
       fileName = "server.js";
       break;
+    case "express-ts":
+      fileName = "server.ts";
+      break;
     default:
       fileName = "script.js";
   }
+  const isServerMode = environmentMode === "express" || environmentMode === "express-ts";
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("main", { className: "flex-1 overflow-hidden flex flex-col relative", children: [
     hasPredictionTask && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: `
           shrink-0 border-b p-4 flex flex-col gap-3 transition-colors duration-300
@@ -1233,7 +1330,7 @@ var CodingEnvironment = ({
             readOnly: hasPredictionTask
           }
         ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("section", { className: `flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: environmentMode === "express" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("section", { className: `flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: isServerMode ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           ServerOutput,
           {
             runTrigger,
@@ -1599,6 +1696,46 @@ app.listen(port, () => {
   console.log(\`Mock server listening on port \${port}\`);
 });
 `;
+var EXPRESS_TS_STARTER_CODE = `// Express + TypeScript Simulator
+import express, { Request, Response } from 'express';
+
+const app = express();
+const port = 3000;
+
+interface Product {
+  id: number;
+  name: string;
+  stock: number;
+}
+
+const inventory: Product[] = [
+  { id: 101, name: "Laptop", stock: 5 },
+  { id: 102, name: "Mouse", stock: 12 }
+];
+
+app.get('/', (req: Request, res: Response) => {
+  res.json({ status: "system_nominal", timestamp: Date.now() });
+});
+
+app.get('/products', (req: Request, res: Response) => {
+  res.json(inventory);
+});
+
+app.get('/products/:id', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const item = inventory.find(p => p.id === id);
+  
+  if (item) {
+    res.json(item);
+  } else {
+    res.status(404).json({ error: "Product not found" });
+  }
+});
+
+app.listen(port, () => {
+  console.log(\`TS Server initialized on port \${port}\`);
+});
+`;
 
 // hooks/useSandboxState.ts
 var getStarterCode = (mode) => {
@@ -1613,6 +1750,8 @@ var getStarterCode = (mode) => {
       return REACT_TS_STARTER_CODE;
     case "express":
       return EXPRESS_STARTER_CODE;
+    case "express-ts":
+      return EXPRESS_TS_STARTER_CODE;
     default:
       return STARTER_CODE;
   }

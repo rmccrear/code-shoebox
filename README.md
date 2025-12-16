@@ -14,8 +14,10 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `react`: Live React component rendering with in-browser Babel transpilation.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
+  - `express-ts`: Mocked Express environment with TypeScript support.
 - **Themable**: Full support for light/dark modes and custom color themes.
 - **State Management**: Built-in hook `useSandboxState` for easy persistence and mode switching.
+- **Pedagogical Tools**: Built-in support for code prediction exercises (PRIMM).
 
 ## Installation
 
@@ -218,6 +220,66 @@ Simulates a Node.js Express server environment. The output pane becomes a consol
 />
 ```
 
+#### Express + TypeScript Mode
+Identical to the Express mode but with full TypeScript support. Import `Request` and `Response` types to type your handlers.
+
+```tsx
+<CodeShoebox 
+  code={`
+    import express, { Request, Response } from 'express';
+    const app = express();
+    const port = 3000;
+    
+    interface User {
+      id: number;
+      name: string;
+    }
+    
+    const db: User[] = [{ id: 1, name: 'Alice' }];
+    
+    app.get('/users/:id', (req: Request, res: Response) => {
+       const id = parseInt(req.params.id);
+       const user = db.find(u => u.id === id);
+       if (user) res.json(user);
+       else res.status(404).json({ error: 'Not Found' });
+    });
+    
+    app.listen(port, () => console.log('Ready'));
+  `}
+  onCodeChange={handleCodeChange}
+  environmentMode="express-ts"
+  theme={activeTheme}
+  themeMode="dark"
+/>
+```
+
+### 4. Prediction Templates (Pedagogy)
+
+CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
+
+**Behavior:**
+1.  **Locked Editor**: The code becomes Read-Only.
+2.  **Hidden Output**: The output frame is blurred/hidden.
+3.  **Prediction Input**: A text area appears above the editor.
+4.  **Unlock Trigger**: The "Run Code" button is disabled until the student enters a prediction.
+
+```tsx
+<CodeShoebox 
+  code={`
+    let count = 0;
+    for(let i = 0; i < 5; i++) {
+        count += i;
+    }
+    console.log(count);
+  `}
+  onCodeChange={() => {}} 
+  environmentMode="dom"
+  theme={activeTheme}
+  themeMode="dark"
+  prediction_prompt="What will be the final value of 'count' logged to the console?"
+/>
+```
+
 ## Persistence Strategy
 
 The library provides multiple ways to manage saved state.
@@ -267,23 +329,7 @@ const ExerciseComponent = () => {
 
 ## Cookbook
 
-Here are some minimal examples demonstrating the versatility of CodeShoebox.
-
-### 1. The "Pop Quiz" (Prediction Mode)
-Force students to read and understand code before running it. The editor is read-only and the output is blurred until they enter a prediction.
-
-```tsx
-<CodeShoebox 
-  code="console.log(2 + 2);"
-  onCodeChange={() => {}} 
-  environmentMode="dom"
-  theme={themes[0]}
-  themeMode="dark"
-  prediction_prompt="What will be logged to the console?"
-/>
-```
-
-### 2. Custom Branding (Theming)
+### Custom Branding (Theming)
 CodeShoebox uses HSL values for theming. You can inject your own brand colors easily.
 
 ```tsx
@@ -324,7 +370,7 @@ const matrixTheme = {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
+| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor (clearing undo history). Handled automatically by `useSandboxState`. |
