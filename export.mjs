@@ -1,9 +1,9 @@
 // components/CodeShoebox.tsx
-import { useState as useState4, useMemo as useMemo2, useEffect as useEffect4 } from "react";
+import { useState as useState4, useMemo as useMemo2, useEffect as useEffect5 } from "react";
 
 // components/CodingEnvironment.tsx
-import { useState as useState3, useEffect as useEffect3 } from "react";
-import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows } from "lucide-react";
+import { useState as useState3, useEffect as useEffect4, useRef as useRef4, useCallback as useCallback3 } from "react";
+import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows, GripVertical, GripHorizontal as GripHorizontal3 } from "lucide-react";
 
 // components/CodeEditor.tsx
 import { useMemo } from "react";
@@ -119,7 +119,7 @@ var CodeEditor = ({
 };
 
 // components/OutputFrame.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect as useEffect2, useRef as useRef2, useState, useCallback } from "react";
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -136,7 +136,7 @@ var BASE_STYLES = `
         background: #fff;
         transition: background-color 0.3s, color 0.3s;
         
-        /* Flex layout to pin console to bottom */
+        /* Flex layout */
         display: flex;
         flex-direction: column;
     }
@@ -164,26 +164,6 @@ var BASE_STYLES = `
         flex-shrink: 0; /* Prevent squishing */
     }
 
-    #console-output {
-        flex-shrink: 0;
-        max-height: 35%; /* Cap console height */
-        overflow-y: auto;
-        background: #f4f4f4;
-        border-top: 1px solid #ccc; /* Separator line */
-        padding: 0.5rem 1rem;
-        font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-        font-size: 13px;
-        white-space: pre-wrap;
-        display: none; /* Hidden until logs exist */
-        width: 100%;
-        box-sizing: border-box;
-    }
-    body.dark #console-output { background: #222; border-color: #444; }
-    
-    .error { color: #ef4444; }
-    .log { color: #333; }
-    body.dark .log { color: #ccc; }
-
     /* p5 canvas styling */
     canvas {
         display: block;
@@ -194,7 +174,6 @@ var BASE_STYLES = `
 `;
 var CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
-    const consoleOutput = document.getElementById('console-output');
     
     function formatMessage(msg) {
         if (msg instanceof Error) {
@@ -211,18 +190,7 @@ var CONSOLE_INTERCEPTOR = `
     }
 
     function logToScreen(msg, type = 'log') {
-        consoleOutput.style.display = 'block';
-        const line = document.createElement('div');
-        line.className = type;
-        line.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-        line.style.padding = '2px 0';
-        
         const textContent = formatMessage(msg);
-        line.textContent = '> ' + textContent;
-        
-        consoleOutput.appendChild(line);
-        // Auto scroll to bottom
-        consoleOutput.scrollTop = consoleOutput.scrollHeight;
 
         // Notify parent window (React app) about the log/error
         window.parent.postMessage({ 
@@ -242,12 +210,18 @@ var CONSOLE_INTERCEPTOR = `
         originalError.apply(console, args);
         args.forEach(arg => logToScreen(arg, 'error'));
     };
+    
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        args.forEach(arg => logToScreen(arg, 'warn'));
+    };
 
     // Support console.table specifically for array/object data visualization
     const originalTable = console.table;
     console.table = function(data) {
         originalTable.apply(console, [data]);
-        logToScreen(data, 'log'); // We just log the JSON for now in the small console
+        logToScreen(data, 'log'); // We just log the JSON for now
     };
 
     window.onerror = function(message, source, lineno, colno, error) {
@@ -274,9 +248,6 @@ var BASE_HTML_WRAPPER = (headContent, scriptContent, showPlaceholder = true) => 
         <!-- User output goes here -->
         ${showPlaceholder ? '<p id="placeholder" style="color: #666; font-style: italic; align-self: flex-start;">Output will appear here...</p>' : ""}
     </div>
-    
-    <!-- Console sits at the bottom due to flex layout -->
-    <div id="console-output"></div>
 
     <script>
         ${CONSOLE_INTERCEPTOR}
@@ -289,9 +260,8 @@ var BASE_HTML_WRAPPER = (headContent, scriptContent, showPlaceholder = true) => 
                 const placeholder = document.getElementById('placeholder');
                 if (placeholder) placeholder.style.display = 'none';
                 
-                // Clear console for new run
-                consoleOutput.innerHTML = '';
-                consoleOutput.style.display = 'none';
+                // Clear root
+                // Note: We don't clear the parent console here, that's handled by the React component
                 
                 // Invoke specific runner logic
                 if (window.runMode) {
@@ -771,67 +741,12 @@ var PreviewContainer = ({
   ] });
 };
 
-// components/OutputFrame.tsx
-import { jsx as jsx3 } from "react/jsx-runtime";
-var OutputFrame = ({
-  runTrigger,
-  code,
-  themeMode,
-  environmentMode,
-  isBlurred = false,
-  isPredictionMode = false
-}) => {
-  const iframeRef = useRef(null);
-  const [sandboxSrc, setSandboxSrc] = useState("");
-  useEffect(() => {
-    const url = createSandboxUrl(environmentMode, isPredictionMode);
-    setSandboxSrc(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [environmentMode, isPredictionMode]);
-  useEffect(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    }
-  }, [themeMode]);
-  useEffect(() => {
-    if (runTrigger > 0 && iframeRef.current?.contentWindow) {
-      executeCodeInSandbox(iframeRef.current.contentWindow, code);
-    }
-  }, [runTrigger]);
-  const handleIframeLoad = () => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    }
-  };
-  return /* @__PURE__ */ jsx3(
-    PreviewContainer,
-    {
-      themeMode,
-      isReady: runTrigger > 0,
-      overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-      children: /* @__PURE__ */ jsx3("div", { className: "w-full h-full relative", children: /* @__PURE__ */ jsx3(
-        "iframe",
-        {
-          ref: iframeRef,
-          src: sandboxSrc,
-          title: "Code Output",
-          sandbox: SANDBOX_ATTRIBUTES,
-          className: "w-full h-full border-none",
-          onLoad: handleIframeLoad
-        }
-      ) })
-    }
-  );
-};
-
-// components/ServerOutput.tsx
-import { useEffect as useEffect2, useRef as useRef2, useState as useState2 } from "react";
-import { Send, Server, Clock, AlertCircle, XCircle } from "lucide-react";
+// components/Console.tsx
+import { useEffect, useRef } from "react";
+import { Terminal, Ban } from "lucide-react";
 
 // components/Button.tsx
-import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var Button = ({
   children,
   variant = "primary",
@@ -851,43 +766,84 @@ var Button = ({
       className: `${baseStyles} ${variants[variant]} ${className}`,
       ...props,
       children: [
-        icon && /* @__PURE__ */ jsx4("span", { className: "w-4 h-4", children: icon }),
+        icon && /* @__PURE__ */ jsx3("span", { className: "w-4 h-4", children: icon }),
         children
       ]
     }
   );
 };
 
-// components/ServerOutput.tsx
-import { jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
-var ServerOutput = ({
+// components/Console.tsx
+import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
+var Console = ({
+  logs,
+  onClear,
+  themeMode,
+  className = ""
+}) => {
+  const endRef = useRef(null);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logs]);
+  return /* @__PURE__ */ jsxs3("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
+    /* @__PURE__ */ jsxs3("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
+      /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
+        /* @__PURE__ */ jsx4(Terminal, { className: "w-3 h-3" }),
+        /* @__PURE__ */ jsxs3("span", { children: [
+          "Console (",
+          logs.length,
+          ")"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx4(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ jsx4(Ban, { className: "w-3 h-3" }) })
+    ] }),
+    /* @__PURE__ */ jsxs3("div", { className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`, children: [
+      logs.length === 0 && /* @__PURE__ */ jsx4("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ jsx4("span", { className: "italic", children: "No output" }) }),
+      logs.map((log, i) => /* @__PURE__ */ jsxs3("div", { className: `
+            border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre-wrap
+            ${log.type === "error" ? "text-red-500 bg-red-500/5" : ""}
+            ${log.type === "warn" ? "text-yellow-500 bg-yellow-500/5" : ""}
+          `, children: [
+        /* @__PURE__ */ jsx4("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
+        log.content
+      ] }, i)),
+      /* @__PURE__ */ jsx4("div", { ref: endRef })
+    ] })
+  ] });
+};
+
+// components/OutputFrame.tsx
+import { GripHorizontal } from "lucide-react";
+import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+var OutputFrame = ({
   runTrigger,
   code,
   themeMode,
   environmentMode,
-  isBlurred = false
+  isBlurred = false,
+  isPredictionMode = false
 }) => {
   const iframeRef = useRef2(null);
-  const [sandboxSrc, setSandboxSrc] = useState2("");
-  const [route, setRoute] = useState2("/");
-  const [method, setMethod] = useState2("GET");
-  const [response, setResponse] = useState2(null);
-  const [isLoading, setIsLoading] = useState2(false);
-  const [serverReady, setServerReady] = useState2(false);
-  const [runtimeError, setRuntimeError] = useState2(null);
+  const containerRef = useRef2(null);
+  const [sandboxSrc, setSandboxSrc] = useState("");
+  const [logs, setLogs] = useState([]);
+  const [consoleHeight, setConsoleHeight] = useState(150);
+  const [isDragging, setIsDragging] = useState(false);
   useEffect2(() => {
-    const url = createSandboxUrl(environmentMode);
+    const url = createSandboxUrl(environmentMode, isPredictionMode);
     setSandboxSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [environmentMode]);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [environmentMode, isPredictionMode]);
   useEffect2(() => {
-    if (runTrigger > 0 && iframeRef.current?.contentWindow) {
-      setServerReady(false);
-      setResponse(null);
-      setRuntimeError(null);
-      executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    if (runTrigger > 0) {
+      setLogs([]);
+      if (iframeRef.current?.contentWindow) {
+        executeCodeInSandbox(iframeRef.current.contentWindow, code);
+      }
     }
-  }, [runTrigger, code]);
+  }, [runTrigger]);
   useEffect2(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
@@ -896,18 +852,169 @@ var ServerOutput = ({
   useEffect2(() => {
     const handleMessage = (event) => {
       const { type, payload } = event.data;
+      if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
+        setLogs((prev) => [...prev, {
+          type: type === "RUNTIME_ERROR" ? "error" : type === "CONSOLE_WARN" ? "warn" : "log",
+          content: payload,
+          timestamp: Date.now()
+        }]);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+  const handleIframeLoad = () => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    }
+  };
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeY = e.clientY - containerRect.top;
+    const newHeight = containerRect.height - relativeY;
+    const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
+    setConsoleHeight(clampedHeight);
+  }, [isDragging]);
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+  useEffect2(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+  return /* @__PURE__ */ jsx5(
+    PreviewContainer,
+    {
+      themeMode,
+      isReady: runTrigger > 0,
+      overlayMessage: isBlurred ? "Make your Prediction" : void 0,
+      children: /* @__PURE__ */ jsxs4(
+        "div",
+        {
+          ref: containerRef,
+          className: "w-full h-full flex flex-col relative",
+          children: [
+            /* @__PURE__ */ jsx5("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ jsx5(
+              "iframe",
+              {
+                ref: iframeRef,
+                src: sandboxSrc,
+                title: "Code Output",
+                sandbox: SANDBOX_ATTRIBUTES,
+                className: `w-full h-full border-none ${isDragging ? "pointer-events-none" : ""}`,
+                onLoad: handleIframeLoad
+              }
+            ) }),
+            /* @__PURE__ */ jsx5(
+              "div",
+              {
+                onMouseDown: handleMouseDown,
+                className: `
+                h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
+                ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}
+                ${isDragging ? "!bg-blue-600 !text-white" : ""}
+            `,
+                children: /* @__PURE__ */ jsx5(GripHorizontal, { className: "w-3 h-3" })
+              }
+            ),
+            /* @__PURE__ */ jsx5("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx5(
+              Console,
+              {
+                logs,
+                onClear: () => setLogs([]),
+                themeMode
+              }
+            ) })
+          ]
+        }
+      )
+    }
+  );
+};
+
+// components/ServerOutput.tsx
+import { useEffect as useEffect3, useRef as useRef3, useState as useState2, useCallback as useCallback2 } from "react";
+import { Send, Server, Clock, AlertCircle, XCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
+import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+var ServerOutput = ({
+  runTrigger,
+  code,
+  themeMode,
+  environmentMode,
+  isBlurred = false
+}) => {
+  const iframeRef = useRef3(null);
+  const containerRef = useRef3(null);
+  const [sandboxSrc, setSandboxSrc] = useState2("");
+  const [logs, setLogs] = useState2([]);
+  const [route, setRoute] = useState2("/");
+  const [method, setMethod] = useState2("GET");
+  const [response, setResponse] = useState2(null);
+  const [isLoading, setIsLoading] = useState2(false);
+  const [serverReady, setServerReady] = useState2(false);
+  const [runtimeError, setRuntimeError] = useState2(null);
+  const [consoleHeight, setConsoleHeight] = useState2(150);
+  const [isDragging, setIsDragging] = useState2(false);
+  useEffect3(() => {
+    const url = createSandboxUrl(environmentMode);
+    setSandboxSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [environmentMode]);
+  useEffect3(() => {
+    if (runTrigger > 0 && iframeRef.current?.contentWindow) {
+      setServerReady(false);
+      setResponse(null);
+      setRuntimeError(null);
+      setLogs([]);
+      executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    }
+  }, [runTrigger, code]);
+  useEffect3(() => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    }
+  }, [themeMode]);
+  useEffect3(() => {
+    const handleMessage = (event) => {
+      const { type, payload } = event.data;
       if (type === "SERVER_READY") {
         setServerReady(true);
         setRuntimeError(null);
-      }
-      if (type === "REQUEST_COMPLETE") {
+        setLogs((prev) => [...prev, { type: "log", content: "[System] Server listening...", timestamp: Date.now() }]);
+      } else if (type === "REQUEST_COMPLETE") {
         setResponse(payload);
         setIsLoading(false);
-      }
-      if (type === "RUNTIME_ERROR") {
+      } else if (type === "RUNTIME_ERROR") {
         setRuntimeError(payload);
         setIsLoading(false);
+        setLogs((prev) => [...prev, { type: "error", content: payload, timestamp: Date.now() }]);
         if (!serverReady) setServerReady(false);
+      } else if (type === "CONSOLE_LOG" || type === "CONSOLE_WARN") {
+        setLogs((prev) => [...prev, {
+          type: type === "CONSOLE_WARN" ? "warn" : "log",
+          content: payload,
+          timestamp: Date.now()
+        }]);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -925,17 +1032,51 @@ var ServerOutput = ({
       }, "*");
     }, 300);
   };
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleMouseMove = useCallback2((e) => {
+    if (!isDragging || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const relativeY = e.clientY - containerRect.top;
+    const newHeight = containerRect.height - relativeY;
+    const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
+    setConsoleHeight(clampedHeight);
+  }, [isDragging]);
+  const handleMouseUp = useCallback2(() => {
+    setIsDragging(false);
+  }, []);
+  useEffect3(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
   const isReady = runTrigger > 0;
-  return /* @__PURE__ */ jsxs3("div", { className: "flex flex-col h-full w-full gap-2", children: [
-    /* @__PURE__ */ jsxs3("div", { className: `
+  return /* @__PURE__ */ jsxs5("div", { className: "flex flex-col h-full w-full gap-2", children: [
+    /* @__PURE__ */ jsxs5("div", { className: `
         flex items-center gap-2 p-2 rounded-md border transition-colors
         ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}
       `, children: [
-      /* @__PURE__ */ jsx5("div", { className: `
+      /* @__PURE__ */ jsx6("div", { className: `
             px-3 py-1.5 rounded text-xs font-bold tracking-wider
             ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}
          `, children: "GET" }),
-      /* @__PURE__ */ jsx5(
+      /* @__PURE__ */ jsx6(
         "input",
         {
           type: "text",
@@ -948,7 +1089,7 @@ var ServerOutput = ({
             `
         }
       ),
-      /* @__PURE__ */ jsxs3(
+      /* @__PURE__ */ jsxs5(
         Button,
         {
           onClick: sendRequest,
@@ -956,64 +1097,83 @@ var ServerOutput = ({
           className: "!py-1 !px-3 h-8 text-xs",
           children: [
             isLoading ? "Sending..." : "Send",
-            !isLoading && /* @__PURE__ */ jsx5(Send, { className: "w-3 h-3 ml-1" })
+            !isLoading && /* @__PURE__ */ jsx6(Send, { className: "w-3 h-3 ml-1" })
           ]
         }
       )
     ] }),
-    /* @__PURE__ */ jsx5(
+    /* @__PURE__ */ jsx6(
       PreviewContainer,
       {
         themeMode,
         isReady,
         overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-        children: /* @__PURE__ */ jsxs3("div", { className: "flex flex-col h-full relative", children: [
-          isReady && !serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs3("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs", children: [
-            /* @__PURE__ */ jsx5(Clock, { className: "w-3 h-3 animate-pulse" }),
-            /* @__PURE__ */ jsx5("span", { children: "Starting Server..." })
+        children: /* @__PURE__ */ jsxs5("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
+          isReady && !serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs", children: [
+            /* @__PURE__ */ jsx6(Clock, { className: "w-3 h-3 animate-pulse" }),
+            /* @__PURE__ */ jsx6("span", { children: "Starting Server..." })
           ] }),
-          isReady && serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs3("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-500 text-xs", children: [
-            /* @__PURE__ */ jsx5(Server, { className: "w-3 h-3" }),
-            /* @__PURE__ */ jsx5("span", { children: "Listening on :3000" })
+          isReady && serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-500 text-xs", children: [
+            /* @__PURE__ */ jsx6(Server, { className: "w-3 h-3" }),
+            /* @__PURE__ */ jsx6("span", { children: "Listening on :3000" })
           ] }),
-          isReady && runtimeError && !isBlurred && /* @__PURE__ */ jsxs3("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-xs", children: [
-            /* @__PURE__ */ jsx5(XCircle, { className: "w-3 h-3" }),
-            /* @__PURE__ */ jsx5("span", { children: "Server Error" })
+          isReady && runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-xs", children: [
+            /* @__PURE__ */ jsx6(XCircle, { className: "w-3 h-3" }),
+            /* @__PURE__ */ jsx6("span", { children: "Server Error" })
           ] }),
-          /* @__PURE__ */ jsx5("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs3("div", { className: "animate-in fade-in zoom-in-95 duration-300 p-4 border border-red-500/20 rounded bg-red-500/5", children: [
-            /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
-              /* @__PURE__ */ jsx5(AlertCircle, { className: "w-4 h-4" }),
-              /* @__PURE__ */ jsx5("span", { children: "Runtime Error" })
+          /* @__PURE__ */ jsx6("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs5("div", { className: "animate-in fade-in zoom-in-95 duration-300 p-4 border border-red-500/20 rounded bg-red-500/5", children: [
+            /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
+              /* @__PURE__ */ jsx6(AlertCircle, { className: "w-4 h-4" }),
+              /* @__PURE__ */ jsx6("span", { children: "Runtime Error" })
             ] }),
-            /* @__PURE__ */ jsx5("pre", { className: "whitespace-pre-wrap break-all text-red-400 opacity-90", children: runtimeError }),
-            /* @__PURE__ */ jsx5("p", { className: "mt-4 text-xs text-gray-500", children: "Check the console log below for more details." })
-          ] }) : response ? /* @__PURE__ */ jsxs3("div", { className: "animate-in fade-in slide-in-from-bottom-2 duration-300", children: [
-            /* @__PURE__ */ jsxs3("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: [
-              /* @__PURE__ */ jsxs3("span", { className: `font-bold ${response.status >= 200 && response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
+            /* @__PURE__ */ jsx6("pre", { className: "whitespace-pre-wrap break-all text-red-400 opacity-90", children: runtimeError })
+          ] }) : response ? /* @__PURE__ */ jsxs5("div", { className: "animate-in fade-in slide-in-from-bottom-2 duration-300", children: [
+            /* @__PURE__ */ jsxs5("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: [
+              /* @__PURE__ */ jsxs5("span", { className: `font-bold ${response.status >= 200 && response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
                 response.status,
                 " ",
                 response.status === 200 ? "OK" : "Error"
               ] }),
-              /* @__PURE__ */ jsxs3("span", { className: "text-xs opacity-50", children: [
+              /* @__PURE__ */ jsxs5("span", { className: "text-xs opacity-50", children: [
                 (Math.random() * 40 + 10).toFixed(0),
                 "ms"
               ] })
             ] }),
-            /* @__PURE__ */ jsx5("pre", { className: `whitespace-pre-wrap break-all ${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
-          ] }) : /* @__PURE__ */ jsxs3("div", { className: "h-full flex flex-col items-center justify-center opacity-20 select-none", children: [
-            /* @__PURE__ */ jsx5(Server, { className: "w-12 h-12 mb-2" }),
-            /* @__PURE__ */ jsx5("p", { children: runtimeError ? "Fix errors to restart server" : "No response data" })
+            /* @__PURE__ */ jsx6("pre", { className: `whitespace-pre-wrap break-all ${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
+          ] }) : /* @__PURE__ */ jsxs5("div", { className: "h-full flex flex-col items-center justify-center opacity-20 select-none", children: [
+            /* @__PURE__ */ jsx6(Server, { className: "w-12 h-12 mb-2" }),
+            /* @__PURE__ */ jsx6("p", { children: runtimeError ? "Fix errors to restart server" : "No response data" })
           ] }) }),
-          /* @__PURE__ */ jsx5("div", { className: "h-1/3 border-t border-gray-500/20 relative", children: /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsx6(
+            "div",
+            {
+              onMouseDown: handleMouseDown,
+              className: `
+                    h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
+                    ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}
+                    ${isDragging ? "!bg-blue-600 !text-white" : ""}
+                `,
+              children: /* @__PURE__ */ jsx6(GripHorizontal2, { className: "w-3 h-3" })
+            }
+          ),
+          /* @__PURE__ */ jsx6("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx6(
+            Console,
+            {
+              logs,
+              onClear: () => setLogs([]),
+              themeMode
+            }
+          ) }),
+          /* @__PURE__ */ jsx6(
             "iframe",
             {
               ref: iframeRef,
               src: sandboxSrc,
-              title: "Server Console",
+              title: "Server Execution",
               sandbox: SANDBOX_ATTRIBUTES,
-              className: "w-full h-full border-none"
+              className: "hidden"
             }
-          ) })
+          )
         ] })
       }
     )
@@ -1070,7 +1230,7 @@ var getDocsForMode = (mode) => {
 };
 
 // components/HelpSidebar.tsx
-import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
 var HelpSidebar = ({
   isOpen,
   onClose,
@@ -1079,7 +1239,7 @@ var HelpSidebar = ({
 }) => {
   const docs = getDocsForMode(environmentMode);
   if (!isOpen) return null;
-  return /* @__PURE__ */ jsxs4(
+  return /* @__PURE__ */ jsxs6(
     "aside",
     {
       className: `
@@ -1087,46 +1247,46 @@ var HelpSidebar = ({
         ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-gray-50 border-gray-200"}
       `,
       children: [
-        /* @__PURE__ */ jsxs4("div", { className: `
+        /* @__PURE__ */ jsxs6("div", { className: `
         flex items-center justify-between px-4 h-12 shrink-0 border-b
         ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-white"}
       `, children: [
-          /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsx6(BookOpen, { className: `w-4 h-4 ${themeMode === "dark" ? "text-blue-400" : "text-blue-600"}` }),
-            /* @__PURE__ */ jsx6("h2", { className: "font-semibold text-sm", children: "Documentation" })
+          /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx7(BookOpen, { className: `w-4 h-4 ${themeMode === "dark" ? "text-blue-400" : "text-blue-600"}` }),
+            /* @__PURE__ */ jsx7("h2", { className: "font-semibold text-sm", children: "Documentation" })
           ] }),
-          /* @__PURE__ */ jsx6(Button, { variant: "ghost", onClick: onClose, className: "!p-1 h-8 w-8", children: /* @__PURE__ */ jsx6(X, { className: "w-4 h-4" }) })
+          /* @__PURE__ */ jsx7(Button, { variant: "ghost", onClick: onClose, className: "!p-1 h-8 w-8", children: /* @__PURE__ */ jsx7(X, { className: "w-4 h-4" }) })
         ] }),
-        /* @__PURE__ */ jsx6("div", { className: "flex-1 overflow-y-auto p-4 space-y-6", children: docs ? docs.map((section, idx) => /* @__PURE__ */ jsxs4("div", { children: [
-          /* @__PURE__ */ jsx6("h3", { className: `
+        /* @__PURE__ */ jsx7("div", { className: "flex-1 overflow-y-auto p-4 space-y-6", children: docs ? docs.map((section, idx) => /* @__PURE__ */ jsxs6("div", { children: [
+          /* @__PURE__ */ jsx7("h3", { className: `
                 text-xs font-bold uppercase tracking-wider mb-3
                 ${themeMode === "dark" ? "text-gray-500" : "text-gray-500"}
               `, children: section.title }),
-          /* @__PURE__ */ jsx6("div", { className: "space-y-3", children: section.items.map((item, i) => /* @__PURE__ */ jsxs4("div", { className: `
+          /* @__PURE__ */ jsx7("div", { className: "space-y-3", children: section.items.map((item, i) => /* @__PURE__ */ jsxs6("div", { className: `
                     p-3 rounded-md text-sm
                     ${themeMode === "dark" ? "bg-black/20 hover:bg-black/40" : "bg-white shadow-sm border border-gray-100"}
                   `, children: [
-            /* @__PURE__ */ jsx6("code", { className: `
+            /* @__PURE__ */ jsx7("code", { className: `
                       font-mono text-xs block mb-1
                       ${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}
                     `, children: item.name }),
-            /* @__PURE__ */ jsx6("p", { className: `
+            /* @__PURE__ */ jsx7("p", { className: `
                       leading-relaxed text-xs opacity-90
                       ${themeMode === "dark" ? "text-gray-300" : "text-gray-600"}
                     `, children: item.desc }),
-            item.example && /* @__PURE__ */ jsx6("div", { className: `
+            item.example && /* @__PURE__ */ jsx7("div", { className: `
                         mt-2 p-2 rounded text-xs font-mono overflow-x-auto whitespace-pre
                         ${themeMode === "dark" ? "bg-black/30 text-gray-400" : "bg-gray-50 text-gray-600"}
                       `, children: item.example })
           ] }, i)) })
-        ] }, idx)) : /* @__PURE__ */ jsx6("div", { className: "text-center py-8 opacity-60 text-sm", children: /* @__PURE__ */ jsx6("p", { children: "No documentation available for this mode." }) }) })
+        ] }, idx)) : /* @__PURE__ */ jsx7("div", { className: "text-center py-8 opacity-60 text-sm", children: /* @__PURE__ */ jsx7("p", { children: "No documentation available for this mode." }) }) })
       ]
     }
   );
 };
 
 // components/CodingEnvironment.tsx
-import { jsx as jsx7, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
 var CodingEnvironment = ({
   code,
   onChange,
@@ -1142,14 +1302,17 @@ var CodingEnvironment = ({
   const [predictionAnswer, setPredictionAnswer] = useState3("");
   const [isPredictionLocked, setIsPredictionLocked] = useState3(false);
   const [layout, setLayout] = useState3("horizontal");
+  const containerRef = useRef4(null);
+  const [editorRatio, setEditorRatio] = useState3(0.5);
+  const [isDragging, setIsDragging] = useState3(false);
   const hasDocs = !!getDocsForMode(environmentMode);
-  const hasPredictionTask = !!predictionPrompt;
+  const hasPredictionTask = predictionPrompt !== void 0 && predictionPrompt !== null && predictionPrompt !== "";
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
-  useEffect3(() => {
+  useEffect4(() => {
     setPredictionAnswer("");
     setIsPredictionLocked(false);
   }, [sessionId]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (!hasDocs) setIsHelpOpen(false);
   }, [environmentMode, hasDocs]);
   const handleRunClick = () => {
@@ -1158,9 +1321,46 @@ var CodingEnvironment = ({
     }
     onRun();
   };
-  const toggleLayout = () => {
-    setLayout((prev) => prev === "horizontal" ? "vertical" : "horizontal");
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
+  const handleMouseMove = useCallback3((e) => {
+    if (!isDragging || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    let newRatio = 0.5;
+    if (layout === "horizontal") {
+      const relativeX = e.clientX - containerRect.left;
+      newRatio = relativeX / containerRect.width;
+    } else {
+      const relativeY = e.clientY - containerRect.top;
+      newRatio = relativeY / containerRect.height;
+    }
+    newRatio = Math.max(0.1, Math.min(0.9, newRatio));
+    setEditorRatio(newRatio);
+  }, [isDragging, layout]);
+  const handleMouseUp = useCallback3(() => {
+    setIsDragging(false);
+  }, []);
+  useEffect4(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = layout === "horizontal" ? "col-resize" : "row-resize";
+    } else {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp, layout]);
   let fileName = "script.js";
   switch (environmentMode) {
     case "p5":
@@ -1185,24 +1385,24 @@ var CodingEnvironment = ({
       fileName = "script.js";
   }
   const isServerMode = environmentMode === "express" || environmentMode === "express-ts";
-  return /* @__PURE__ */ jsxs5("main", { className: "flex-1 overflow-hidden flex flex-col relative", children: [
-    hasPredictionTask && /* @__PURE__ */ jsx7("div", { className: `
+  return /* @__PURE__ */ jsxs7("main", { className: "flex-1 overflow-hidden flex flex-col relative", children: [
+    hasPredictionTask && /* @__PURE__ */ jsx8("div", { className: `
           shrink-0 border-b p-4 flex flex-col gap-3 transition-colors duration-300
           ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50/50 border-blue-100"}
-        `, children: /* @__PURE__ */ jsxs5("div", { className: "flex items-start gap-3", children: [
-      /* @__PURE__ */ jsx7("div", { className: `p-2 rounded-lg shrink-0 ${themeMode === "dark" ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-700"}`, children: /* @__PURE__ */ jsx7(Brain, { className: "w-5 h-5" }) }),
-      /* @__PURE__ */ jsxs5("div", { className: "flex-1 space-y-2", children: [
-        /* @__PURE__ */ jsxs5("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxs5("div", { children: [
-            /* @__PURE__ */ jsx7("h3", { className: `text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === "dark" ? "text-purple-400" : "text-purple-700"}`, children: "Predict" }),
-            /* @__PURE__ */ jsx7("p", { className: `text-sm leading-relaxed ${themeMode === "dark" ? "text-gray-300" : "text-gray-800"}`, children: predictionPrompt })
+        `, children: /* @__PURE__ */ jsxs7("div", { className: "flex items-start gap-3", children: [
+      /* @__PURE__ */ jsx8("div", { className: `p-2 rounded-lg shrink-0 ${themeMode === "dark" ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-700"}`, children: /* @__PURE__ */ jsx8(Brain, { className: "w-5 h-5" }) }),
+      /* @__PURE__ */ jsxs7("div", { className: "flex-1 space-y-2", children: [
+        /* @__PURE__ */ jsxs7("div", { className: "flex items-center justify-between", children: [
+          /* @__PURE__ */ jsxs7("div", { className: "flex-1", children: [
+            /* @__PURE__ */ jsx8("h3", { className: `text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === "dark" ? "text-purple-400" : "text-purple-700"}`, children: "Predict" }),
+            /* @__PURE__ */ jsx8("div", { className: `text-sm leading-relaxed ${themeMode === "dark" ? "text-gray-300" : "text-gray-800"}`, children: predictionPrompt })
           ] }),
-          isPredictionLocked && /* @__PURE__ */ jsxs5("div", { className: `flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ${themeMode === "dark" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-green-100 text-green-700 border-green-200"}`, children: [
-            /* @__PURE__ */ jsx7(Lock, { className: "w-3 h-3" }),
+          isPredictionLocked && /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ml-4 ${themeMode === "dark" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-green-100 text-green-700 border-green-200"}`, children: [
+            /* @__PURE__ */ jsx8(Lock, { className: "w-3 h-3" }),
             "Locked"
           ] })
         ] }),
-        /* @__PURE__ */ jsx7(
+        /* @__PURE__ */ jsx8(
           "textarea",
           {
             value: predictionAnswer,
@@ -1218,35 +1418,35 @@ var CodingEnvironment = ({
         )
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxs5("div", { className: `h-12 shrink-0 border-b flex items-center justify-between px-4 transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`, children: [
-      /* @__PURE__ */ jsxs5("div", { className: `flex items-center gap-2 transition-colors ${themeMode === "dark" ? "text-gray-400" : "text-gray-600"}`, children: [
-        /* @__PURE__ */ jsx7(FileCode, { className: "w-4 h-4" }),
-        /* @__PURE__ */ jsx7("span", { className: "text-sm font-mono opacity-80", children: fileName }),
-        hasPredictionTask && /* @__PURE__ */ jsx7("span", { className: "ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20", children: "Read Only" })
+    /* @__PURE__ */ jsxs7("div", { className: `h-12 shrink-0 border-b flex items-center justify-between px-4 transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`, children: [
+      /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-2 transition-colors ${themeMode === "dark" ? "text-gray-400" : "text-gray-600"}`, children: [
+        /* @__PURE__ */ jsx8(FileCode, { className: "w-4 h-4" }),
+        /* @__PURE__ */ jsx8("span", { className: "text-sm font-mono opacity-80", children: fileName }),
+        hasPredictionTask && /* @__PURE__ */ jsx8("span", { className: "ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20", children: "Read Only" })
       ] }),
-      /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-3", children: [
-        /* @__PURE__ */ jsxs5("div", { className: "hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5", children: [
-          /* @__PURE__ */ jsx7(
+      /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxs7("div", { className: "hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5", children: [
+          /* @__PURE__ */ jsx8(
             "button",
             {
               onClick: () => setLayout("horizontal"),
               className: `p-1.5 rounded ${layout === "horizontal" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
               title: "Split Screen (Side by Side)",
-              children: /* @__PURE__ */ jsx7(Columns, { className: "w-3.5 h-3.5" })
+              children: /* @__PURE__ */ jsx8(Columns, { className: "w-3.5 h-3.5" })
             }
           ),
-          /* @__PURE__ */ jsx7(
+          /* @__PURE__ */ jsx8(
             "button",
             {
               onClick: () => setLayout("vertical"),
               className: `p-1.5 rounded ${layout === "vertical" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
               title: "Vertical Split (Stacked)",
-              children: /* @__PURE__ */ jsx7(Rows, { className: "w-3.5 h-3.5" })
+              children: /* @__PURE__ */ jsx8(Rows, { className: "w-3.5 h-3.5" })
             }
           )
         ] }),
-        /* @__PURE__ */ jsx7("div", { className: `h-4 w-px mx-1 ${themeMode === "dark" ? "bg-white/10" : "bg-gray-200"}` }),
-        hasDocs && /* @__PURE__ */ jsxs5(
+        /* @__PURE__ */ jsx8("div", { className: `h-4 w-px mx-1 ${themeMode === "dark" ? "bg-white/10" : "bg-gray-200"}` }),
+        hasDocs && /* @__PURE__ */ jsxs7(
           Button,
           {
             variant: "ghost",
@@ -1254,62 +1454,103 @@ var CodingEnvironment = ({
             className: `!px-2 ${isHelpOpen ? "bg-blue-500/10 text-blue-500" : ""}`,
             title: "Toggle Documentation",
             children: [
-              /* @__PURE__ */ jsx7(Book, { className: "w-4 h-4" }),
-              /* @__PURE__ */ jsx7("span", { className: "hidden sm:inline text-xs ml-2", children: "Help" })
+              /* @__PURE__ */ jsx8(Book, { className: "w-4 h-4" }),
+              /* @__PURE__ */ jsx8("span", { className: "hidden sm:inline text-xs ml-2", children: "Help" })
             ]
           }
         ),
-        /* @__PURE__ */ jsx7(
+        /* @__PURE__ */ jsx8(
           Button,
           {
             onClick: handleRunClick,
             disabled: isRunning || !isPredictionFulfilled,
             className: `h-8 px-4 text-sm font-semibold shadow-sm transition-all duration-300 ${!isPredictionFulfilled ? "opacity-50 cursor-not-allowed grayscale" : ""}`,
-            icon: isRunning ? /* @__PURE__ */ jsx7(CheckCircle2, { className: "w-3.5 h-3.5 animate-pulse" }) : /* @__PURE__ */ jsx7(Play, { className: "w-3.5 h-3.5 fill-current" }),
+            icon: isRunning ? /* @__PURE__ */ jsx8(CheckCircle2, { className: "w-3.5 h-3.5 animate-pulse" }) : /* @__PURE__ */ jsx8(Play, { className: "w-3.5 h-3.5 fill-current" }),
             children: isRunning ? "Running..." : "Run Code"
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxs5("div", { className: "flex-1 flex overflow-hidden", children: [
-      /* @__PURE__ */ jsxs5("div", { className: `flex-1 flex overflow-hidden min-w-0 ${layout === "horizontal" ? "flex-col md:flex-row" : "flex-col"}`, children: [
-        /* @__PURE__ */ jsx7("section", { className: `
-             flex-1 flex flex-col relative group transition-colors duration-300 min-w-0
-             ${layout === "horizontal" ? "min-h-[40%] md:min-h-0 border-b md:border-b-0 md:border-r" : "min-h-[40%] border-b"}
+    /* @__PURE__ */ jsxs7("div", { className: "flex-1 flex overflow-hidden", children: [
+      /* @__PURE__ */ jsxs7(
+        "div",
+        {
+          ref: containerRef,
+          className: `flex-1 flex overflow-hidden min-w-0 ${layout === "horizontal" ? "flex-row" : "flex-col"}`,
+          children: [
+            /* @__PURE__ */ jsx8(
+              "section",
+              {
+                style: {
+                  [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%`
+                },
+                className: `
+             flex flex-col relative group transition-colors duration-300 min-w-0
              ${themeMode === "dark" ? "border-gray-800" : "border-gray-200"}
-          `, children: /* @__PURE__ */ jsx7(
-          CodeEditor,
-          {
-            code,
-            onChange: (val) => onChange(val || ""),
-            themeMode,
-            environmentMode,
-            sessionId,
-            readOnly: hasPredictionTask
-          }
-        ) }),
-        /* @__PURE__ */ jsx7("section", { className: `flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}`, children: /* @__PURE__ */ jsx7("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx7(
-          ServerOutput,
-          {
-            runTrigger,
-            code,
-            themeMode,
-            environmentMode,
-            isBlurred: !isPredictionFulfilled
-          }
-        ) : /* @__PURE__ */ jsx7(
-          OutputFrame,
-          {
-            runTrigger,
-            code,
-            themeMode,
-            environmentMode,
-            isBlurred: !isPredictionFulfilled,
-            isPredictionMode: hasPredictionTask
-          }
-        ) }) })
-      ] }),
-      hasDocs && isHelpOpen && /* @__PURE__ */ jsx7(
+            `,
+                children: /* @__PURE__ */ jsx8(
+                  CodeEditor,
+                  {
+                    code,
+                    onChange: (val) => onChange(val || ""),
+                    themeMode,
+                    environmentMode,
+                    sessionId,
+                    readOnly: hasPredictionTask
+                  }
+                )
+              }
+            ),
+            /* @__PURE__ */ jsx8(
+              "div",
+              {
+                onMouseDown: handleMouseDown,
+                className: `
+                z-20 flex items-center justify-center shrink-0 hover:bg-blue-500 hover:text-white transition-colors
+                ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-600 border-black/20" : "bg-gray-100 text-gray-400 border-white"}
+                ${isDragging ? "!bg-blue-600 !text-white" : ""}
+                ${layout === "horizontal" ? "w-3 h-full cursor-col-resize border-l border-r" : "h-3 w-full cursor-row-resize border-t border-b"}
+            `,
+                children: layout === "horizontal" ? /* @__PURE__ */ jsx8(GripVertical, { className: "w-3 h-3" }) : /* @__PURE__ */ jsx8(GripHorizontal3, { className: "w-3 h-3" })
+              }
+            ),
+            /* @__PURE__ */ jsx8(
+              "section",
+              {
+                style: {
+                  [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%`
+                },
+                className: `
+                flex flex-col relative transition-colors duration-300 min-w-0 
+                ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}
+                ${isDragging ? "pointer-events-none" : ""} /* Prevent iframe stealing mouse events */
+            `,
+                children: /* @__PURE__ */ jsx8("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx8(
+                  ServerOutput,
+                  {
+                    runTrigger,
+                    code,
+                    themeMode,
+                    environmentMode,
+                    isBlurred: !isPredictionFulfilled
+                  }
+                ) : /* @__PURE__ */ jsx8(
+                  OutputFrame,
+                  {
+                    runTrigger,
+                    code,
+                    themeMode,
+                    environmentMode,
+                    isBlurred: !isPredictionFulfilled,
+                    isPredictionMode: hasPredictionTask
+                  }
+                ) })
+              }
+            )
+          ]
+        }
+      ),
+      hasDocs && isHelpOpen && /* @__PURE__ */ jsx8(
         HelpSidebar,
         {
           isOpen: isHelpOpen,
@@ -1323,7 +1564,7 @@ var CodingEnvironment = ({
 };
 
 // components/CodeShoebox.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx9 } from "react/jsx-runtime";
 var CodeShoebox = ({
   code,
   onCodeChange,
@@ -1335,7 +1576,7 @@ var CodeShoebox = ({
 }) => {
   const [runTrigger, setRunTrigger] = useState4(0);
   const [isRunning, setIsRunning] = useState4(false);
-  useEffect4(() => {
+  useEffect5(() => {
     setRunTrigger(0);
     setIsRunning(false);
   }, [sessionId]);
@@ -1362,12 +1603,12 @@ var CodeShoebox = ({
       "--foreground": colors.foreground || defaultFg
     };
   }, [themeMode, theme]);
-  return /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsx9(
     "div",
     {
       className: "flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
       style: themeStyles,
-      children: /* @__PURE__ */ jsx8(
+      children: /* @__PURE__ */ jsx9(
         CodingEnvironment,
         {
           sessionId,
@@ -1387,7 +1628,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-import { useState as useState5, useEffect as useEffect5, useCallback } from "react";
+import { useState as useState5, useEffect as useEffect6, useCallback as useCallback4 } from "react";
 
 // theme.ts
 var baseTheme = {
@@ -1716,7 +1957,7 @@ var getStarterCode = (mode) => {
 };
 var useSandboxState = (persistenceKey) => {
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : "";
-  const getStorageKey = useCallback((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
+  const getStorageKey = useCallback4((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
   const loadSavedMode = () => {
     if (!persistenceKey || typeof window === "undefined") return "dom";
     try {
@@ -1760,31 +2001,31 @@ var useSandboxState = (persistenceKey) => {
     return loadSavedCode(environmentMode);
   });
   const [sessionId, setSessionId] = useState5(0);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     const key = getStorageKey(`code_${environmentMode}`);
     localStorage.setItem(key, code);
   }, [code, environmentMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_mode"), themeMode);
   }, [themeMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_name"), activeThemeName);
   }, [activeThemeName, persistenceKey, getStorageKey]);
-  const switchMode = useCallback((newMode) => {
+  const switchMode = useCallback4((newMode) => {
     if (newMode === environmentMode) return;
     const savedCode = loadSavedCode(newMode);
     setEnvironmentMode(newMode);
     setCode(savedCode);
     setSessionId((prev) => prev + 1);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  const resetCode = useCallback(() => {
+  const resetCode = useCallback4(() => {
     const starter = getStarterCode(environmentMode);
     setCode(starter);
     setSessionId((prev) => prev + 1);

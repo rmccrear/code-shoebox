@@ -21,12 +21,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.7**:
+To install version **v1.0.10**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.7
+npm install github:rmccrear/code-shoebox#v1.0.10
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.7
+yarn add github:rmccrear/code-shoebox#v1.0.10
 ```
 
 ## Styling Setup
@@ -257,6 +257,8 @@ Identical to the Express mode but with full TypeScript support. Import `Request`
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
 
+This prop accepts **strings** or **JSX (React Nodes)**, allowing you to pass rich content like bullet lists, bold text, or code snippets within the question.
+
 **Behavior:**
 1.  **Locked Editor**: The code becomes Read-Only.
 2.  **Hidden Output**: The output frame is blurred/hidden.
@@ -265,18 +267,24 @@ CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passi
 
 ```tsx
 <CodeShoebox 
-  code={`
-    let count = 0;
-    for(let i = 0; i < 5; i++) {
-        count += i;
-    }
-    console.log(count);
-  `}
+  code={`console.log("Mystery");`}
   onCodeChange={() => {}} 
   environmentMode="dom"
   theme={activeTheme}
   themeMode="dark"
-  prediction_prompt="What will be the final value of 'count' logged to the console?"
+  // You can pass a string
+  // prediction_prompt="What will be the final value?"
+  
+  // Or pass JSX for formatting
+  prediction_prompt={
+    <div>
+       <p style={{ fontWeight: 'bold' }}>Analyze the code below:</p>
+       <ul style={{ paddingLeft: 20, listStyle: 'disc' }}>
+         <li>What is the function name?</li>
+         <li>What are the arguments?</li>
+       </ul>
+    </div>
+  }
 />
 ```
 
@@ -374,7 +382,7 @@ const matrixTheme = {
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor (clearing undo history). Handled automatically by `useSandboxState`. |
-| `prediction_prompt` | `string` | No | If provided, locks the editor in "Read Only" mode and blurs the output until the user enters a prediction. |
+| `prediction_prompt` | `string \| React.ReactNode` | No | If provided, locks the editor in "Read Only" mode and blurs the output until the user enters a prediction. Accepts plain text or formatted JSX (e.g., lists, bold text). |
 
 ## Development
 
