@@ -190,3 +190,44 @@ app.listen(port, () => {
   console.log(\`Mock server listening on port \${port}\`);
 });
 `;
+
+export const EXPRESS_TS_STARTER_CODE = `// Express + TypeScript Simulator
+import express, { Request, Response } from 'express';
+
+const app = express();
+const port = 3000;
+
+interface Product {
+  id: number;
+  name: string;
+  stock: number;
+}
+
+const inventory: Product[] = [
+  { id: 101, name: "Laptop", stock: 5 },
+  { id: 102, name: "Mouse", stock: 12 }
+];
+
+app.get('/', (req: Request, res: Response) => {
+  res.json({ status: "system_nominal", timestamp: Date.now() });
+});
+
+app.get('/products', (req: Request, res: Response) => {
+  res.json(inventory);
+});
+
+app.get('/products/:id', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const item = inventory.find(p => p.id === id);
+  
+  if (item) {
+    res.json(item);
+  } else {
+    res.status(404).json({ error: "Product not found" });
+  }
+});
+
+app.listen(port, () => {
+  console.log(\`TS Server initialized on port \${port}\`);
+});
+`;

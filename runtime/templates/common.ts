@@ -78,6 +78,20 @@ export const CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
     const consoleOutput = document.getElementById('console-output');
     
+    function formatMessage(msg) {
+        if (msg instanceof Error) {
+            return msg.toString();
+        }
+        if (typeof msg === 'object' && msg !== null) {
+            try {
+                return JSON.stringify(msg, null, 2);
+            } catch (e) {
+                return '[Circular Object]';
+            }
+        }
+        return String(msg);
+    }
+
     function logToScreen(msg, type = 'log') {
         consoleOutput.style.display = 'block';
         const line = document.createElement('div');
@@ -85,7 +99,7 @@ export const CONSOLE_INTERCEPTOR = `
         line.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
         line.style.padding = '2px 0';
         
-        const textContent = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : String(msg);
+        const textContent = formatMessage(msg);
         line.textContent = '> ' + textContent;
         
         consoleOutput.appendChild(line);
@@ -109,6 +123,13 @@ export const CONSOLE_INTERCEPTOR = `
     console.error = function(...args) {
         originalError.apply(console, args);
         args.forEach(arg => logToScreen(arg, 'error'));
+    };
+
+    // Support console.table specifically for array/object data visualization
+    const originalTable = console.table;
+    console.table = function(data) {
+        originalTable.apply(console, [data]);
+        logToScreen(data, 'log'); // We just log the JSON for now in the small console
     };
 
     window.onerror = function(message, source, lineno, colno, error) {

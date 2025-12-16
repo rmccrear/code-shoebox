@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, LayoutTemplate, ArrowLeft } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
@@ -102,6 +103,7 @@ const App: React.FC = () => {
                   <option value="react" className="text-black">React (JS)</option>
                   <option value="react-ts" className="text-black">React (TS)</option>
                   <option value="express" className="text-black">Node / Express</option>
+                  <option value="express-ts" className="text-black">Express (TS)</option>
                 </select>
               </div>
             </div>

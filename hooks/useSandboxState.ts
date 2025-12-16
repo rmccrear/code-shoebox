@@ -8,7 +8,8 @@ import {
   REACT_STARTER_CODE, 
   TYPESCRIPT_STARTER_CODE,
   REACT_TS_STARTER_CODE,
-  EXPRESS_STARTER_CODE 
+  EXPRESS_STARTER_CODE,
+  EXPRESS_TS_STARTER_CODE
 } from '../constants';
 
 // Helper: Get starter code for a specific mode
@@ -19,6 +20,7 @@ const getStarterCode = (mode: EnvironmentMode) => {
     case 'typescript': return TYPESCRIPT_STARTER_CODE;
     case 'react-ts': return REACT_TS_STARTER_CODE;
     case 'express': return EXPRESS_STARTER_CODE;
+    case 'express-ts': return EXPRESS_TS_STARTER_CODE;
     default: return STARTER_CODE;
   }
 };

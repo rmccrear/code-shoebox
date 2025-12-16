@@ -1,7 +1,8 @@
 
 import { BASE_HTML_WRAPPER } from "./common";
 
-const EXPRESS_SHIM = `
+// Export the mock logic so it can be reused by express-ts
+export const EXPRESS_MOCK_SETUP = `
     // --- Mock Express & Response Objects ---
 
     class MockResponse {
@@ -38,39 +39,26 @@ const EXPRESS_SHIM = `
         }
 
         get(path, handler) {
-            // Convert Express path params (e.g. /users/:id) to regex for simple matching
-            // This is a basic implementation.
             const regexPath = path.replace(/:[^/]+/g, '([^/]+)');
             this.routes.GET[regexPath] = { originalPath: path, handler };
         }
 
         listen(port, cb) {
             if (cb) cb();
-            // Notify parent that app is ready
             window.parent.postMessage({ type: 'SERVER_READY' }, '*');
         }
 
-        // Internal method to process incoming requests from the UI
         async _handleRequest(method, url) {
             console.log(\`Incoming Request: \${method} \${url}\`);
             
             const methodRoutes = this.routes[method] || {};
             
-            // Find matching route
             for (const routeRegex in methodRoutes) {
                 const match = new RegExp(\`^\${routeRegex}$\`).exec(url);
                 if (match) {
                     const { handler } = methodRoutes[routeRegex];
                     
-                    // Extract params
                     const params = {};
-                    // This is a simplification. A real router tracks param names.
-                    // For this mock, we support basic direct matching or single param.
-                    // If user used :id, we'd need to map match[1] to 'id'.
-                    // For now, let's just expose a basic req object.
-                    
-                    // Improved Param Parsing for simple cases like /users/:id
-                    // We need to know the param keys from originalPath
                     const originalPath = methodRoutes[routeRegex].originalPath;
                     const paramKeys = (originalPath.match(/:([^/]+)/g) || []).map(k => k.substring(1));
                     
@@ -80,12 +68,7 @@ const EXPRESS_SHIM = `
                        });
                     }
 
-                    const req = { 
-                        method, 
-                        url, 
-                        params, 
-                        query: {} // Query parsing omitted for brevity
-                    };
+                    const req = { method, url, params, query: {} };
 
                     return new Promise(resolve => {
                         const res = new MockResponse(resolve);
@@ -105,24 +88,15 @@ const EXPRESS_SHIM = `
 
     // --- Global Shim ---
     const appInstance = new MockApp();
+    
+    // For JS mode: const app = express();
+    // For TS mode shim: require('express') returns window.express
     window.express = function() {
         return appInstance;
     };
-
-    window.runMode = function(code, root) {
-        // Express Mode
-        // We don't use 'root' for visual output, but we clear it to be clean
-        root.innerHTML = '';
-        
-        // Reset routes on re-run
-        appInstance.routes = { GET: {} };
-
-        try {
-            window.eval(code);
-        } catch (err) {
-            console.error(err);
-        }
-    };
+    
+    // Expose instance for reset logic
+    window.appInstance = appInstance;
 
     // --- Message Listener for Test Requests ---
     window.addEventListener('message', async (event) => {
@@ -130,8 +104,6 @@ const EXPRESS_SHIM = `
         if (type === 'SIMULATE_REQUEST') {
             const { method, url } = payload;
             const response = await appInstance._handleRequest(method, url);
-            
-            // Send result back to parent
             window.parent.postMessage({
                 type: 'REQUEST_COMPLETE',
                 payload: response
@@ -140,8 +112,26 @@ const EXPRESS_SHIM = `
     });
 `;
 
+const EXPRESS_JS_RUNNER = `
+    window.runMode = function(code, root) {
+        // Express Mode (JS)
+        root.innerHTML = '';
+        
+        // Reset routes on re-run
+        if (window.appInstance) {
+            window.appInstance.routes = { GET: {} };
+        }
+
+        try {
+            window.eval(code);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+`;
+
 export const generateExpressHtml = (showPlaceholder: boolean = true) => {
-    // We pass false for placeholder usually, or handle it via CSS in the ServerOutput component 
-    // because the console is the main view here.
-    return BASE_HTML_WRAPPER('', EXPRESS_SHIM, false); 
+    // Combine the setup logic and the JS-specific runner
+    const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
+    return BASE_HTML_WRAPPER('', script, false); 
 };

@@ -15,6 +15,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
       return "What property is being accessed on the 'currentUser' object to display the header text?";
     case 'express':
       return "What HTTP status code will the server return if you send a GET request to '/users/99'?";
+    case 'express-ts':
+      return "Look at the route handler for '/products/:id'. What message will be returned if the ID does not exist in the inventory?";
     default:
       return "Predict the output of the code below.";
   }

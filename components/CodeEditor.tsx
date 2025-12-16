@@ -28,6 +28,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     switch (environmentMode) {
       case 'typescript': return `${basePath}.ts`;
       case 'react-ts': return `${basePath}.tsx`;
+      case 'express-ts': return `${basePath}.ts`;
       case 'react': return `${basePath}.jsx`;
       case 'p5': return `${basePath}.js`;
       default: return `${basePath}.js`;
@@ -35,7 +36,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [sessionId, environmentMode]);
 
   const language = useMemo(() => {
-    if (environmentMode === 'typescript' || environmentMode === 'react-ts') return 'typescript';
+    if (environmentMode === 'typescript' || environmentMode === 'react-ts' || environmentMode === 'express-ts') return 'typescript';
     return 'javascript';
   }, [environmentMode]);
 
@@ -49,7 +50,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             target: monaco.languages.typescript.ScriptTarget.ES2020,
             allowNonTsExtensions: true,
             moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-            noLib: false 
+            noLib: false,
+            esModuleInterop: true,
         });
         
         // Add a basic shim for React types
@@ -61,6 +63,36 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                 `,
                 'react-shim.d.ts'
              );
+        }
+
+        // Add a shim for Express types
+        if (environmentMode === 'express-ts') {
+            monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                `
+                declare module 'express' {
+                    export interface Request {
+                        params: any;
+                        query: any;
+                        body: any;
+                        method: string;
+                        url: string;
+                    }
+                    export interface Response {
+                        status(code: number): this;
+                        json(data: any): void;
+                        send(data: any): void;
+                    }
+                    export interface Application {
+                        get(path: string, handler: (req: Request, res: Response) => void): void;
+                        post(path: string, handler: (req: Request, res: Response) => void): void;
+                        listen(port: number, cb?: () => void): void;
+                    }
+                    function express(): Application;
+                    export default express;
+                }
+                `,
+                'express.d.ts'
+            );
         }
     }
   };

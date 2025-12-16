@@ -73,8 +73,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
     case 'typescript': fileName = 'script.ts'; break;
     case 'react-ts': fileName = 'App.tsx'; break;
     case 'express': fileName = 'server.js'; break;
+    case 'express-ts': fileName = 'server.ts'; break;
     default: fileName = 'script.js';
   }
+
+  const isServerMode = environmentMode === 'express' || environmentMode === 'express-ts';
 
   return (
     <main className="flex-1 overflow-hidden flex flex-col relative">
@@ -209,7 +212,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           {/* Output Pane */}
           <section className={`flex-1 flex flex-col min-h-[40%] md:min-h-0 relative transition-colors duration-300 min-w-0 ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <div className="flex-1 p-2 md:p-4 h-full overflow-hidden">
-              {environmentMode === 'express' ? (
+              {isServerMode ? (
                 <ServerOutput
                    runTrigger={runTrigger}
                    code={code}

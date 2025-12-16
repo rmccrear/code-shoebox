@@ -10,6 +10,7 @@ import { generateReactHtml } from "./templates/react";
 import { generateTsHtml } from "./templates/typescript";
 import { generateReactTsHtml } from "./templates/react-ts";
 import { generateExpressHtml } from "./templates/express";
+import { generateExpressTsHtml } from "./templates/express-ts";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 
@@ -36,6 +37,9 @@ export const createSandboxUrl = (mode: EnvironmentMode = 'dom', isPredictionMode
       break;
     case 'express':
       html = generateExpressHtml(showPlaceholder);
+      break;
+    case 'express-ts':
+      html = generateExpressTsHtml(showPlaceholder);
       break;
     default:
       html = generateDomHtml(showPlaceholder);
