@@ -41,10 +41,10 @@ __export(export_exports, {
 module.exports = __toCommonJS(export_exports);
 
 // components/CodeShoebox.tsx
-var import_react8 = require("react");
+var import_react7 = require("react");
 
 // components/CodingEnvironment.tsx
-var import_react7 = require("react");
+var import_react6 = require("react");
 var import_lucide_react5 = require("lucide-react");
 
 // components/CodeEditor.tsx
@@ -161,7 +161,7 @@ var CodeEditor = ({
 };
 
 // components/OutputFrame.tsx
-var import_react5 = require("react");
+var import_react4 = require("react");
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -784,7 +784,6 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
-var import_react4 = require("react");
 var import_lucide_react = require("lucide-react");
 
 // components/Button.tsx
@@ -823,10 +822,6 @@ var Console = ({
   themeMode,
   className = ""
 }) => {
-  const endRef = (0, import_react4.useRef)(null);
-  (0, import_react4.useEffect)(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
@@ -839,18 +834,23 @@ var Console = ({
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_lucide_react.Ban, { className: "w-3 h-3" }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`, children: [
-      logs.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "italic", children: "No output" }) }),
-      logs.map((log, i) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+      "div",
+      {
+        className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`,
+        children: [
+          logs.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "italic", children: "No output" }) }),
+          logs.map((log, i) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `
             border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre-wrap
             ${log.type === "error" ? "text-red-500 bg-red-500/5" : ""}
             ${log.type === "warn" ? "text-yellow-500 bg-yellow-500/5" : ""}
           `, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
-        log.content
-      ] }, i)),
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { ref: endRef })
-    ] })
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
+            log.content
+          ] }, i))
+        ]
+      }
+    )
   ] });
 };
 
@@ -865,20 +865,20 @@ var OutputFrame = ({
   isBlurred = false,
   isPredictionMode = false
 }) => {
-  const iframeRef = (0, import_react5.useRef)(null);
-  const containerRef = (0, import_react5.useRef)(null);
-  const [sandboxSrc, setSandboxSrc] = (0, import_react5.useState)("");
-  const [logs, setLogs] = (0, import_react5.useState)([]);
-  const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
-  (0, import_react5.useEffect)(() => {
+  const iframeRef = (0, import_react4.useRef)(null);
+  const containerRef = (0, import_react4.useRef)(null);
+  const [sandboxSrc, setSandboxSrc] = (0, import_react4.useState)("");
+  const [logs, setLogs] = (0, import_react4.useState)([]);
+  const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
+  (0, import_react4.useEffect)(() => {
     const url = createSandboxUrl(environmentMode, isPredictionMode);
     setSandboxSrc(url);
     return () => {
       URL.revokeObjectURL(url);
     };
   }, [environmentMode, isPredictionMode]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (runTrigger > 0) {
       setLogs([]);
       if (iframeRef.current?.contentWindow) {
@@ -886,12 +886,12 @@ var OutputFrame = ({
       }
     }
   }, [runTrigger]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     const handleMessage = (event) => {
       const { type, payload } = event.data;
       if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
@@ -914,7 +914,7 @@ var OutputFrame = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react5.useCallback)((e) => {
+  const handleMouseMove = (0, import_react4.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
@@ -922,10 +922,10 @@ var OutputFrame = ({
     const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
     setConsoleHeight(clampedHeight);
   }, [isDragging]);
-  const handleMouseUp = (0, import_react5.useCallback)(() => {
+  const handleMouseUp = (0, import_react4.useCallback)(() => {
     setIsDragging(false);
   }, []);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -995,7 +995,7 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-var import_react6 = require("react");
+var import_react5 = require("react");
 var import_lucide_react3 = require("lucide-react");
 var import_jsx_runtime6 = require("react/jsx-runtime");
 var ServerOutput = ({
@@ -1005,24 +1005,24 @@ var ServerOutput = ({
   environmentMode,
   isBlurred = false
 }) => {
-  const iframeRef = (0, import_react6.useRef)(null);
-  const containerRef = (0, import_react6.useRef)(null);
-  const [sandboxSrc, setSandboxSrc] = (0, import_react6.useState)("");
-  const [logs, setLogs] = (0, import_react6.useState)([]);
-  const [route, setRoute] = (0, import_react6.useState)("/");
-  const [method, setMethod] = (0, import_react6.useState)("GET");
-  const [response, setResponse] = (0, import_react6.useState)(null);
-  const [isLoading, setIsLoading] = (0, import_react6.useState)(false);
-  const [serverReady, setServerReady] = (0, import_react6.useState)(false);
-  const [runtimeError, setRuntimeError] = (0, import_react6.useState)(null);
-  const [consoleHeight, setConsoleHeight] = (0, import_react6.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
-  (0, import_react6.useEffect)(() => {
+  const iframeRef = (0, import_react5.useRef)(null);
+  const containerRef = (0, import_react5.useRef)(null);
+  const [sandboxSrc, setSandboxSrc] = (0, import_react5.useState)("");
+  const [logs, setLogs] = (0, import_react5.useState)([]);
+  const [route, setRoute] = (0, import_react5.useState)("/");
+  const [method, setMethod] = (0, import_react5.useState)("GET");
+  const [response, setResponse] = (0, import_react5.useState)(null);
+  const [isLoading, setIsLoading] = (0, import_react5.useState)(false);
+  const [serverReady, setServerReady] = (0, import_react5.useState)(false);
+  const [runtimeError, setRuntimeError] = (0, import_react5.useState)(null);
+  const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
+  (0, import_react5.useEffect)(() => {
     const url = createSandboxUrl(environmentMode);
     setSandboxSrc(url);
     return () => URL.revokeObjectURL(url);
   }, [environmentMode]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (runTrigger > 0 && iframeRef.current?.contentWindow) {
       setServerReady(false);
       setResponse(null);
@@ -1031,12 +1031,12 @@ var ServerOutput = ({
       executeCodeInSandbox(iframeRef.current.contentWindow, code);
     }
   }, [runTrigger, code]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     const handleMessage = (event) => {
       const { type, payload } = event.data;
       if (type === "SERVER_READY") {
@@ -1078,7 +1078,7 @@ var ServerOutput = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react6.useCallback)((e) => {
+  const handleMouseMove = (0, import_react5.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
@@ -1086,10 +1086,10 @@ var ServerOutput = ({
     const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
     setConsoleHeight(clampedHeight);
   }, [isDragging]);
-  const handleMouseUp = (0, import_react6.useCallback)(() => {
+  const handleMouseUp = (0, import_react5.useCallback)(() => {
     setIsDragging(false);
   }, []);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1340,21 +1340,21 @@ var CodingEnvironment = ({
   sessionId,
   predictionPrompt
 }) => {
-  const [isHelpOpen, setIsHelpOpen] = (0, import_react7.useState)(false);
-  const [predictionAnswer, setPredictionAnswer] = (0, import_react7.useState)("");
-  const [isPredictionLocked, setIsPredictionLocked] = (0, import_react7.useState)(false);
-  const [layout, setLayout] = (0, import_react7.useState)("horizontal");
-  const containerRef = (0, import_react7.useRef)(null);
-  const [editorRatio, setEditorRatio] = (0, import_react7.useState)(0.5);
-  const [isDragging, setIsDragging] = (0, import_react7.useState)(false);
+  const [isHelpOpen, setIsHelpOpen] = (0, import_react6.useState)(false);
+  const [predictionAnswer, setPredictionAnswer] = (0, import_react6.useState)("");
+  const [isPredictionLocked, setIsPredictionLocked] = (0, import_react6.useState)(false);
+  const [layout, setLayout] = (0, import_react6.useState)("horizontal");
+  const containerRef = (0, import_react6.useRef)(null);
+  const [editorRatio, setEditorRatio] = (0, import_react6.useState)(0.5);
+  const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
   const hasDocs = !!getDocsForMode(environmentMode);
   const hasPredictionTask = predictionPrompt !== void 0 && predictionPrompt !== null && predictionPrompt !== "";
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
-  (0, import_react7.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     setPredictionAnswer("");
     setIsPredictionLocked(false);
   }, [sessionId]);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (!hasDocs) setIsHelpOpen(false);
   }, [environmentMode, hasDocs]);
   const handleRunClick = () => {
@@ -1367,7 +1367,7 @@ var CodingEnvironment = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react7.useCallback)((e) => {
+  const handleMouseMove = (0, import_react6.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     let newRatio = 0.5;
@@ -1381,10 +1381,10 @@ var CodingEnvironment = ({
     newRatio = Math.max(0.1, Math.min(0.9, newRatio));
     setEditorRatio(newRatio);
   }, [isDragging, layout]);
-  const handleMouseUp = (0, import_react7.useCallback)(() => {
+  const handleMouseUp = (0, import_react6.useCallback)(() => {
     setIsDragging(false);
   }, []);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react6.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1616,9 +1616,9 @@ var CodeShoebox = ({
   sessionId = 0,
   prediction_prompt
 }) => {
-  const [runTrigger, setRunTrigger] = (0, import_react8.useState)(0);
-  const [isRunning, setIsRunning] = (0, import_react8.useState)(false);
-  (0, import_react8.useEffect)(() => {
+  const [runTrigger, setRunTrigger] = (0, import_react7.useState)(0);
+  const [isRunning, setIsRunning] = (0, import_react7.useState)(false);
+  (0, import_react7.useEffect)(() => {
     setRunTrigger(0);
     setIsRunning(false);
   }, [sessionId]);
@@ -1629,7 +1629,7 @@ var CodeShoebox = ({
       setIsRunning(false);
     }, 500);
   };
-  const themeStyles = (0, import_react8.useMemo)(() => {
+  const themeStyles = (0, import_react7.useMemo)(() => {
     const colors = themeMode === "dark" ? theme.dark : theme.light;
     const defaultBg = themeMode === "dark" ? "220 13% 18%" : "0 0% 98%";
     const defaultFg = themeMode === "dark" ? "0 0% 95%" : "220 13% 18%";
@@ -1670,7 +1670,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-var import_react9 = require("react");
+var import_react8 = require("react");
 
 // theme.ts
 var baseTheme = {
@@ -1999,7 +1999,7 @@ var getStarterCode = (mode) => {
 };
 var useSandboxState = (persistenceKey) => {
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : "";
-  const getStorageKey = (0, import_react9.useCallback)((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
+  const getStorageKey = (0, import_react8.useCallback)((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
   const loadSavedMode = () => {
     if (!persistenceKey || typeof window === "undefined") return "dom";
     try {
@@ -2036,38 +2036,38 @@ var useSandboxState = (persistenceKey) => {
       return getStarterCode(mode);
     }
   };
-  const [environmentMode, setEnvironmentMode] = (0, import_react9.useState)(loadSavedMode);
-  const [themeMode, setThemeMode] = (0, import_react9.useState)(loadSavedThemeMode);
-  const [activeThemeName, setActiveThemeName] = (0, import_react9.useState)(loadSavedThemeName);
-  const [code, setCode] = (0, import_react9.useState)(() => {
+  const [environmentMode, setEnvironmentMode] = (0, import_react8.useState)(loadSavedMode);
+  const [themeMode, setThemeMode] = (0, import_react8.useState)(loadSavedThemeMode);
+  const [activeThemeName, setActiveThemeName] = (0, import_react8.useState)(loadSavedThemeName);
+  const [code, setCode] = (0, import_react8.useState)(() => {
     return loadSavedCode(environmentMode);
   });
-  const [sessionId, setSessionId] = (0, import_react9.useState)(0);
-  (0, import_react9.useEffect)(() => {
+  const [sessionId, setSessionId] = (0, import_react8.useState)(0);
+  (0, import_react8.useEffect)(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!persistenceKey) return;
     const key = getStorageKey(`code_${environmentMode}`);
     localStorage.setItem(key, code);
   }, [code, environmentMode, persistenceKey, getStorageKey]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_mode"), themeMode);
   }, [themeMode, persistenceKey, getStorageKey]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_name"), activeThemeName);
   }, [activeThemeName, persistenceKey, getStorageKey]);
-  const switchMode = (0, import_react9.useCallback)((newMode) => {
+  const switchMode = (0, import_react8.useCallback)((newMode) => {
     if (newMode === environmentMode) return;
     const savedCode = loadSavedCode(newMode);
     setEnvironmentMode(newMode);
     setCode(savedCode);
     setSessionId((prev) => prev + 1);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  const resetCode = (0, import_react9.useCallback)(() => {
+  const resetCode = (0, import_react8.useCallback)(() => {
     const starter = getStarterCode(environmentMode);
     setCode(starter);
     setSessionId((prev) => prev + 1);
@@ -2088,9 +2088,9 @@ var useSandboxState = (persistenceKey) => {
 };
 
 // hooks/useAutoKey.ts
-var import_react10 = require("react");
+var import_react9 = require("react");
 var useAutoKey = (identifier, initialCode = "", prefix = "auto") => {
-  const key = (0, import_react10.useMemo)(() => {
+  const key = (0, import_react9.useMemo)(() => {
     if (typeof window === "undefined") {
       return `${prefix}_server`;
     }
