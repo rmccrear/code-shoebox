@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
@@ -41,7 +42,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [environmentMode]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
-    editor.focus();
+    // We do not auto-focus the editor to prevent scrolling jumps in tutorial pages.
     
     // Configure compiler options for TS
     if (language === 'typescript') {

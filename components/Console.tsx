@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Terminal, Ban } from 'lucide-react';
 import { ThemeMode } from '../types';
 import { Button } from './Button';
@@ -24,6 +24,21 @@ export const Console: React.FC<ConsoleProps> = ({
   themeMode, 
   className = '' 
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when logs change
+  useEffect(() => {
+    if (containerRef.current) {
+      // Use scrollTo on the container to avoid scrolling the main window
+      // Instant scroll if resetting (logs cleared), smooth otherwise
+      const isReset = logs.length === 0;
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: isReset ? 'auto' : 'smooth'
+      });
+    }
+  }, [logs]);
+
   return (
     <div className={`flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-gray-50'}`}>
       {/* Console Header */}
@@ -39,6 +54,7 @@ export const Console: React.FC<ConsoleProps> = ({
 
       {/* Logs Area */}
       <div 
+        ref={containerRef}
         className={`flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
       >
         {logs.length === 0 && (
