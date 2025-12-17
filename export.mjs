@@ -1,8 +1,8 @@
 // components/CodeShoebox.tsx
-import { useState as useState4, useMemo as useMemo2, useEffect as useEffect4 } from "react";
+import { useState as useState4, useMemo as useMemo2, useEffect as useEffect5 } from "react";
 
 // components/CodingEnvironment.tsx
-import { useState as useState3, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3 } from "react";
+import { useState as useState3, useEffect as useEffect4, useRef as useRef4, useCallback as useCallback3 } from "react";
 import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows, GripVertical, GripHorizontal as GripHorizontal3 } from "lucide-react";
 
 // components/CodeEditor.tsx
@@ -39,7 +39,6 @@ var CodeEditor = ({
     return "javascript";
   }, [environmentMode]);
   const handleEditorDidMount = (editor, monaco) => {
-    editor.focus();
     if (language === "typescript") {
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         jsx: monaco.languages.typescript.JsxEmit.React,
@@ -119,7 +118,7 @@ var CodeEditor = ({
 };
 
 // components/OutputFrame.tsx
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect as useEffect2, useRef as useRef2, useState, useCallback } from "react";
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -742,6 +741,7 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
+import { useEffect, useRef } from "react";
 import { Terminal, Ban } from "lucide-react";
 
 // components/Button.tsx
@@ -780,6 +780,16 @@ var Console = ({
   themeMode,
   className = ""
 }) => {
+  const containerRef = useRef(null);
+  useEffect(() => {
+    if (containerRef.current) {
+      const isReset = logs.length === 0;
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: isReset ? "auto" : "smooth"
+      });
+    }
+  }, [logs]);
   return /* @__PURE__ */ jsxs3("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
     /* @__PURE__ */ jsxs3("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
       /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
@@ -795,6 +805,7 @@ var Console = ({
     /* @__PURE__ */ jsxs3(
       "div",
       {
+        ref: containerRef,
         className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`,
         children: [
           logs.length === 0 && /* @__PURE__ */ jsx4("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ jsx4("span", { className: "italic", children: "No output" }) }),
@@ -823,20 +834,20 @@ var OutputFrame = ({
   isBlurred = false,
   isPredictionMode = false
 }) => {
-  const iframeRef = useRef(null);
-  const containerRef = useRef(null);
+  const iframeRef = useRef2(null);
+  const containerRef = useRef2(null);
   const [sandboxSrc, setSandboxSrc] = useState("");
   const [logs, setLogs] = useState([]);
   const [consoleHeight, setConsoleHeight] = useState(150);
   const [isDragging, setIsDragging] = useState(false);
-  useEffect(() => {
+  useEffect2(() => {
     const url = createSandboxUrl(environmentMode, isPredictionMode);
     setSandboxSrc(url);
     return () => {
       URL.revokeObjectURL(url);
     };
   }, [environmentMode, isPredictionMode]);
-  useEffect(() => {
+  useEffect2(() => {
     if (runTrigger > 0) {
       setLogs([]);
       if (iframeRef.current?.contentWindow) {
@@ -844,12 +855,12 @@ var OutputFrame = ({
       }
     }
   }, [runTrigger]);
-  useEffect(() => {
+  useEffect2(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
-  useEffect(() => {
+  useEffect2(() => {
     const handleMessage = (event) => {
       const { type, payload } = event.data;
       if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
@@ -883,7 +894,7 @@ var OutputFrame = ({
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
-  useEffect(() => {
+  useEffect2(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -953,7 +964,7 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-import { useEffect as useEffect2, useRef as useRef2, useState as useState2, useCallback as useCallback2 } from "react";
+import { useEffect as useEffect3, useRef as useRef3, useState as useState2, useCallback as useCallback2 } from "react";
 import { Send, Server, Clock, AlertCircle, XCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
 import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var ServerOutput = ({
@@ -963,8 +974,8 @@ var ServerOutput = ({
   environmentMode,
   isBlurred = false
 }) => {
-  const iframeRef = useRef2(null);
-  const containerRef = useRef2(null);
+  const iframeRef = useRef3(null);
+  const containerRef = useRef3(null);
   const [sandboxSrc, setSandboxSrc] = useState2("");
   const [logs, setLogs] = useState2([]);
   const [route, setRoute] = useState2("/");
@@ -975,12 +986,12 @@ var ServerOutput = ({
   const [runtimeError, setRuntimeError] = useState2(null);
   const [consoleHeight, setConsoleHeight] = useState2(150);
   const [isDragging, setIsDragging] = useState2(false);
-  useEffect2(() => {
+  useEffect3(() => {
     const url = createSandboxUrl(environmentMode);
     setSandboxSrc(url);
     return () => URL.revokeObjectURL(url);
   }, [environmentMode]);
-  useEffect2(() => {
+  useEffect3(() => {
     if (runTrigger > 0 && iframeRef.current?.contentWindow) {
       setServerReady(false);
       setResponse(null);
@@ -989,12 +1000,12 @@ var ServerOutput = ({
       executeCodeInSandbox(iframeRef.current.contentWindow, code);
     }
   }, [runTrigger, code]);
-  useEffect2(() => {
+  useEffect3(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
-  useEffect2(() => {
+  useEffect3(() => {
     const handleMessage = (event) => {
       const { type, payload } = event.data;
       if (type === "SERVER_READY") {
@@ -1047,7 +1058,7 @@ var ServerOutput = ({
   const handleMouseUp = useCallback2(() => {
     setIsDragging(false);
   }, []);
-  useEffect2(() => {
+  useEffect3(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1302,17 +1313,17 @@ var CodingEnvironment = ({
   const [predictionAnswer, setPredictionAnswer] = useState3("");
   const [isPredictionLocked, setIsPredictionLocked] = useState3(false);
   const [layout, setLayout] = useState3("horizontal");
-  const containerRef = useRef3(null);
+  const containerRef = useRef4(null);
   const [editorRatio, setEditorRatio] = useState3(0.5);
   const [isDragging, setIsDragging] = useState3(false);
   const hasDocs = !!getDocsForMode(environmentMode);
   const hasPredictionTask = predictionPrompt !== void 0 && predictionPrompt !== null && predictionPrompt !== "";
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
-  useEffect3(() => {
+  useEffect4(() => {
     setPredictionAnswer("");
     setIsPredictionLocked(false);
   }, [sessionId]);
-  useEffect3(() => {
+  useEffect4(() => {
     if (!hasDocs) setIsHelpOpen(false);
   }, [environmentMode, hasDocs]);
   const handleRunClick = () => {
@@ -1342,7 +1353,7 @@ var CodingEnvironment = ({
   const handleMouseUp = useCallback3(() => {
     setIsDragging(false);
   }, []);
-  useEffect3(() => {
+  useEffect4(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1576,7 +1587,7 @@ var CodeShoebox = ({
 }) => {
   const [runTrigger, setRunTrigger] = useState4(0);
   const [isRunning, setIsRunning] = useState4(false);
-  useEffect4(() => {
+  useEffect5(() => {
     setRunTrigger(0);
     setIsRunning(false);
   }, [sessionId]);
@@ -1628,7 +1639,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-import { useState as useState5, useEffect as useEffect5, useCallback as useCallback4 } from "react";
+import { useState as useState5, useEffect as useEffect6, useCallback as useCallback4 } from "react";
 
 // theme.ts
 var baseTheme = {
@@ -2001,20 +2012,20 @@ var useSandboxState = (persistenceKey) => {
     return loadSavedCode(environmentMode);
   });
   const [sessionId, setSessionId] = useState5(0);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     const key = getStorageKey(`code_${environmentMode}`);
     localStorage.setItem(key, code);
   }, [code, environmentMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_mode"), themeMode);
   }, [themeMode, persistenceKey, getStorageKey]);
-  useEffect5(() => {
+  useEffect6(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("theme_name"), activeThemeName);
   }, [activeThemeName, persistenceKey, getStorageKey]);
