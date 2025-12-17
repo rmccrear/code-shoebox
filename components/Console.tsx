@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Terminal, Ban } from 'lucide-react';
 import { ThemeMode } from '../types';
 import { Button } from './Button';
@@ -24,13 +24,6 @@ export const Console: React.FC<ConsoleProps> = ({
   themeMode, 
   className = '' 
 }) => {
-  const endRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when logs change
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
-
   return (
     <div className={`flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-gray-50'}`}>
       {/* Console Header */}
@@ -45,7 +38,9 @@ export const Console: React.FC<ConsoleProps> = ({
       </div>
 
       {/* Logs Area */}
-      <div className={`flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+      <div 
+        className={`flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
+      >
         {logs.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center opacity-30 select-none">
             <span className="italic">No output</span>
@@ -64,7 +59,6 @@ export const Console: React.FC<ConsoleProps> = ({
              {log.content}
           </div>
         ))}
-        <div ref={endRef} />
       </div>
     </div>
   );
