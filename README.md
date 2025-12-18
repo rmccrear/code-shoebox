@@ -1,4 +1,3 @@
-
 # CodeShoebox
 
 CodeShoebox is a self-contained, secure code playground component for React. It features a Monaco editor, a sandboxed execution environment (iframe), and support for multiple runtime modes (DOM, p5.js, React).
@@ -15,18 +14,20 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
+  - `node-js`: Pure JavaScript environment optimized for logic and algorithms (Console only).
+  - `node-ts`: Pure TypeScript environment optimized for logic and algorithms (Console only).
 - **Themable**: Full support for light/dark modes and custom color themes.
 - **State Management**: Built-in hook `useSandboxState` for easy persistence and mode switching.
 - **Pedagogical Tools**: Built-in support for code prediction exercises (PRIMM).
 
 ## Installation
 
-To install version **v1.0.13**:
+To install version **v1.0.15**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.14
+npm install github:rmccrear/code-shoebox#v1.0.15
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.14
+yarn add github:rmccrear/code-shoebox#v1.0.15
 ```
 
 ## Styling Setup
@@ -91,6 +92,7 @@ const MyEditor = () => {
         <option value="dom">JavaScript</option>
         <option value="react">React</option>
         <option value="p5">p5.js</option>
+        <option value="node-js">Pure Logic (JS)</option>
         <option value="express">Node/Express</option>
       </select>
 
@@ -122,7 +124,7 @@ const MyCustomEditor = () => {
   return (
     <div style={{ height: '500px' }}>
       <CodeShoebox 
-        code={code}
+        code={code} 
         onCodeChange={setCode}
         environmentMode="dom"
         theme={themes[0]}
@@ -189,6 +191,28 @@ Automatically detects the global `setup` and `draw` functions and moves the crea
   environmentMode="p5"
   theme={activeTheme}
   themeMode="light"
+/>
+```
+
+#### Headless Mode (node-js / node-ts)
+Optimized for teaching data structures and algorithms. The visual output pane is disabled to force students to use the console. Global DOM objects like `window` and `document` are shadowed to prevent browser manipulation.
+
+```tsx
+<CodeShoebox 
+  code={`
+    const users = [
+      { name: 'Alice', age: 25 },
+      { name: 'Bob', age: 30 }
+    ];
+    
+    const names = users.map(u => u.name);
+    console.log("User Names:", names);
+    console.table(users);
+  `}
+  onCodeChange={handleCodeChange}
+  environmentMode="node-js"
+  theme={activeTheme}
+  themeMode="dark"
 />
 ```
 
@@ -378,7 +402,7 @@ const matrixTheme = {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
+| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor (clearing undo history). Handled automatically by `useSandboxState`. |

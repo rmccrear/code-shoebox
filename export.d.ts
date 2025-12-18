@@ -27,7 +27,7 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'dom' | 'p5' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts';
+type EnvironmentMode = 'dom' | 'p5' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts';
 interface EditorProps {
     initialCode: string;
     onChange: (code: string) => void;

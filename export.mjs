@@ -1,9 +1,22 @@
 // components/CodeShoebox.tsx
-import { useState as useState4, useMemo as useMemo2, useEffect as useEffect5 } from "react";
+import { useState as useState4, useMemo as useMemo2, useEffect as useEffect4 } from "react";
 
 // components/CodingEnvironment.tsx
-import { useState as useState3, useEffect as useEffect4, useRef as useRef4, useCallback as useCallback3 } from "react";
-import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows, GripVertical, GripHorizontal as GripHorizontal3 } from "lucide-react";
+import { useState as useState3, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3 } from "react";
+import {
+  Play,
+  CheckCircle2,
+  FileCode,
+  Book,
+  Brain,
+  Lock,
+  Columns,
+  Rows,
+  GripVertical,
+  GripHorizontal as GripHorizontal3,
+  Maximize2,
+  Minimize2
+} from "lucide-react";
 
 // components/CodeEditor.tsx
 import { useMemo } from "react";
@@ -21,11 +34,11 @@ var CodeEditor = ({
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     switch (environmentMode) {
       case "typescript":
+      case "express-ts":
+      case "node-ts":
         return `${basePath}.ts`;
       case "react-ts":
         return `${basePath}.tsx`;
-      case "express-ts":
-        return `${basePath}.ts`;
       case "react":
         return `${basePath}.jsx`;
       case "p5":
@@ -35,10 +48,12 @@ var CodeEditor = ({
     }
   }, [sessionId, environmentMode]);
   const language = useMemo(() => {
-    if (environmentMode === "typescript" || environmentMode === "react-ts" || environmentMode === "express-ts") return "typescript";
+    const tsModes = ["typescript", "react-ts", "express-ts", "node-ts"];
+    if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";
   }, [environmentMode]);
   const handleEditorDidMount = (editor, monaco) => {
+    editor.focus();
     if (language === "typescript") {
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         jsx: monaco.languages.typescript.JsxEmit.React,
@@ -92,7 +107,7 @@ var CodeEditor = ({
     {
       height: "100%",
       path: modelPath,
-      defaultLanguage: language,
+      language,
       theme: themeMode === "dark" ? "vs-dark" : "light",
       value: code,
       onChange,
@@ -118,7 +133,7 @@ var CodeEditor = ({
 };
 
 // components/OutputFrame.tsx
-import { useEffect as useEffect2, useRef as useRef2, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -174,6 +189,8 @@ var BASE_STYLES = `
 var CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
     
+    let messagePort = null;
+
     function formatMessage(msg) {
         if (msg instanceof Error) {
             return msg.toString();
@@ -191,11 +208,17 @@ var CONSOLE_INTERCEPTOR = `
     function logToScreen(msg, type = 'log') {
         const textContent = formatMessage(msg);
 
-        // Notify parent window (React app) about the log/error
-        window.parent.postMessage({ 
-            type: type === 'error' ? 'RUNTIME_ERROR' : 'CONSOLE_LOG',
+        // Notify parent via established port (preferred for isolation) or global postMessage
+        const payload = { 
+            type: type === 'error' ? 'RUNTIME_ERROR' : (type === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
             payload: textContent
-        }, '*');
+        };
+
+        if (messagePort) {
+            messagePort.postMessage(payload);
+        } else {
+            window.parent.postMessage(payload, '*');
+        }
     }
 
     const originalLog = console.log;
@@ -230,6 +253,17 @@ var CONSOLE_INTERCEPTOR = `
 
     window.addEventListener('unhandledrejection', function(event) {
         logToScreen(\`Async Error: \${event.reason}\`, 'error');
+    });
+
+    // Listen for port initialization
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'INIT_PORT' && event.ports[0]) {
+            messagePort = event.ports[0];
+            // If the server simulator sent this, it might expect a ready signal on the port
+            if (window.serverReadySignal) {
+                messagePort.postMessage({ type: 'SERVER_READY' });
+            }
+        }
     });
 `;
 var BASE_HTML_WRAPPER = (headContent, scriptContent, showPlaceholder = true) => `
@@ -555,7 +589,16 @@ var EXPRESS_MOCK_SETUP = `
 
         listen(port, cb) {
             if (cb) cb();
-            window.parent.postMessage({ type: 'SERVER_READY' }, '*');
+            
+            // Signal ready via port if available, else global
+            const readyMsg = { type: 'SERVER_READY' };
+            if (window.messagePort) {
+                window.messagePort.postMessage(readyMsg);
+            } else {
+                window.parent.postMessage(readyMsg, '*');
+                // Flag for async port initialization
+                window.serverReadySignal = true;
+            }
         }
 
         async _handleRequest(method, url) {
@@ -596,41 +639,42 @@ var EXPRESS_MOCK_SETUP = `
         }
     }
 
-    // --- Global Shim ---
     const appInstance = new MockApp();
-    
-    // For JS mode: const app = express();
-    // For TS mode shim: require('express') returns window.express
-    window.express = function() {
-        return appInstance;
-    };
-    
-    // Expose instance for reset logic
+    window.express = function() { return appInstance; };
     window.appInstance = appInstance;
 
-    // --- Message Listener for Test Requests ---
-    window.addEventListener('message', async (event) => {
-        const { type, payload } = event.data;
-        if (type === 'SIMULATE_REQUEST') {
-            const { method, url } = payload;
+    // Listen on the private port primarily
+    const requestHandler = async (event) => {
+        if (event.data && event.data.type === 'SIMULATE_REQUEST') {
+            const { method, url } = event.data.payload;
             const response = await appInstance._handleRequest(method, url);
-            window.parent.postMessage({
-                type: 'REQUEST_COMPLETE',
-                payload: response
-            }, '*');
+            const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
+            
+            if (window.messagePort) {
+                window.messagePort.postMessage(completeMsg);
+            } else {
+                window.parent.postMessage(completeMsg, '*');
+            }
         }
-    });
+    };
+
+    window.addEventListener('message', requestHandler);
+    
+    // Also listen on the port once initialized
+    const checkPortInterval = setInterval(() => {
+        if (window.messagePort) {
+            window.messagePort.addEventListener('message', requestHandler);
+            window.messagePort.start();
+            clearInterval(checkPortInterval);
+        }
+    }, 50);
 `;
 var EXPRESS_JS_RUNNER = `
     window.runMode = function(code, root) {
-        // Express Mode (JS)
         root.innerHTML = '';
-        
-        // Reset routes on re-run
         if (window.appInstance) {
             window.appInstance.routes = { GET: {} };
         }
-
         try {
             window.eval(code);
         } catch (err) {
@@ -692,6 +736,47 @@ var generateExpressTsHtml = (showPlaceholder = false) => {
   return BASE_HTML_WRAPPER(BABEL_CDN2, script, false);
 };
 
+// runtime/templates/headless.ts
+var BABEL_CDN3 = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+var HEADLESS_RUNNER = (isTypescript) => `
+    window.runMode = function(code, root) {
+        // Clear previous state if any
+        root.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.3; text-align:center; font-family:sans-serif; padding:2rem;">' +
+                         '<div style="font-size:3rem; margin-bottom:1rem;">\u{1F4BB}</div>' +
+                         '<div>Console Environment Active</div>' +
+                         '<div style="font-size:0.8rem; margin-top:0.5rem;">The output is displayed in the console below.</div>' +
+                         '</div>';
+
+        try {
+            let executableCode = code;
+
+            if (${isTypescript}) {
+                // Transpile TS
+                executableCode = Babel.transform(code, {
+                    presets: ['env', 'typescript'],
+                    filename: 'index.ts'
+                }).code;
+            }
+
+            /**
+             * We wrap in a function to shadow globals like 'document' and 'window'
+             * with null to reinforce that this is a console-only environment.
+             */
+            const headlessWrapper = new Function('document', 'window', 'root', executableCode);
+            headlessWrapper(null, null, null);
+            
+        } catch (err) {
+            console.error(err);
+        }
+    };
+`;
+var generateHeadlessJsHtml = () => {
+  return BASE_HTML_WRAPPER("", HEADLESS_RUNNER(false), false);
+};
+var generateHeadlessTsHtml = () => {
+  return BASE_HTML_WRAPPER(BABEL_CDN3, HEADLESS_RUNNER(true), false);
+};
+
 // runtime/runner.ts
 var SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 var createSandboxUrl = (mode = "dom", isPredictionMode = false) => {
@@ -715,6 +800,12 @@ var createSandboxUrl = (mode = "dom", isPredictionMode = false) => {
       break;
     case "express-ts":
       html = generateExpressTsHtml(showPlaceholder);
+      break;
+    case "node-js":
+      html = generateHeadlessJsHtml();
+      break;
+    case "node-ts":
+      html = generateHeadlessTsHtml();
       break;
     default:
       html = generateDomHtml(showPlaceholder);
@@ -741,7 +832,6 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
-import { useEffect, useRef } from "react";
 import { Terminal, Ban } from "lucide-react";
 
 // components/Button.tsx
@@ -780,16 +870,6 @@ var Console = ({
   themeMode,
   className = ""
 }) => {
-  const containerRef = useRef(null);
-  useEffect(() => {
-    if (containerRef.current) {
-      const isReset = logs.length === 0;
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: isReset ? "auto" : "smooth"
-      });
-    }
-  }, [logs]);
   return /* @__PURE__ */ jsxs3("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
     /* @__PURE__ */ jsxs3("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
       /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
@@ -805,7 +885,6 @@ var Console = ({
     /* @__PURE__ */ jsxs3(
       "div",
       {
-        ref: containerRef,
         className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`,
         children: [
           logs.length === 0 && /* @__PURE__ */ jsx4("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ jsx4("span", { className: "italic", children: "No output" }) }),
@@ -834,34 +913,17 @@ var OutputFrame = ({
   isBlurred = false,
   isPredictionMode = false
 }) => {
-  const iframeRef = useRef2(null);
-  const containerRef = useRef2(null);
+  const iframeRef = useRef(null);
+  const containerRef = useRef(null);
+  const channelRef = useRef(null);
   const [sandboxSrc, setSandboxSrc] = useState("");
   const [logs, setLogs] = useState([]);
   const [consoleHeight, setConsoleHeight] = useState(150);
   const [isDragging, setIsDragging] = useState(false);
-  useEffect2(() => {
-    const url = createSandboxUrl(environmentMode, isPredictionMode);
-    setSandboxSrc(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [environmentMode, isPredictionMode]);
-  useEffect2(() => {
-    if (runTrigger > 0) {
-      setLogs([]);
-      if (iframeRef.current?.contentWindow) {
-        executeCodeInSandbox(iframeRef.current.contentWindow, code);
-      }
-    }
-  }, [runTrigger]);
-  useEffect2(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    }
-  }, [themeMode]);
-  useEffect2(() => {
-    const handleMessage = (event) => {
+  const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
+  useEffect(() => {
+    channelRef.current = new MessageChannel();
+    channelRef.current.port1.onmessage = (event) => {
       const { type, payload } = event.data;
       if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
         setLogs((prev) => [...prev, {
@@ -871,11 +933,33 @@ var OutputFrame = ({
         }]);
       }
     };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.port1.close();
+      }
+    };
   }, []);
-  const handleIframeLoad = () => {
+  useEffect(() => {
+    const url = createSandboxUrl(environmentMode, isPredictionMode);
+    setSandboxSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [environmentMode, isPredictionMode]);
+  useEffect(() => {
+    if (runTrigger > 0) {
+      setLogs([]);
+      if (iframeRef.current?.contentWindow) {
+        executeCodeInSandbox(iframeRef.current.contentWindow, code);
+      }
+    }
+  }, [runTrigger, code]);
+  useEffect(() => {
     if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    }
+  }, [themeMode]);
+  const handleIframeLoad = () => {
+    if (iframeRef.current?.contentWindow && channelRef.current) {
+      iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channelRef.current.port2]);
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   };
@@ -891,10 +975,8 @@ var OutputFrame = ({
     const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
     setConsoleHeight(clampedHeight);
   }, [isDragging]);
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-  useEffect2(() => {
+  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  useEffect(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -909,8 +991,6 @@ var OutputFrame = ({
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   return /* @__PURE__ */ jsx5(
@@ -919,53 +999,50 @@ var OutputFrame = ({
       themeMode,
       isReady: runTrigger > 0,
       overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-      children: /* @__PURE__ */ jsxs4(
-        "div",
-        {
-          ref: containerRef,
-          className: "w-full h-full flex flex-col relative",
-          children: [
-            /* @__PURE__ */ jsx5("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ jsx5(
-              "iframe",
-              {
-                ref: iframeRef,
-                src: sandboxSrc,
-                title: "Code Output",
-                sandbox: SANDBOX_ATTRIBUTES,
-                className: `w-full h-full border-none ${isDragging ? "pointer-events-none" : ""}`,
-                onLoad: handleIframeLoad
-              }
-            ) }),
-            /* @__PURE__ */ jsx5(
-              "div",
-              {
-                onMouseDown: handleMouseDown,
-                className: `
-                h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
-                ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}
-                ${isDragging ? "!bg-blue-600 !text-white" : ""}
-            `,
-                children: /* @__PURE__ */ jsx5(GripHorizontal, { className: "w-3 h-3" })
-              }
-            ),
-            /* @__PURE__ */ jsx5("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx5(
-              Console,
-              {
-                logs,
-                onClear: () => setLogs([]),
-                themeMode
-              }
-            ) })
-          ]
-        }
-      )
+      children: /* @__PURE__ */ jsxs4("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
+        !isHeadless && /* @__PURE__ */ jsx5("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ jsx5(
+          "iframe",
+          {
+            ref: iframeRef,
+            src: sandboxSrc,
+            title: "Code Output",
+            sandbox: SANDBOX_ATTRIBUTES,
+            className: `w-full h-full border-none ${isDragging ? "pointer-events-none" : ""}`,
+            onLoad: handleIframeLoad
+          }
+        ) }),
+        !isHeadless && /* @__PURE__ */ jsx5(
+          "div",
+          {
+            onMouseDown: handleMouseDown,
+            className: `
+                  h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
+                  ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}
+                  ${isDragging ? "!bg-blue-600 !text-white" : ""}
+              `,
+            children: /* @__PURE__ */ jsx5(GripHorizontal, { className: "w-3 h-3" })
+          }
+        ),
+        /* @__PURE__ */ jsx5("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx5(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        isHeadless && /* @__PURE__ */ jsx5(
+          "iframe",
+          {
+            ref: iframeRef,
+            src: sandboxSrc,
+            title: "Headless Execution",
+            sandbox: SANDBOX_ATTRIBUTES,
+            className: "hidden",
+            onLoad: handleIframeLoad
+          }
+        )
+      ] })
     }
   );
 };
 
 // components/ServerOutput.tsx
-import { useEffect as useEffect3, useRef as useRef3, useState as useState2, useCallback as useCallback2 } from "react";
-import { Send, Server, Clock, AlertCircle, XCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
+import { useEffect as useEffect2, useRef as useRef2, useState as useState2, useCallback as useCallback2 } from "react";
+import { Server, Clock, AlertCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
 import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var ServerOutput = ({
   runTrigger,
@@ -974,8 +1051,9 @@ var ServerOutput = ({
   environmentMode,
   isBlurred = false
 }) => {
-  const iframeRef = useRef3(null);
-  const containerRef = useRef3(null);
+  const iframeRef = useRef2(null);
+  const containerRef = useRef2(null);
+  const channelRef = useRef2(null);
   const [sandboxSrc, setSandboxSrc] = useState2("");
   const [logs, setLogs] = useState2([]);
   const [route, setRoute] = useState2("/");
@@ -986,27 +1064,9 @@ var ServerOutput = ({
   const [runtimeError, setRuntimeError] = useState2(null);
   const [consoleHeight, setConsoleHeight] = useState2(150);
   const [isDragging, setIsDragging] = useState2(false);
-  useEffect3(() => {
-    const url = createSandboxUrl(environmentMode);
-    setSandboxSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [environmentMode]);
-  useEffect3(() => {
-    if (runTrigger > 0 && iframeRef.current?.contentWindow) {
-      setServerReady(false);
-      setResponse(null);
-      setRuntimeError(null);
-      setLogs([]);
-      executeCodeInSandbox(iframeRef.current.contentWindow, code);
-    }
-  }, [runTrigger, code]);
-  useEffect3(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    }
-  }, [themeMode]);
-  useEffect3(() => {
-    const handleMessage = (event) => {
+  useEffect2(() => {
+    channelRef.current = new MessageChannel();
+    channelRef.current.port1.onmessage = (event) => {
       const { type, payload } = event.data;
       if (type === "SERVER_READY") {
         setServerReady(true);
@@ -1028,20 +1088,44 @@ var ServerOutput = ({
         }]);
       }
     };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [serverReady]);
+    return () => {
+      if (channelRef.current) channelRef.current.port1.close();
+    };
+  }, []);
+  useEffect2(() => {
+    const url = createSandboxUrl(environmentMode);
+    setSandboxSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [environmentMode]);
+  useEffect2(() => {
+    if (runTrigger > 0 && iframeRef.current?.contentWindow) {
+      setServerReady(false);
+      setResponse(null);
+      setRuntimeError(null);
+      setLogs([]);
+      executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    }
+  }, [runTrigger, code]);
+  useEffect2(() => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    }
+  }, [themeMode]);
+  const handleIframeLoad = () => {
+    if (iframeRef.current?.contentWindow && channelRef.current) {
+      iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channelRef.current.port2]);
+      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    }
+  };
   const sendRequest = () => {
-    if (!serverReady) return;
+    if (!serverReady || !channelRef.current) return;
     setIsLoading(true);
     setResponse(null);
     setRuntimeError(null);
-    setTimeout(() => {
-      iframeRef.current?.contentWindow?.postMessage({
-        type: "SIMULATE_REQUEST",
-        payload: { method, url: route }
-      }, "*");
-    }, 300);
+    channelRef.current.port1.postMessage({
+      type: "SIMULATE_REQUEST",
+      payload: { method, url: route }
+    });
   };
   const handleMouseDown = (e) => {
     e.preventDefault();
@@ -1055,10 +1139,8 @@ var ServerOutput = ({
     const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
     setConsoleHeight(clampedHeight);
   }, [isDragging]);
-  const handleMouseUp = useCallback2(() => {
-    setIsDragging(false);
-  }, []);
-  useEffect3(() => {
+  const handleMouseUp = useCallback2(() => setIsDragging(false), []);
+  useEffect2(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1067,127 +1149,41 @@ var ServerOutput = ({
     } else {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     }
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isReady = runTrigger > 0;
   return /* @__PURE__ */ jsxs5("div", { className: "flex flex-col h-full w-full gap-2", children: [
-    /* @__PURE__ */ jsxs5("div", { className: `
-        flex items-center gap-2 p-2 rounded-md border transition-colors
-        ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}
-      `, children: [
-      /* @__PURE__ */ jsx6("div", { className: `
-            px-3 py-1.5 rounded text-xs font-bold tracking-wider
-            ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}
-         `, children: "GET" }),
-      /* @__PURE__ */ jsx6(
-        "input",
-        {
-          type: "text",
-          value: route,
-          onChange: (e) => setRoute(e.target.value),
-          placeholder: "/api/users",
-          className: `
-                flex-1 bg-transparent border-none outline-none text-sm font-mono
-                ${themeMode === "dark" ? "text-white placeholder-gray-600" : "text-gray-800 placeholder-gray-400"}
-            `
-        }
-      ),
-      /* @__PURE__ */ jsxs5(
-        Button,
-        {
-          onClick: sendRequest,
-          disabled: !isReady || isLoading || !serverReady || !!runtimeError,
-          className: "!py-1 !px-3 h-8 text-xs",
-          children: [
-            isLoading ? "Sending..." : "Send",
-            !isLoading && /* @__PURE__ */ jsx6(Send, { className: "w-3 h-3 ml-1" })
-          ]
-        }
-      )
+    /* @__PURE__ */ jsxs5("div", { className: `flex items-center gap-2 p-2 rounded-md border transition-colors ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}`, children: [
+      /* @__PURE__ */ jsx6("div", { className: `px-3 py-1.5 rounded text-xs font-bold tracking-wider ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}`, children: "GET" }),
+      /* @__PURE__ */ jsx6("input", { type: "text", value: route, onChange: (e) => setRoute(e.target.value), placeholder: "/api/users", className: `flex-1 bg-transparent border-none outline-none text-sm font-mono ${themeMode === "dark" ? "text-white placeholder-gray-600" : "text-gray-800 placeholder-gray-400"}` }),
+      /* @__PURE__ */ jsx6(Button, { onClick: sendRequest, disabled: !isReady || isLoading || !serverReady || !!runtimeError, className: "!py-1 !px-3 h-8 text-xs", children: isLoading ? "Sending..." : "Send" })
     ] }),
-    /* @__PURE__ */ jsx6(
-      PreviewContainer,
-      {
-        themeMode,
-        isReady,
-        overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-        children: /* @__PURE__ */ jsxs5("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
-          isReady && !serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs", children: [
-            /* @__PURE__ */ jsx6(Clock, { className: "w-3 h-3 animate-pulse" }),
-            /* @__PURE__ */ jsx6("span", { children: "Starting Server..." })
-          ] }),
-          isReady && serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-500 text-xs", children: [
-            /* @__PURE__ */ jsx6(Server, { className: "w-3 h-3" }),
-            /* @__PURE__ */ jsx6("span", { children: "Listening on :3000" })
-          ] }),
-          isReady && runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-xs", children: [
-            /* @__PURE__ */ jsx6(XCircle, { className: "w-3 h-3" }),
-            /* @__PURE__ */ jsx6("span", { children: "Server Error" })
-          ] }),
-          /* @__PURE__ */ jsx6("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs5("div", { className: "animate-in fade-in zoom-in-95 duration-300 p-4 border border-red-500/20 rounded bg-red-500/5", children: [
-            /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
-              /* @__PURE__ */ jsx6(AlertCircle, { className: "w-4 h-4" }),
-              /* @__PURE__ */ jsx6("span", { children: "Runtime Error" })
-            ] }),
-            /* @__PURE__ */ jsx6("pre", { className: "whitespace-pre-wrap break-all text-red-400 opacity-90", children: runtimeError })
-          ] }) : response ? /* @__PURE__ */ jsxs5("div", { className: "animate-in fade-in slide-in-from-bottom-2 duration-300", children: [
-            /* @__PURE__ */ jsxs5("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: [
-              /* @__PURE__ */ jsxs5("span", { className: `font-bold ${response.status >= 200 && response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
-                response.status,
-                " ",
-                response.status === 200 ? "OK" : "Error"
-              ] }),
-              /* @__PURE__ */ jsxs5("span", { className: "text-xs opacity-50", children: [
-                (Math.random() * 40 + 10).toFixed(0),
-                "ms"
-              ] })
-            ] }),
-            /* @__PURE__ */ jsx6("pre", { className: `whitespace-pre-wrap break-all ${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
-          ] }) : /* @__PURE__ */ jsxs5("div", { className: "h-full flex flex-col items-center justify-center opacity-20 select-none", children: [
-            /* @__PURE__ */ jsx6(Server, { className: "w-12 h-12 mb-2" }),
-            /* @__PURE__ */ jsx6("p", { children: runtimeError ? "Fix errors to restart server" : "No response data" })
-          ] }) }),
-          /* @__PURE__ */ jsx6(
-            "div",
-            {
-              onMouseDown: handleMouseDown,
-              className: `
-                    h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
-                    ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}
-                    ${isDragging ? "!bg-blue-600 !text-white" : ""}
-                `,
-              children: /* @__PURE__ */ jsx6(GripHorizontal2, { className: "w-3 h-3" })
-            }
-          ),
-          /* @__PURE__ */ jsx6("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx6(
-            Console,
-            {
-              logs,
-              onClear: () => setLogs([]),
-              themeMode
-            }
-          ) }),
-          /* @__PURE__ */ jsx6(
-            "iframe",
-            {
-              ref: iframeRef,
-              src: sandboxSrc,
-              title: "Server Execution",
-              sandbox: SANDBOX_ATTRIBUTES,
-              className: "hidden"
-            }
-          )
-        ] })
-      }
-    )
+    /* @__PURE__ */ jsx6(PreviewContainer, { themeMode, isReady, overlayMessage: isBlurred ? "Make your Prediction" : void 0, children: /* @__PURE__ */ jsxs5("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
+      isReady && !serverReady && !runtimeError && !isBlurred && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs", children: [
+        /* @__PURE__ */ jsx6(Clock, { className: "w-3 h-3 animate-pulse" }),
+        /* @__PURE__ */ jsx6("span", { children: "Starting Server..." })
+      ] }),
+      /* @__PURE__ */ jsx6("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs5("div", { className: "p-4 border border-red-500/20 rounded bg-red-500/5 text-red-400", children: [
+        /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
+          /* @__PURE__ */ jsx6(AlertCircle, { className: "w-4 h-4" }),
+          /* @__PURE__ */ jsx6("span", { children: "Runtime Error" })
+        ] }),
+        /* @__PURE__ */ jsx6("pre", { className: "whitespace-pre-wrap break-all", children: runtimeError })
+      ] }) : response ? /* @__PURE__ */ jsxs5("div", { children: [
+        /* @__PURE__ */ jsx6("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: /* @__PURE__ */ jsx6("span", { className: `font-bold ${response.status < 300 ? "text-green-500" : "text-red-500"}`, children: response.status }) }),
+        /* @__PURE__ */ jsx6("pre", { className: `${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
+      ] }) : /* @__PURE__ */ jsxs5("div", { className: "h-full flex flex-col items-center justify-center opacity-20", children: [
+        /* @__PURE__ */ jsx6(Server, { className: "w-12 h-12 mb-2" }),
+        /* @__PURE__ */ jsx6("p", { children: "Ready" })
+      ] }) }),
+      /* @__PURE__ */ jsx6("div", { onMouseDown: handleMouseDown, className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`, children: /* @__PURE__ */ jsx6(GripHorizontal2, { className: "w-3 h-3" }) }),
+      /* @__PURE__ */ jsx6("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx6(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+      /* @__PURE__ */ jsx6("iframe", { ref: iframeRef, src: sandboxSrc, title: "Server Execution", sandbox: SANDBOX_ATTRIBUTES, className: "hidden", onLoad: handleIframeLoad })
+    ] }) })
   ] });
 };
 
@@ -1313,17 +1309,36 @@ var CodingEnvironment = ({
   const [predictionAnswer, setPredictionAnswer] = useState3("");
   const [isPredictionLocked, setIsPredictionLocked] = useState3(false);
   const [layout, setLayout] = useState3("horizontal");
-  const containerRef = useRef4(null);
+  const [isFullscreen, setIsFullscreen] = useState3(false);
+  const containerRef = useRef3(null);
+  const fullscreenContainerRef = useRef3(null);
   const [editorRatio, setEditorRatio] = useState3(0.5);
   const [isDragging, setIsDragging] = useState3(false);
   const hasDocs = !!getDocsForMode(environmentMode);
   const hasPredictionTask = predictionPrompt !== void 0 && predictionPrompt !== null && predictionPrompt !== "";
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
-  useEffect4(() => {
+  useEffect3(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (!fullscreenContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      fullscreenContainerRef.current.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+  useEffect3(() => {
     setPredictionAnswer("");
     setIsPredictionLocked(false);
   }, [sessionId]);
-  useEffect4(() => {
+  useEffect3(() => {
     if (!hasDocs) setIsHelpOpen(false);
   }, [environmentMode, hasDocs]);
   const handleRunClick = () => {
@@ -1353,7 +1368,7 @@ var CodingEnvironment = ({
   const handleMouseUp = useCallback3(() => {
     setIsDragging(false);
   }, []);
-  useEffect4(() => {
+  useEffect3(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1392,186 +1407,209 @@ var CodingEnvironment = ({
     case "express-ts":
       fileName = "server.ts";
       break;
+    case "node-js":
+      fileName = "index.js";
+      break;
+    case "node-ts":
+      fileName = "index.ts";
+      break;
     default:
       fileName = "script.js";
   }
   const isServerMode = environmentMode === "express" || environmentMode === "express-ts";
-  return /* @__PURE__ */ jsxs7("main", { className: "flex-1 overflow-hidden flex flex-col relative", children: [
-    hasPredictionTask && /* @__PURE__ */ jsx8("div", { className: `
+  return /* @__PURE__ */ jsxs7(
+    "div",
+    {
+      ref: fullscreenContainerRef,
+      className: `flex-1 overflow-hidden flex flex-col relative ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`,
+      children: [
+        hasPredictionTask && /* @__PURE__ */ jsx8("div", { className: `
           shrink-0 border-b p-4 flex flex-col gap-3 transition-colors duration-300
           ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50/50 border-blue-100"}
         `, children: /* @__PURE__ */ jsxs7("div", { className: "flex items-start gap-3", children: [
-      /* @__PURE__ */ jsx8("div", { className: `p-2 rounded-lg shrink-0 ${themeMode === "dark" ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-700"}`, children: /* @__PURE__ */ jsx8(Brain, { className: "w-5 h-5" }) }),
-      /* @__PURE__ */ jsxs7("div", { className: "flex-1 space-y-2", children: [
-        /* @__PURE__ */ jsxs7("div", { className: "flex items-center justify-between", children: [
-          /* @__PURE__ */ jsxs7("div", { className: "flex-1", children: [
-            /* @__PURE__ */ jsx8("h3", { className: `text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === "dark" ? "text-purple-400" : "text-purple-700"}`, children: "Predict" }),
-            /* @__PURE__ */ jsx8("div", { className: `text-sm leading-relaxed ${themeMode === "dark" ? "text-gray-300" : "text-gray-800"}`, children: predictionPrompt })
-          ] }),
-          isPredictionLocked && /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ml-4 ${themeMode === "dark" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-green-100 text-green-700 border-green-200"}`, children: [
-            /* @__PURE__ */ jsx8(Lock, { className: "w-3 h-3" }),
-            "Locked"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsx8(
-          "textarea",
-          {
-            value: predictionAnswer,
-            onChange: (e) => setPredictionAnswer(e.target.value),
-            placeholder: "Type your prediction here...",
-            disabled: isPredictionLocked,
-            className: `
+          /* @__PURE__ */ jsx8("div", { className: `p-2 rounded-lg shrink-0 ${themeMode === "dark" ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-700"}`, children: /* @__PURE__ */ jsx8(Brain, { className: "w-5 h-5" }) }),
+          /* @__PURE__ */ jsxs7("div", { className: "flex-1 space-y-2", children: [
+            /* @__PURE__ */ jsxs7("div", { className: "flex items-center justify-between", children: [
+              /* @__PURE__ */ jsxs7("div", { className: "flex-1", children: [
+                /* @__PURE__ */ jsx8("h3", { className: `text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === "dark" ? "text-purple-400" : "text-purple-700"}`, children: "Predict" }),
+                /* @__PURE__ */ jsx8("div", { className: `text-sm leading-relaxed ${themeMode === "dark" ? "text-gray-300" : "text-gray-800"}`, children: predictionPrompt })
+              ] }),
+              isPredictionLocked && /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ml-4 ${themeMode === "dark" ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-green-100 text-green-700 border-green-200"}`, children: [
+                /* @__PURE__ */ jsx8(Lock, { className: "w-3 h-3" }),
+                "Locked"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx8(
+              "textarea",
+              {
+                value: predictionAnswer,
+                onChange: (e) => setPredictionAnswer(e.target.value),
+                placeholder: "Type your prediction here...",
+                disabled: isPredictionLocked,
+                className: `
                     w-full min-h-[60px] p-3 rounded-md text-sm outline-none border focus:ring-2 transition-all resize-y
                     disabled:opacity-60 disabled:cursor-not-allowed
                     ${themeMode === "dark" ? "bg-black/20 border-white/10 text-gray-200 placeholder-gray-500 focus:border-purple-500/50 focus:ring-purple-500/20 disabled:bg-black/40" : "bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-200 disabled:bg-gray-50"}
                   `
-          }
-        )
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxs7("div", { className: `h-12 shrink-0 border-b flex items-center justify-between px-4 transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`, children: [
-      /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-2 transition-colors ${themeMode === "dark" ? "text-gray-400" : "text-gray-600"}`, children: [
-        /* @__PURE__ */ jsx8(FileCode, { className: "w-4 h-4" }),
-        /* @__PURE__ */ jsx8("span", { className: "text-sm font-mono opacity-80", children: fileName }),
-        hasPredictionTask && /* @__PURE__ */ jsx8("span", { className: "ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20", children: "Read Only" })
-      ] }),
-      /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-3", children: [
-        /* @__PURE__ */ jsxs7("div", { className: "hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5", children: [
-          /* @__PURE__ */ jsx8(
-            "button",
-            {
-              onClick: () => setLayout("horizontal"),
-              className: `p-1.5 rounded ${layout === "horizontal" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
-              title: "Split Screen (Side by Side)",
-              children: /* @__PURE__ */ jsx8(Columns, { className: "w-3.5 h-3.5" })
-            }
-          ),
-          /* @__PURE__ */ jsx8(
-            "button",
-            {
-              onClick: () => setLayout("vertical"),
-              className: `p-1.5 rounded ${layout === "vertical" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
-              title: "Vertical Split (Stacked)",
-              children: /* @__PURE__ */ jsx8(Rows, { className: "w-3.5 h-3.5" })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsx8("div", { className: `h-4 w-px mx-1 ${themeMode === "dark" ? "bg-white/10" : "bg-gray-200"}` }),
-        hasDocs && /* @__PURE__ */ jsxs7(
-          Button,
-          {
-            variant: "ghost",
-            onClick: () => setIsHelpOpen(!isHelpOpen),
-            className: `!px-2 ${isHelpOpen ? "bg-blue-500/10 text-blue-500" : ""}`,
-            title: "Toggle Documentation",
-            children: [
-              /* @__PURE__ */ jsx8(Book, { className: "w-4 h-4" }),
-              /* @__PURE__ */ jsx8("span", { className: "hidden sm:inline text-xs ml-2", children: "Help" })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsx8(
-          Button,
-          {
-            onClick: handleRunClick,
-            disabled: isRunning || !isPredictionFulfilled,
-            className: `h-8 px-4 text-sm font-semibold shadow-sm transition-all duration-300 ${!isPredictionFulfilled ? "opacity-50 cursor-not-allowed grayscale" : ""}`,
-            icon: isRunning ? /* @__PURE__ */ jsx8(CheckCircle2, { className: "w-3.5 h-3.5 animate-pulse" }) : /* @__PURE__ */ jsx8(Play, { className: "w-3.5 h-3.5 fill-current" }),
-            children: isRunning ? "Running..." : "Run Code"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxs7("div", { className: "flex-1 flex overflow-hidden", children: [
-      /* @__PURE__ */ jsxs7(
-        "div",
-        {
-          ref: containerRef,
-          className: `flex-1 flex overflow-hidden min-w-0 ${layout === "horizontal" ? "flex-row" : "flex-col"}`,
-          children: [
-            /* @__PURE__ */ jsx8(
-              "section",
+              }
+            )
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxs7("div", { className: `h-12 shrink-0 border-b flex items-center justify-between px-4 transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`, children: [
+          /* @__PURE__ */ jsxs7("div", { className: `flex items-center gap-2 transition-colors ${themeMode === "dark" ? "text-gray-400" : "text-gray-600"}`, children: [
+            /* @__PURE__ */ jsx8(FileCode, { className: "w-4 h-4" }),
+            /* @__PURE__ */ jsx8("span", { className: "text-sm font-mono opacity-80", children: fileName }),
+            hasPredictionTask && /* @__PURE__ */ jsx8("span", { className: "ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20", children: "Read Only" })
+          ] }),
+          /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-3", children: [
+            /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5", children: [
+              /* @__PURE__ */ jsx8(
+                "button",
+                {
+                  onClick: () => setLayout("horizontal"),
+                  className: `p-1.5 rounded ${layout === "horizontal" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
+                  title: "Split Screen (Side by Side)",
+                  children: /* @__PURE__ */ jsx8(Columns, { className: "w-3.5 h-3.5" })
+                }
+              ),
+              /* @__PURE__ */ jsx8(
+                "button",
+                {
+                  onClick: () => setLayout("vertical"),
+                  className: `p-1.5 rounded ${layout === "vertical" ? themeMode === "dark" ? "bg-gray-700 text-white shadow-sm" : "bg-white text-black shadow-sm" : "opacity-50 hover:opacity-100"}`,
+                  title: "Vertical Split (Stacked)",
+                  children: /* @__PURE__ */ jsx8(Rows, { className: "w-3.5 h-3.5" })
+                }
+              ),
+              /* @__PURE__ */ jsx8("div", { className: `w-px h-3 mx-0.5 ${themeMode === "dark" ? "bg-white/10" : "bg-black/10"}` }),
+              /* @__PURE__ */ jsx8(
+                "button",
+                {
+                  onClick: toggleFullscreen,
+                  className: `p-1.5 rounded opacity-50 hover:opacity-100 transition-opacity ${isFullscreen ? themeMode === "dark" ? "bg-blue-500/20 text-blue-400" : "bg-blue-50 text-blue-600" : ""}`,
+                  title: isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen",
+                  children: isFullscreen ? /* @__PURE__ */ jsx8(Minimize2, { className: "w-3.5 h-3.5" }) : /* @__PURE__ */ jsx8(Maximize2, { className: "w-3.5 h-3.5" })
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsx8("div", { className: `h-4 w-px mx-1 ${themeMode === "dark" ? "bg-white/10" : "bg-gray-200"}` }),
+            hasDocs && /* @__PURE__ */ jsxs7(
+              Button,
               {
-                style: {
-                  [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%`
-                },
-                className: `
-             flex flex-col relative group transition-colors duration-300 min-w-0
-             ${themeMode === "dark" ? "border-gray-800" : "border-gray-200"}
-            `,
-                children: /* @__PURE__ */ jsx8(
-                  CodeEditor,
-                  {
-                    code,
-                    onChange: (val) => onChange(val || ""),
-                    themeMode,
-                    environmentMode,
-                    sessionId,
-                    readOnly: hasPredictionTask
-                  }
-                )
+                variant: "ghost",
+                onClick: () => setIsHelpOpen(!isHelpOpen),
+                className: `!px-2 ${isHelpOpen ? "bg-blue-500/10 text-blue-500" : ""}`,
+                title: "Toggle Documentation",
+                children: [
+                  /* @__PURE__ */ jsx8(Book, { className: "w-4 h-4" }),
+                  /* @__PURE__ */ jsx8("span", { className: "hidden sm:inline text-xs ml-2", children: "Help" })
+                ]
               }
             ),
             /* @__PURE__ */ jsx8(
-              "div",
+              Button,
               {
-                onMouseDown: handleMouseDown,
-                className: `
+                onClick: handleRunClick,
+                disabled: isRunning || !isPredictionFulfilled,
+                className: `h-8 px-4 text-sm font-semibold shadow-sm transition-all duration-300 ${!isPredictionFulfilled ? "opacity-50 cursor-not-allowed grayscale" : ""}`,
+                icon: isRunning ? /* @__PURE__ */ jsx8(CheckCircle2, { className: "w-3.5 h-3.5 animate-pulse" }) : /* @__PURE__ */ jsx8(Play, { className: "w-3.5 h-3.5 fill-current" }),
+                children: isRunning ? "Running..." : "Run Code"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs7("div", { className: "flex-1 flex overflow-hidden", children: [
+          /* @__PURE__ */ jsxs7(
+            "div",
+            {
+              ref: containerRef,
+              className: `flex-1 flex overflow-hidden min-w-0 ${layout === "horizontal" ? "flex-row" : "flex-col"}`,
+              children: [
+                /* @__PURE__ */ jsx8(
+                  "section",
+                  {
+                    style: {
+                      [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%`
+                    },
+                    className: `
+             flex flex-col relative group transition-colors duration-300 min-w-0
+             ${themeMode === "dark" ? "border-gray-800" : "border-gray-200"}
+            `,
+                    children: /* @__PURE__ */ jsx8(
+                      CodeEditor,
+                      {
+                        code,
+                        onChange: (val) => onChange(val || ""),
+                        themeMode,
+                        environmentMode,
+                        sessionId,
+                        readOnly: hasPredictionTask
+                      }
+                    )
+                  }
+                ),
+                /* @__PURE__ */ jsx8(
+                  "div",
+                  {
+                    onMouseDown: handleMouseDown,
+                    className: `
                 z-20 flex items-center justify-center shrink-0 hover:bg-blue-500 hover:text-white transition-colors
                 ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-600 border-black/20" : "bg-gray-100 text-gray-400 border-white"}
                 ${isDragging ? "!bg-blue-600 !text-white" : ""}
                 ${layout === "horizontal" ? "w-3 h-full cursor-col-resize border-l border-r" : "h-3 w-full cursor-row-resize border-t border-b"}
             `,
-                children: layout === "horizontal" ? /* @__PURE__ */ jsx8(GripVertical, { className: "w-3 h-3" }) : /* @__PURE__ */ jsx8(GripHorizontal3, { className: "w-3 h-3" })
-              }
-            ),
-            /* @__PURE__ */ jsx8(
-              "section",
-              {
-                style: {
-                  [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%`
-                },
-                className: `
+                    children: layout === "horizontal" ? /* @__PURE__ */ jsx8(GripVertical, { className: "w-3 h-3" }) : /* @__PURE__ */ jsx8(GripHorizontal3, { className: "w-3 h-3" })
+                  }
+                ),
+                /* @__PURE__ */ jsx8(
+                  "section",
+                  {
+                    style: {
+                      [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%`
+                    },
+                    className: `
                 flex flex-col relative transition-colors duration-300 min-w-0 
                 ${themeMode === "dark" ? "bg-gray-800" : "bg-gray-100"}
                 ${isDragging ? "pointer-events-none" : ""} /* Prevent iframe stealing mouse events */
             `,
-                children: /* @__PURE__ */ jsx8("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx8(
-                  ServerOutput,
-                  {
-                    runTrigger,
-                    code,
-                    themeMode,
-                    environmentMode,
-                    isBlurred: !isPredictionFulfilled
+                    children: /* @__PURE__ */ jsx8("div", { className: "flex-1 p-2 md:p-4 h-full overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx8(
+                      ServerOutput,
+                      {
+                        runTrigger,
+                        code,
+                        themeMode,
+                        environmentMode,
+                        isBlurred: !isPredictionFulfilled
+                      }
+                    ) : /* @__PURE__ */ jsx8(
+                      OutputFrame,
+                      {
+                        runTrigger,
+                        code,
+                        themeMode,
+                        environmentMode,
+                        isBlurred: !isPredictionFulfilled,
+                        isPredictionMode: hasPredictionTask
+                      }
+                    ) })
                   }
-                ) : /* @__PURE__ */ jsx8(
-                  OutputFrame,
-                  {
-                    runTrigger,
-                    code,
-                    themeMode,
-                    environmentMode,
-                    isBlurred: !isPredictionFulfilled,
-                    isPredictionMode: hasPredictionTask
-                  }
-                ) })
-              }
-            )
-          ]
-        }
-      ),
-      hasDocs && isHelpOpen && /* @__PURE__ */ jsx8(
-        HelpSidebar,
-        {
-          isOpen: isHelpOpen,
-          onClose: () => setIsHelpOpen(false),
-          themeMode,
-          environmentMode
-        }
-      )
-    ] })
-  ] });
+                )
+              ]
+            }
+          ),
+          hasDocs && isHelpOpen && /* @__PURE__ */ jsx8(
+            HelpSidebar,
+            {
+              isOpen: isHelpOpen,
+              onClose: () => setIsHelpOpen(false),
+              themeMode,
+              environmentMode
+            }
+          )
+        ] })
+      ]
+    }
+  );
 };
 
 // components/CodeShoebox.tsx
@@ -1587,7 +1625,7 @@ var CodeShoebox = ({
 }) => {
   const [runTrigger, setRunTrigger] = useState4(0);
   const [isRunning, setIsRunning] = useState4(false);
-  useEffect5(() => {
+  useEffect4(() => {
     setRunTrigger(0);
     setIsRunning(false);
   }, [sessionId]);
@@ -1639,7 +1677,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-import { useState as useState5, useEffect as useEffect6, useCallback as useCallback4 } from "react";
+import { useState as useState5, useEffect as useEffect5, useCallback as useCallback4 } from "react";
 
 // theme.ts
 var baseTheme = {
@@ -1749,43 +1787,44 @@ root.appendChild(button);
 // Example 3: Console logging
 console.log('Code loaded successfully.');
 `;
-var TYPESCRIPT_STARTER_CODE = `// Welcome to TypeScript!
-// The browser will transpile this code before running it.
-
-interface User {
-  id: number;
-  name: string;
-  role: 'admin' | 'user';
-}
-
-const currentUser: User = {
-  id: 42,
-  name: "Sandbox Developer",
-  role: "admin"
-};
-
-// 'root' is available in the global scope
-const displayUser = (user: User) => {
-  const card = document.createElement('div');
-  Object.assign(card.style, {
-    padding: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    fontFamily: 'monospace'
-  });
-
-  card.innerHTML = \`
-    <h3>\${user.name}</h3>
-    <p>ID: \${user.id}</p>
-    <p>Role: <span style="color: blue">\${user.role}</span></p>
-  \`;
-  
-  root.appendChild(card);
-};
-
-displayUser(currentUser);
-console.log("TypeScript execution complete");
-`;
+var TYPESCRIPT_STARTER_CODE = [
+  "// Welcome to TypeScript!",
+  "// The browser will transpile this code before running it.",
+  "",
+  "interface User {",
+  "  id: number;",
+  "  name: string;",
+  "  role: 'admin' | 'user';",
+  "}",
+  "",
+  "const currentUser: User = {",
+  "  id: 42,",
+  '  name: "Sandbox Developer",',
+  '  role: "admin"',
+  "};",
+  "",
+  "// 'root' is available in the global scope",
+  "const displayUser = (user: User) => {",
+  "  const card = document.createElement('div');",
+  "  Object.assign(card.style, {",
+  "    padding: '20px',",
+  "    border: '1px solid #ccc',",
+  "    borderRadius: '8px',",
+  "    fontFamily: 'monospace'",
+  "  });",
+  "",
+  "  card.innerHTML = `",
+  "    <h3>${user.name}</h3>",
+  "    <p>ID: ${user.id}</p>",
+  '    <p>Role: <span style="color: blue">${user.role}</span></p>',
+  "  `;",
+  "  ",
+  "  root.appendChild(card);",
+  "};",
+  "",
+  "displayUser(currentUser);",
+  'console.log("TypeScript execution complete");'
+].join("\n");
 var P5_STARTER_CODE = `// Welcome to p5.js Creative Coding!
 // The console below will capture your logs.
 
@@ -1869,82 +1908,150 @@ if (container) {
   root.render(<Counter start={10} />);
 }
 `;
-var EXPRESS_STARTER_CODE = `// Welcome to the Express.js Simulator!
-// We've mocked 'express' so you can write server-side code in the browser.
+var EXPRESS_STARTER_CODE = [
+  "// Welcome to the Express.js Simulator!",
+  "// We've mocked 'express' so you can write server-side code in the browser.",
+  "",
+  "const app = express();",
+  "const port = 3000;",
+  "",
+  "// Database simulation",
+  "const users = [",
+  "  { id: 1, name: 'Alice', role: 'engineer' },",
+  "  { id: 2, name: 'Bob', role: 'designer' }",
+  "];",
+  "",
+  "// Define your routes below",
+  "app.get('/', (req, res) => {",
+  "  res.json({ message: 'Welcome to the mock API!' });",
+  "});",
+  "",
+  "app.get('/users', (req, res) => {",
+  "  res.json(users);",
+  "});",
+  "",
+  "app.get('/users/:id', (req, res) => {",
+  "  const id = parseInt(req.params.id);",
+  "  const user = users.find(u => u.id === id);",
+  "  ",
+  "  if (user) {",
+  "    res.json(user);",
+  "  } else {",
+  "    res.status(404).json({ error: 'User not found' });",
+  "  }",
+  "});",
+  "",
+  "// Start the server",
+  "app.listen(port, () => {",
+  "  console.log(`Mock server listening on port ${port}`);",
+  "});"
+].join("\n");
+var EXPRESS_TS_STARTER_CODE = [
+  "// Express + TypeScript Simulator",
+  "import express, { Request, Response } from 'express';",
+  "",
+  "const app = express();",
+  "const port = 3000;",
+  "",
+  "interface Product {",
+  "  id: number;",
+  "  name: string;",
+  "  stock: number;",
+  "}",
+  "",
+  "const inventory: Product[] = [",
+  '  { id: 101, name: "Laptop", stock: 5 },',
+  '  { id: 102, name: "Mouse", stock: 12 }',
+  "];",
+  "",
+  "app.get('/', (req: Request, res: Response) => {",
+  '  res.json({ status: "system_nominal", timestamp: Date.now() });',
+  "});",
+  "",
+  "app.get('/products', (req: Request, res: Response) => {",
+  "  res.json(inventory);",
+  "});",
+  "",
+  "app.get('/products/:id', (req: Request, res: Response) => {",
+  "  const id = parseInt(req.params.id);",
+  "  const item = inventory.find(p => p.id === id);",
+  "  ",
+  "  if (item) {",
+  "    res.json(item);",
+  "  } else {",
+  '    res.status(404).json({ error: "Product not found" });',
+  "  }",
+  "});",
+  "",
+  "app.listen(port, () => {",
+  "  console.log(`TS Server initialized on port ${port}`);",
+  "});"
+].join("\n");
+var NODE_JS_STARTER_CODE = `/**
+ * Logic & Algorithms: The Reducer Pattern
+ * 
+ * Scenario: Track Meet Analysis
+ * Goal: Sum up the total miles where the pace was under 7:00 min/mile.
+ */
 
-const app = express();
-const port = 3000;
-
-// Database simulation
-const users = [
-  { id: 1, name: 'Alice', role: 'engineer' },
-  { id: 2, name: 'Bob', role: 'designer' }
+const trackMeets = [
+  { event: "High School Invitational", miles: 3.1, pacePerMile: 6.45 },
+  { event: "City Championship", miles: 3.1, pacePerMile: 7.10 },
+  { event: "District Finals", miles: 3.1, pacePerMile: 6.55 },
+  { event: "State Meet", miles: 3.1, pacePerMile: 6.50 },
+  { event: "Morning Training Run", miles: 5.0, pacePerMile: 8.30 },
+  { event: "Speed Workout", miles: 4.0, pacePerMile: 6.58 }
 ];
 
-// Define your routes below
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the mock API!' });
-});
+console.log("Analyzing Track Meet Data...");
+console.table(trackMeets);
 
-app.get('/users', (req, res) => {
-  res.json(users);
-});
-
-app.get('/users/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const user = users.find(u => u.id === id);
-  
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(404).json({ error: 'User not found' });
+// Use reduce to filter and sum in one pass
+const eliteMiles = trackMeets.reduce((total, meet) => {
+  if (meet.pacePerMile < 7.0) {
+    console.log(\`\u2705 Included: \${meet.event} (\${meet.miles} miles @ \${meet.pacePerMile})\`);
+    return total + meet.miles;
   }
-});
+  return total;
+}, 0);
 
-// Start the server
-app.listen(port, () => {
-  console.log(\`Mock server listening on port \${port}\`);
-});
+console.log("\\n--- Results ---");
+console.log(\`Total "Elite" Miles (Under 7:00 pace): \${eliteMiles.toFixed(1)} miles\`);
 `;
-var EXPRESS_TS_STARTER_CODE = `// Express + TypeScript Simulator
-import express, { Request, Response } from 'express';
+var NODE_TS_STARTER_CODE = `/**
+ * Pure TypeScript Console Environment
+ * Focus on types and logic without DOM distraction.
+ */
 
-const app = express();
-const port = 3000;
-
-interface Product {
+interface Task {
   id: number;
-  name: string;
-  stock: number;
+  title: string;
+  completed: boolean;
 }
 
-const inventory: Product[] = [
-  { id: 101, name: "Laptop", stock: 5 },
-  { id: 102, name: "Mouse", stock: 12 }
-];
+class TodoList {
+  private tasks: Task[] = [];
 
-app.get('/', (req: Request, res: Response) => {
-  res.json({ status: "system_nominal", timestamp: Date.now() });
-});
-
-app.get('/products', (req: Request, res: Response) => {
-  res.json(inventory);
-});
-
-app.get('/products/:id', (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-  const item = inventory.find(p => p.id === id);
-  
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ error: "Product not found" });
+  addTask(title: string): void {
+    const newTask: Task = {
+      id: this.tasks.length + 1,
+      title,
+      completed: false
+    };
+    this.tasks.push(newTask);
+    console.log(\`Added task: "\${title}"\`);
   }
-});
 
-app.listen(port, () => {
-  console.log(\`TS Server initialized on port \${port}\`);
-});
+  showTasks(): void {
+    console.log("--- Current Todo List ---");
+    console.table(this.tasks);
+  }
+}
+
+const myTodos = new TodoList();
+myTodos.addTask("Learn TypeScript Types");
+myTodos.addTask("Master the Console");
+myTodos.showTasks();
 `;
 
 // hooks/useSandboxState.ts
@@ -1962,6 +2069,10 @@ var getStarterCode = (mode) => {
       return EXPRESS_STARTER_CODE;
     case "express-ts":
       return EXPRESS_TS_STARTER_CODE;
+    case "node-js":
+      return NODE_JS_STARTER_CODE;
+    case "node-ts":
+      return NODE_TS_STARTER_CODE;
     default:
       return STARTER_CODE;
   }
@@ -1970,7 +2081,7 @@ var useSandboxState = (persistenceKey) => {
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : "";
   const getStorageKey = useCallback4((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
   const loadSavedMode = () => {
-    if (!persistenceKey || typeof window === "undefined") return "dom";
+    if (typeof persistenceKey !== "string" || typeof window === "undefined") return "dom";
     try {
       const saved = localStorage.getItem(getStorageKey("env_mode"));
       return saved || "dom";
@@ -1979,7 +2090,7 @@ var useSandboxState = (persistenceKey) => {
     }
   };
   const loadSavedThemeMode = () => {
-    if (!persistenceKey || typeof window === "undefined") return "dark";
+    if (typeof persistenceKey !== "string" || typeof window === "undefined") return "dark";
     try {
       const saved = localStorage.getItem(getStorageKey("theme_mode"));
       return saved || "dark";
@@ -1988,23 +2099,24 @@ var useSandboxState = (persistenceKey) => {
     }
   };
   const loadSavedThemeName = () => {
-    if (!persistenceKey || typeof window === "undefined") return themes[0].name;
+    if (typeof persistenceKey !== "string" || typeof window === "undefined") return themes[0].name;
     try {
       return localStorage.getItem(getStorageKey("theme_name")) || themes[0].name;
     } catch {
       return themes[0].name;
     }
   };
-  const loadSavedCode = (mode) => {
-    if (!persistenceKey || typeof window === "undefined") return getStarterCode(mode);
+  const loadSavedCode = useCallback4((mode) => {
+    const starter = getStarterCode(mode);
+    if (typeof persistenceKey !== "string" || typeof window === "undefined") return starter;
     try {
       const key = getStorageKey(`code_${mode}`);
       const saved = localStorage.getItem(key);
-      return saved !== null ? saved : getStarterCode(mode);
+      return typeof saved === "string" ? saved : starter;
     } catch {
-      return getStarterCode(mode);
+      return starter;
     }
-  };
+  }, [persistenceKey, getStorageKey]);
   const [environmentMode, setEnvironmentMode] = useState5(loadSavedMode);
   const [themeMode, setThemeMode] = useState5(loadSavedThemeMode);
   const [activeThemeName, setActiveThemeName] = useState5(loadSavedThemeName);
@@ -2012,21 +2124,21 @@ var useSandboxState = (persistenceKey) => {
     return loadSavedCode(environmentMode);
   });
   const [sessionId, setSessionId] = useState5(0);
-  useEffect6(() => {
-    if (!persistenceKey) return;
+  useEffect5(() => {
+    if (typeof persistenceKey !== "string") return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);
   }, [environmentMode, persistenceKey, getStorageKey]);
-  useEffect6(() => {
-    if (!persistenceKey) return;
+  useEffect5(() => {
+    if (typeof persistenceKey !== "string") return;
     const key = getStorageKey(`code_${environmentMode}`);
     localStorage.setItem(key, code);
   }, [code, environmentMode, persistenceKey, getStorageKey]);
-  useEffect6(() => {
-    if (!persistenceKey) return;
+  useEffect5(() => {
+    if (typeof persistenceKey !== "string") return;
     localStorage.setItem(getStorageKey("theme_mode"), themeMode);
   }, [themeMode, persistenceKey, getStorageKey]);
-  useEffect6(() => {
-    if (!persistenceKey) return;
+  useEffect5(() => {
+    if (typeof persistenceKey !== "string") return;
     localStorage.setItem(getStorageKey("theme_name"), activeThemeName);
   }, [activeThemeName, persistenceKey, getStorageKey]);
   const switchMode = useCallback4((newMode) => {
@@ -2035,7 +2147,7 @@ var useSandboxState = (persistenceKey) => {
     setEnvironmentMode(newMode);
     setCode(savedCode);
     setSessionId((prev) => prev + 1);
-  }, [environmentMode, persistenceKey, getStorageKey]);
+  }, [environmentMode, loadSavedCode]);
   const resetCode = useCallback4(() => {
     const starter = getStarterCode(environmentMode);
     setCode(starter);
