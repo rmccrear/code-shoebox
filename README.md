@@ -30,15 +30,17 @@ npm install github:rmccrear/code-shoebox#v1.0.15
 yarn add github:rmccrear/code-shoebox#v1.0.15
 ```
 
-## Styling Setup
+## Maintenance & Releases
 
-CodeShoebox ships with a compiled CSS file that includes all necessary layout styles. **You must import this file in your application.**
+To create a new release (tagging and updating distribution branch):
 
-In your root file (e.g., `main.tsx`, `App.tsx`, or `_app.tsx`):
-
-```tsx
-import 'code-shoebox/styles.css';
-```
+1. Update the version in `package.json`.
+2. Commit your changes.
+3. Run the release command:
+   ```bash
+   npm run release
+   ```
+   This script will automatically tag the release with `v[version]` using your latest commit message as the tag description, push the tag, and update the `dist` branch.
 
 ## Layout Requirements
 

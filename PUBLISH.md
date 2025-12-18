@@ -1,57 +1,68 @@
-# Publishing Guide
 
-This project is configured to publish the compiled distribution files to a specific branch (`dist`) in your Git repository. This allows you to install the library directly from GitHub or use it as a submodule without needing to publish to the public npm registry.
+# Publishing & Release Guide
 
-## Quick Start
+This project is configured to automate versioning, Git tagging, and the deployment of compiled distribution files.
 
-1. Ensure all your changes are committed to your working branch (e.g., `main`).
-2. Run the publish script:
+## Releasing a New Version (Recommended)
 
-   ```bash
-   npm run publish:dist
-   ```
+The `release` script is the primary tool for publishing updates. It automates the tedious parts of the Git workflow to ensure consistency across versions.
 
-   **Note:** You may be prompted for your GitHub credentials if you are not using SSH keys.
+### Prerequisites
+- **Git CLI**: You must have `git` installed and configured.
+- **Push Access**: You must have write permissions for the repository.
+- **Clean State**: It is recommended (but not strictly required) to have a clean working directory before running the release.
 
-## What Happens Behind the Scenes?
+### Step-by-Step Instructions
 
-The `npm run publish:dist` command executes a sequence of tasks defined in `package.json`:
+1.  **Update the version**: 
+    Open `package.json` and increment the `"version"` field (e.g., from `1.0.15` to `1.0.16`).
+2.  **Commit your changes**: 
+    Stage and commit your updates. **Important:** The message of this last commit will be used as the description for your Git tag. Make it descriptive (e.g., "feat: add SQL support and fix console scrolling").
+    ```bash
+    git add .
+    git commit -m "feat: your descriptive message"
+    ```
+3.  **Run the release command**:
+    ```bash
+    npm run release
+    ```
 
-1. **Build** (`npm run build`): 
-   - Compiles the TypeScript code into CommonJS (`.js`) and ESM (`.mjs`) formats.
-   - Generates type definitions (`.d.ts`).
-   - Outputs everything to the `dist/` folder.
+### What the Release Script Does
+- **Version Check**: Reads the version you just set in `package.json`.
+- **Commit Fetching**: Automatically grabs the message from your most recent commit.
+- **Tagging**: Creates an annotated Git tag (e.g., `v1.0.16`) using the version number and that commit message.
+- **Syncing**: Pushes the new tag to GitHub.
+- **Distribution**: Automatically triggers `npm run publish:dist`, which builds the library and updates the `dist` branch.
 
-2. **Prepare** (`node scripts/prepare-dist.js`):
-   - Copies the `README.md` into `dist/`.
-   - Copies `package.json` into `dist/` and modifies it (removes `dist/` prefixes from paths) so the package resolves correctly when installed from the root of the branch.
+---
 
-3. **Deploy** (`npx gh-pages ...`):
-   - Uses the `gh-pages` utility to forcefully push the contents of the `dist` folder to the `dist` branch of your `origin` remote.
+## Updating the Distribution Branch Only
+
+If you need to push a fix to the `dist` branch without incrementing the version number or creating a new tag:
+
+```bash
+npm run publish:dist
+```
+
+This is useful for documentation updates or minor internal adjustments that don't warrant a version bump.
+
+---
 
 ## How to Install the Published Package
 
-Once the `dist` branch is updated, you can install the library in other projects using the Git URL targeting that specific branch.
+Once the release script finishes, users can install the specific version via GitHub:
 
-### Using npm
-
+### Targeting a Specific Version (Recommended)
 ```bash
-# Replace 'username/repo' with your actual GitHub path
-npm install git+https://github.com/username/code-shoebox.git#dist
+npm install github:rmccrear/code-shoebox#v1.0.15
 ```
 
-### In `package.json`
-
-```json
-{
-  "dependencies": {
-    "code-shoebox": "git+https://github.com/username/code-shoebox.git#dist"
-  }
-}
+### Targeting the Latest Build
+```bash
+npm install github:rmccrear/code-shoebox#dist
 ```
 
-## Troubleshooting
-
-- **Permissions**: Ensure you have push access to the repository.
-- **Diverged History**: Since the script force-pushes to the `dist` branch, it overwrites history on that branch. This is intended for distribution branches.
-- **gh-pages error**: If `npx gh-pages` fails, ensure the `dist` directory was created successfully by the build step.
+## Best Practices
+- **Atomic Commits**: Always commit your version bump separately or as the final commit in a feature set to ensure the tag description is accurate.
+- **GitHub Releases**: After running the script, visit the GitHub "Releases" page. You will see your new tag there. You can manually edit it to add richer release notes or attach assets if needed.
+- **Branch Protection**: If you have branch protection enabled, ensure your local credentials allow pushing tags directly to the origin.

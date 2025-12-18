@@ -13,6 +13,7 @@
     "build": "tsup export.ts --format cjs,esm --dts --clean && npx tailwindcss -i ./styles/input.css -o ./dist/styles.css",
     "prepublishOnly": "npm run build",
     "publish:dist": "npm run build && node scripts/prepare-dist.js && npx gh-pages -d dist -b dist",
+    "release": "node scripts/release.js",
     "lint": "eslint ."
   },
   "peerDependencies": {
