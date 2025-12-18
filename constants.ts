@@ -29,43 +29,45 @@ root.appendChild(button);
 console.log('Code loaded successfully.');
 `;
 
-export const TYPESCRIPT_STARTER_CODE = `// Welcome to TypeScript!
-// The browser will transpile this code before running it.
-
-interface User {
-  id: number;
-  name: string;
-  role: 'admin' | 'user';
-}
-
-const currentUser: User = {
-  id: 42,
-  name: "Sandbox Developer",
-  role: "admin"
-};
-
-// 'root' is available in the global scope
-const displayUser = (user: User) => {
-  const card = document.createElement('div');
-  Object.assign(card.style, {
-    padding: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    fontFamily: 'monospace'
-  });
-
-  card.innerHTML = \`
-    <h3>\${user.name}</h3>
-    <p>ID: \${user.id}</p>
-    <p>Role: <span style="color: blue">\${user.role}</span></p>
-  \`;
-  
-  root.appendChild(card);
-};
-
-displayUser(currentUser);
-console.log("TypeScript execution complete");
-`;
+// Using array join to safely handle nested template literals and avoid escaping issues in complex starter code strings
+export const TYPESCRIPT_STARTER_CODE = [
+  '// Welcome to TypeScript!',
+  '// The browser will transpile this code before running it.',
+  '',
+  'interface User {',
+  '  id: number;',
+  '  name: string;',
+  '  role: \'admin\' | \'user\';',
+  '}',
+  '',
+  'const currentUser: User = {',
+  '  id: 42,',
+  '  name: "Sandbox Developer",',
+  '  role: "admin"',
+  '};',
+  '',
+  '// \'root\' is available in the global scope',
+  'const displayUser = (user: User) => {',
+  '  const card = document.createElement(\'div\');',
+  '  Object.assign(card.style, {',
+  '    padding: \'20px\',',
+  '    border: \'1px solid #ccc\',',
+  '    borderRadius: \'8px\',',
+  '    fontFamily: \'monospace\'',
+  '  });',
+  '',
+  '  card.innerHTML = `',
+  '    <h3>${user.name}</h3>',
+  '    <p>ID: ${user.id}</p>',
+  '    <p>Role: <span style="color: blue">${user.role}</span></p>',
+  '  `;',
+  '  ',
+  '  root.appendChild(card);',
+  '};',
+  '',
+  'displayUser(currentUser);',
+  'console.log("TypeScript execution complete");'
+].join('\n');
 
 export const P5_STARTER_CODE = `// Welcome to p5.js Creative Coding!
 // The console below will capture your logs.
@@ -153,81 +155,151 @@ if (container) {
 }
 `;
 
-export const EXPRESS_STARTER_CODE = `// Welcome to the Express.js Simulator!
-// We've mocked 'express' so you can write server-side code in the browser.
+export const EXPRESS_STARTER_CODE = [
+  '// Welcome to the Express.js Simulator!',
+  '// We\'ve mocked \'express\' so you can write server-side code in the browser.',
+  '',
+  'const app = express();',
+  'const port = 3000;',
+  '',
+  '// Database simulation',
+  'const users = [',
+  '  { id: 1, name: \'Alice\', role: \'engineer\' },',
+  '  { id: 2, name: \'Bob\', role: \'designer\' }',
+  '];',
+  '',
+  '// Define your routes below',
+  'app.get(\'/\', (req, res) => {',
+  '  res.json({ message: \'Welcome to the mock API!\' });',
+  '});',
+  '',
+  'app.get(\'/users\', (req, res) => {',
+  '  res.json(users);',
+  '});',
+  '',
+  'app.get(\'/users/:id\', (req, res) => {',
+  '  const id = parseInt(req.params.id);',
+  '  const user = users.find(u => u.id === id);',
+  '  ',
+  '  if (user) {',
+  '    res.json(user);',
+  '  } else {',
+  '    res.status(404).json({ error: \'User not found\' });',
+  '  }',
+  '});',
+  '',
+  '// Start the server',
+  'app.listen(port, () => {',
+  '  console.log(`Mock server listening on port ${port}`);',
+  '});'
+].join('\n');
 
-const app = express();
-const port = 3000;
+export const EXPRESS_TS_STARTER_CODE = [
+  '// Express + TypeScript Simulator',
+  'import express, { Request, Response } from \'express\';',
+  '',
+  'const app = express();',
+  'const port = 3000;',
+  '',
+  'interface Product {',
+  '  id: number;',
+  '  name: string;',
+  '  stock: number;',
+  '}',
+  '',
+  'const inventory: Product[] = [',
+  '  { id: 101, name: "Laptop", stock: 5 },',
+  '  { id: 102, name: "Mouse", stock: 12 }',
+  '];',
+  '',
+  'app.get(\'/\', (req: Request, res: Response) => {',
+  '  res.json({ status: "system_nominal", timestamp: Date.now() });',
+  '});',
+  '',
+  'app.get(\'/products\', (req: Request, res: Response) => {',
+  '  res.json(inventory);',
+  '});',
+  '',
+  'app.get(\'/products/:id\', (req: Request, res: Response) => {',
+  '  const id = parseInt(req.params.id);',
+  '  const item = inventory.find(p => p.id === id);',
+  '  ',
+  '  if (item) {',
+  '    res.json(item);',
+  '  } else {',
+  '    res.status(404).json({ error: "Product not found" });',
+  '  }',
+  '});',
+  '',
+  'app.listen(port, () => {',
+  '  console.log(`TS Server initialized on port ${port}`);',
+  '});'
+].join('\n');
 
-// Database simulation
-const users = [
-  { id: 1, name: 'Alice', role: 'engineer' },
-  { id: 2, name: 'Bob', role: 'designer' }
+export const NODE_JS_STARTER_CODE = `/**
+ * Logic & Algorithms: The Reducer Pattern
+ * 
+ * Scenario: Track Meet Analysis
+ * Goal: Sum up the total miles where the pace was under 7:00 min/mile.
+ */
+
+const trackMeets = [
+  { event: "High School Invitational", miles: 3.1, pacePerMile: 6.45 },
+  { event: "City Championship", miles: 3.1, pacePerMile: 7.10 },
+  { event: "District Finals", miles: 3.1, pacePerMile: 6.55 },
+  { event: "State Meet", miles: 3.1, pacePerMile: 6.50 },
+  { event: "Morning Training Run", miles: 5.0, pacePerMile: 8.30 },
+  { event: "Speed Workout", miles: 4.0, pacePerMile: 6.58 }
 ];
 
-// Define your routes below
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to the mock API!' });
-});
+console.log("Analyzing Track Meet Data...");
+console.table(trackMeets);
 
-app.get('/users', (req, res) => {
-  res.json(users);
-});
-
-app.get('/users/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const user = users.find(u => u.id === id);
-  
-  if (user) {
-    res.json(user);
-  } else {
-    res.status(404).json({ error: 'User not found' });
+// Use reduce to filter and sum in one pass
+const eliteMiles = trackMeets.reduce((total, meet) => {
+  if (meet.pacePerMile < 7.0) {
+    console.log(\`✅ Included: \${meet.event} (\${meet.miles} miles @ \${meet.pacePerMile})\`);
+    return total + meet.miles;
   }
-});
+  return total;
+}, 0);
 
-// Start the server
-app.listen(port, () => {
-  console.log(\`Mock server listening on port \${port}\`);
-});
+console.log("\\n--- Results ---");
+console.log(\`Total "Elite" Miles (Under 7:00 pace): \${eliteMiles.toFixed(1)} miles\`);
 `;
 
-export const EXPRESS_TS_STARTER_CODE = `// Express + TypeScript Simulator
-import express, { Request, Response } from 'express';
+export const NODE_TS_STARTER_CODE = `/**
+ * Pure TypeScript Console Environment
+ * Focus on types and logic without DOM distraction.
+ */
 
-const app = express();
-const port = 3000;
-
-interface Product {
+interface Task {
   id: number;
-  name: string;
-  stock: number;
+  title: string;
+  completed: boolean;
 }
 
-const inventory: Product[] = [
-  { id: 101, name: "Laptop", stock: 5 },
-  { id: 102, name: "Mouse", stock: 12 }
-];
+class TodoList {
+  private tasks: Task[] = [];
 
-app.get('/', (req: Request, res: Response) => {
-  res.json({ status: "system_nominal", timestamp: Date.now() });
-});
-
-app.get('/products', (req: Request, res: Response) => {
-  res.json(inventory);
-});
-
-app.get('/products/:id', (req: Request, res: Response) => {
-  const id = parseInt(req.params.id);
-  const item = inventory.find(p => p.id === id);
-  
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ error: "Product not found" });
+  addTask(title: string): void {
+    const newTask: Task = {
+      id: this.tasks.length + 1,
+      title,
+      completed: false
+    };
+    this.tasks.push(newTask);
+    console.log(\`Added task: "\${title}"\`);
   }
-});
 
-app.listen(port, () => {
-  console.log(\`TS Server initialized on port \${port}\`);
-});
+  showTasks(): void {
+    console.log("--- Current Todo List ---");
+    console.table(this.tasks);
+  }
+}
+
+const myTodos = new TodoList();
+myTodos.addTask("Learn TypeScript Types");
+myTodos.addTask("Master the Console");
+myTodos.showTasks();
 `;

@@ -1,5 +1,4 @@
 
-
 import React, { useMemo } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
@@ -27,22 +26,29 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const modelPath = useMemo(() => {
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     switch (environmentMode) {
-      case 'typescript': return `${basePath}.ts`;
-      case 'react-ts': return `${basePath}.tsx`;
-      case 'express-ts': return `${basePath}.ts`;
-      case 'react': return `${basePath}.jsx`;
-      case 'p5': return `${basePath}.js`;
-      default: return `${basePath}.js`;
+      case 'typescript': 
+      case 'express-ts':
+      case 'node-ts': 
+        return `${basePath}.ts`;
+      case 'react-ts': 
+        return `${basePath}.tsx`;
+      case 'react': 
+        return `${basePath}.jsx`;
+      case 'p5': 
+        return `${basePath}.js`;
+      default: 
+        return `${basePath}.js`;
     }
   }, [sessionId, environmentMode]);
 
   const language = useMemo(() => {
-    if (environmentMode === 'typescript' || environmentMode === 'react-ts' || environmentMode === 'express-ts') return 'typescript';
+    const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'node-ts'];
+    if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';
   }, [environmentMode]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
-    // We do not auto-focus the editor to prevent scrolling jumps in tutorial pages.
+    editor.focus();
     
     // Configure compiler options for TS
     if (language === 'typescript') {
@@ -104,7 +110,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         key={modelPath} // Force full re-render of Editor component when path changes
         height="100%"
         path={modelPath}
-        defaultLanguage={language}
+        language={language}
         theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
         
         // Use 'value' instead of 'defaultValue' to ensure the editor content 

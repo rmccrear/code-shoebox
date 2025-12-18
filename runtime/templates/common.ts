@@ -1,5 +1,4 @@
 
-
 /**
  * Shared HTML/CSS/JS for the sandbox environment.
  */
@@ -58,6 +57,8 @@ export const BASE_STYLES = `
 export const CONSOLE_INTERCEPTOR = `
     // --- Console Capture System ---
     
+    let messagePort = null;
+
     function formatMessage(msg) {
         if (msg instanceof Error) {
             return msg.toString();
@@ -75,11 +76,17 @@ export const CONSOLE_INTERCEPTOR = `
     function logToScreen(msg, type = 'log') {
         const textContent = formatMessage(msg);
 
-        // Notify parent window (React app) about the log/error
-        window.parent.postMessage({ 
-            type: type === 'error' ? 'RUNTIME_ERROR' : 'CONSOLE_LOG',
+        // Notify parent via established port (preferred for isolation) or global postMessage
+        const payload = { 
+            type: type === 'error' ? 'RUNTIME_ERROR' : (type === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
             payload: textContent
-        }, '*');
+        };
+
+        if (messagePort) {
+            messagePort.postMessage(payload);
+        } else {
+            window.parent.postMessage(payload, '*');
+        }
     }
 
     const originalLog = console.log;
@@ -114,6 +121,17 @@ export const CONSOLE_INTERCEPTOR = `
 
     window.addEventListener('unhandledrejection', function(event) {
         logToScreen(\`Async Error: \${event.reason}\`, 'error');
+    });
+
+    // Listen for port initialization
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'INIT_PORT' && event.ports[0]) {
+            messagePort = event.ports[0];
+            // If the server simulator sent this, it might expect a ready signal on the port
+            if (window.serverReadySignal) {
+                messagePort.postMessage({ type: 'SERVER_READY' });
+            }
+        }
     });
 `;
 

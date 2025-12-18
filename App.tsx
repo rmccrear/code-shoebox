@@ -97,13 +97,21 @@ const App: React.FC = () => {
                   onChange={(e) => setEnvironmentMode(e.target.value as EnvironmentMode)}
                   className="bg-transparent border-none outline-none appearance-none cursor-pointer pr-4 font-medium"
                 >
-                  <option value="dom" className="text-black">DOM / JS</option>
-                  <option value="typescript" className="text-black">TypeScript</option>
-                  <option value="p5" className="text-black">p5.js</option>
-                  <option value="react" className="text-black">React (JS)</option>
-                  <option value="react-ts" className="text-black">React (TS)</option>
-                  <option value="express" className="text-black">Node / Express</option>
-                  <option value="express-ts" className="text-black">Express (TS)</option>
+                  <optgroup label="Web & UI" className="text-black">
+                    <option value="dom">DOM / JS</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="p5">p5.js</option>
+                    <option value="react">React (JS)</option>
+                    <option value="react-ts">React (TS)</option>
+                  </optgroup>
+                  <optgroup label="Logic & Console" className="text-black">
+                    <option value="node-js">JavaScript (Console)</option>
+                    <option value="node-ts">TypeScript (Console)</option>
+                  </optgroup>
+                  <optgroup label="Server (Express)" className="text-black">
+                    <option value="express">Node / Express</option>
+                    <option value="express-ts">Express (TS)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>

@@ -45,7 +45,16 @@ export const EXPRESS_MOCK_SETUP = `
 
         listen(port, cb) {
             if (cb) cb();
-            window.parent.postMessage({ type: 'SERVER_READY' }, '*');
+            
+            // Signal ready via port if available, else global
+            const readyMsg = { type: 'SERVER_READY' };
+            if (window.messagePort) {
+                window.messagePort.postMessage(readyMsg);
+            } else {
+                window.parent.postMessage(readyMsg, '*');
+                // Flag for async port initialization
+                window.serverReadySignal = true;
+            }
         }
 
         async _handleRequest(method, url) {
@@ -86,42 +95,43 @@ export const EXPRESS_MOCK_SETUP = `
         }
     }
 
-    // --- Global Shim ---
     const appInstance = new MockApp();
-    
-    // For JS mode: const app = express();
-    // For TS mode shim: require('express') returns window.express
-    window.express = function() {
-        return appInstance;
-    };
-    
-    // Expose instance for reset logic
+    window.express = function() { return appInstance; };
     window.appInstance = appInstance;
 
-    // --- Message Listener for Test Requests ---
-    window.addEventListener('message', async (event) => {
-        const { type, payload } = event.data;
-        if (type === 'SIMULATE_REQUEST') {
-            const { method, url } = payload;
+    // Listen on the private port primarily
+    const requestHandler = async (event) => {
+        if (event.data && event.data.type === 'SIMULATE_REQUEST') {
+            const { method, url } = event.data.payload;
             const response = await appInstance._handleRequest(method, url);
-            window.parent.postMessage({
-                type: 'REQUEST_COMPLETE',
-                payload: response
-            }, '*');
+            const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
+            
+            if (window.messagePort) {
+                window.messagePort.postMessage(completeMsg);
+            } else {
+                window.parent.postMessage(completeMsg, '*');
+            }
         }
-    });
+    };
+
+    window.addEventListener('message', requestHandler);
+    
+    // Also listen on the port once initialized
+    const checkPortInterval = setInterval(() => {
+        if (window.messagePort) {
+            window.messagePort.addEventListener('message', requestHandler);
+            window.messagePort.start();
+            clearInterval(checkPortInterval);
+        }
+    }, 50);
 `;
 
 const EXPRESS_JS_RUNNER = `
     window.runMode = function(code, root) {
-        // Express Mode (JS)
         root.innerHTML = '';
-        
-        // Reset routes on re-run
         if (window.appInstance) {
             window.appInstance.routes = { GET: {} };
         }
-
         try {
             window.eval(code);
         } catch (err) {
@@ -131,7 +141,6 @@ const EXPRESS_JS_RUNNER = `
 `;
 
 export const generateExpressHtml = (showPlaceholder: boolean = true) => {
-    // Combine the setup logic and the JS-specific runner
     const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
     return BASE_HTML_WRAPPER('', script, false); 
 };

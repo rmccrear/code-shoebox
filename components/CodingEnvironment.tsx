@@ -1,6 +1,19 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, CheckCircle2, FileCode, Book, Brain, Lock, Columns, Rows, GripVertical, GripHorizontal } from 'lucide-react';
+import { 
+  Play, 
+  CheckCircle2, 
+  FileCode, 
+  Book, 
+  Brain, 
+  Lock, 
+  Columns, 
+  Rows, 
+  GripVertical, 
+  GripHorizontal,
+  Maximize2,
+  Minimize2
+} from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
@@ -38,15 +51,39 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
   const [layout, setLayout] = useState<LayoutDirection>('horizontal');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
-  // Resizing State
+  // Resizing & Fullscreen State
   const containerRef = useRef<HTMLDivElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const [editorRatio, setEditorRatio] = useState(0.5); // 0.0 to 1.0
   const [isDragging, setIsDragging] = useState(false);
 
   const hasDocs = !!getDocsForMode(environmentMode);
   const hasPredictionTask = predictionPrompt !== undefined && predictionPrompt !== null && predictionPrompt !== '';
   const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
+
+  // Sync with browser fullscreen changes (e.g. user presses Esc)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!fullscreenContainerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      fullscreenContainerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // Reset local state when session changes
   useEffect(() => {
@@ -100,7 +137,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      // Prevent selection during drag
       document.body.style.userSelect = 'none';
       document.body.style.cursor = layout === 'horizontal' ? 'col-resize' : 'row-resize';
     } else {
@@ -118,8 +154,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp, layout]);
 
-  // --- End Resizing Logic ---
-
   let fileName = 'script.js';
   switch (environmentMode) {
     case 'p5': fileName = 'sketch.js'; break;
@@ -128,13 +162,18 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
     case 'react-ts': fileName = 'App.tsx'; break;
     case 'express': fileName = 'server.js'; break;
     case 'express-ts': fileName = 'server.ts'; break;
+    case 'node-js': fileName = 'index.js'; break;
+    case 'node-ts': fileName = 'index.ts'; break;
     default: fileName = 'script.js';
   }
 
   const isServerMode = environmentMode === 'express' || environmentMode === 'express-ts';
 
   return (
-    <main className="flex-1 overflow-hidden flex flex-col relative">
+    <div 
+      ref={fullscreenContainerRef} 
+      className={`flex-1 overflow-hidden flex flex-col relative ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-white'}`}
+    >
       
       {/* Prediction Panel */}
       {hasPredictionTask && (
@@ -197,8 +236,8 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
          {/* Right: Actions */}
          <div className="flex items-center gap-3">
-            {/* Layout Toggle */}
-            <div className="hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
+            {/* Layout & Fullscreen Toggles */}
+            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
                 <button
                     onClick={() => setLayout('horizontal')}
                     className={`p-1.5 rounded ${layout === 'horizontal' ? (themeMode === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'opacity-50 hover:opacity-100'}`}
@@ -212,6 +251,14 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                     title="Vertical Split (Stacked)"
                 >
                     <Rows className="w-3.5 h-3.5" />
+                </button>
+                <div className={`w-px h-3 mx-0.5 ${themeMode === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
+                <button
+                    onClick={toggleFullscreen}
+                    className={`p-1.5 rounded opacity-50 hover:opacity-100 transition-opacity ${isFullscreen ? (themeMode === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : ''}`}
+                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                    {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
             </div>
 
@@ -331,6 +378,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           />
         )}
       </div>
-    </main>
+    </div>
   );
 };

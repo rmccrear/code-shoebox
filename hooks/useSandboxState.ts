@@ -9,11 +9,13 @@ import {
   TYPESCRIPT_STARTER_CODE,
   REACT_TS_STARTER_CODE,
   EXPRESS_STARTER_CODE,
-  EXPRESS_TS_STARTER_CODE
+  EXPRESS_TS_STARTER_CODE,
+  NODE_JS_STARTER_CODE,
+  NODE_TS_STARTER_CODE
 } from '../constants';
 
-// Helper: Get starter code for a specific mode
-const getStarterCode = (mode: EnvironmentMode) => {
+// Helper: Get starter code for a specific mode, ensuring it always returns a string
+const getStarterCode = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'p5': return P5_STARTER_CODE;
     case 'react': return REACT_STARTER_CODE;
@@ -21,6 +23,8 @@ const getStarterCode = (mode: EnvironmentMode) => {
     case 'react-ts': return REACT_TS_STARTER_CODE;
     case 'express': return EXPRESS_STARTER_CODE;
     case 'express-ts': return EXPRESS_TS_STARTER_CODE;
+    case 'node-js': return NODE_JS_STARTER_CODE;
+    case 'node-ts': return NODE_TS_STARTER_CODE;
     default: return STARTER_CODE;
   }
 };
@@ -37,7 +41,7 @@ export const useSandboxState = (persistenceKey?: string) => {
   // -- Initializers --
 
   const loadSavedMode = (): EnvironmentMode => {
-    if (!persistenceKey || typeof window === 'undefined') return 'dom';
+    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return 'dom';
     try {
       const saved = localStorage.getItem(getStorageKey('env_mode'));
       return (saved as EnvironmentMode) || 'dom';
@@ -45,7 +49,7 @@ export const useSandboxState = (persistenceKey?: string) => {
   };
 
   const loadSavedThemeMode = (): ThemeMode => {
-    if (!persistenceKey || typeof window === 'undefined') return 'dark';
+    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return 'dark';
     try {
       const saved = localStorage.getItem(getStorageKey('theme_mode'));
       return (saved as ThemeMode) || 'dark';
@@ -53,20 +57,22 @@ export const useSandboxState = (persistenceKey?: string) => {
   };
 
   const loadSavedThemeName = (): string => {
-    if (!persistenceKey || typeof window === 'undefined') return themes[0].name;
+    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return themes[0].name;
     try {
       return localStorage.getItem(getStorageKey('theme_name')) || themes[0].name;
     } catch { return themes[0].name; }
   };
 
-  const loadSavedCode = (mode: EnvironmentMode): string => {
-    if (!persistenceKey || typeof window === 'undefined') return getStarterCode(mode);
+  // Wrapped in useCallback to provide a stable reference and ensures string return type
+  const loadSavedCode = useCallback((mode: EnvironmentMode): string => {
+    const starter = getStarterCode(mode);
+    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return starter;
     try {
       const key = getStorageKey(`code_${mode}`);
       const saved = localStorage.getItem(key);
-      return saved !== null ? saved : getStarterCode(mode);
-    } catch { return getStarterCode(mode); }
-  };
+      return typeof saved === 'string' ? saved : starter;
+    } catch { return starter; }
+  }, [persistenceKey, getStorageKey]);
 
   // -- State --
   const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>(loadSavedMode);
@@ -84,23 +90,23 @@ export const useSandboxState = (persistenceKey?: string) => {
   // -- Effects (Persistence) --
 
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (typeof persistenceKey !== 'string') return;
     localStorage.setItem(getStorageKey('env_mode'), environmentMode);
   }, [environmentMode, persistenceKey, getStorageKey]);
 
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (typeof persistenceKey !== 'string') return;
     const key = getStorageKey(`code_${environmentMode}`);
     localStorage.setItem(key, code);
   }, [code, environmentMode, persistenceKey, getStorageKey]);
 
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (typeof persistenceKey !== 'string') return;
     localStorage.setItem(getStorageKey('theme_mode'), themeMode);
   }, [themeMode, persistenceKey, getStorageKey]);
 
   useEffect(() => {
-    if (!persistenceKey) return;
+    if (typeof persistenceKey !== 'string') return;
     localStorage.setItem(getStorageKey('theme_name'), activeThemeName);
   }, [activeThemeName, persistenceKey, getStorageKey]);
 
@@ -116,7 +122,7 @@ export const useSandboxState = (persistenceKey?: string) => {
     setEnvironmentMode(newMode);
     setCode(savedCode);
     setSessionId(prev => prev + 1);
-  }, [environmentMode, persistenceKey, getStorageKey]); // Added deps
+  }, [environmentMode, loadSavedCode]);
 
   const resetCode = useCallback(() => {
     const starter = getStarterCode(environmentMode);
