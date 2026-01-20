@@ -1,6 +1,6 @@
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createSandboxUrl, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
 import { ThemeMode, EnvironmentMode } from '../types';
 import { PreviewContainer } from './PreviewContainer';
 import { Console, LogEntry } from './Console';
@@ -13,6 +13,7 @@ interface OutputFrameProps {
   environmentMode: EnvironmentMode;
   isBlurred?: boolean;
   isPredictionMode?: boolean;
+  debugMode?: boolean;
 }
 
 export const OutputFrame: React.FC<OutputFrameProps> = ({ 
@@ -21,21 +22,34 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   themeMode, 
   environmentMode,
   isBlurred = false,
-  isPredictionMode = false
+  isPredictionMode = false,
+  debugMode = false
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<MessageChannel | null>(null);
-  const [sandboxSrc, setSandboxSrc] = useState<string>('');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
-  // Resizable Console State
   const [consoleHeight, setConsoleHeight] = useState(150); 
   const [isDragging, setIsDragging] = useState(false);
 
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
 
-  // Initialize MessageChannel for isolation
+  const addSystemLog = useCallback((msg: string, type: 'log' | 'error' | 'warn' = 'log') => {
+    setLogs(prev => [...prev, {
+        type,
+        content: `[System] ${msg}`,
+        timestamp: Date.now()
+    }]);
+  }, []);
+
+  // Use sessionId implicitly via key on the iframe component in CodingEnvironment if possible,
+  // or here to force re-render on mode change.
+  const sandboxHtml = useMemo(() => {
+    if (debugMode) addSystemLog(`Generating Sandbox HTML for mode: ${environmentMode}`);
+    return getSandboxHtml(environmentMode, isPredictionMode);
+  }, [environmentMode, isPredictionMode, debugMode, addSystemLog]);
+
   useEffect(() => {
     channelRef.current = new MessageChannel();
     
@@ -48,6 +62,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
                  timestamp: Date.now()
              }]);
         }
+        else if (type === 'READY_SIGNAL' && debugMode) {
+             addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
+        }
     };
 
     return () => {
@@ -55,26 +72,21 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
             channelRef.current.port1.close();
         }
     };
-  }, []);
+  }, [debugMode, addSystemLog]);
 
-  // Re-generate sandbox URL
-  useEffect(() => {
-    const url = createSandboxUrl(environmentMode, isPredictionMode);
-    setSandboxSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [environmentMode, isPredictionMode]); 
-
-  // Reset logs and execute code
   useEffect(() => {
     if (runTrigger > 0) {
         setLogs([]);
+        if (debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
              executeCodeInSandbox(iframeRef.current.contentWindow, code);
+             if (debugMode) addSystemLog('EXECUTE message dispatched.');
+        } else if (debugMode) {
+             addSystemLog('FAILED: iframe.contentWindow is null.', 'error');
         }
     }
-  }, [runTrigger, code]);
+  }, [runTrigger, code, debugMode, addSystemLog]);
 
-  // Sync Theme
   useEffect(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
@@ -82,15 +94,14 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   }, [themeMode]);
 
   const handleIframeLoad = () => {
+    if (debugMode) addSystemLog('Iframe "onLoad" event fired.');
     if (iframeRef.current?.contentWindow && channelRef.current) {
-      // Transfer port to iframe for isolated communication
       iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channelRef.current.port2]);
       iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
+      if (debugMode) addSystemLog('Channel Ports initialized.');
     }
   };
 
-  // --- Resize Logic ---
-  
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -101,8 +112,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
     const newHeight = containerRect.height - relativeY;
-    const clampedHeight = Math.max(30, Math.min(containerRect.height * 0.8, newHeight));
-    setConsoleHeight(clampedHeight);
+    setConsoleHeight(Math.max(30, Math.min(containerRect.height * 0.8, newHeight)));
   }, [isDragging]);
 
   const handleMouseUp = useCallback(() => setIsDragging(false), []);
@@ -112,12 +122,10 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
-      document.body.style.userSelect = '';
     }
     return () => {
         window.removeEventListener('mousemove', handleMouseMove);
@@ -136,8 +144,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         {!isHeadless && (
           <div className="flex-1 min-h-0 relative">
                <iframe
+                  key={`${environmentMode}-${isPredictionMode}`}
                   ref={iframeRef}
-                  src={sandboxSrc}
+                  srcDoc={sandboxHtml}
                   title="Code Output"
                   sandbox={SANDBOX_ATTRIBUTES} 
                   className={`w-full h-full border-none ${isDragging ? 'pointer-events-none' : ''}`}
@@ -149,11 +158,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         {!isHeadless && (
           <div 
               onMouseDown={handleMouseDown}
-              className={`
-                  h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors
-                  ${themeMode === 'dark' ? 'bg-[#252526] text-gray-600 border-t border-b border-black/20' : 'bg-gray-100 text-gray-400 border-t border-b border-gray-200'}
-                  ${isDragging ? '!bg-blue-600 !text-white' : ''}
-              `}
+              className={`h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors ${themeMode === 'dark' ? 'bg-[#252526] text-gray-600 border-t border-b border-black/20' : 'bg-gray-100 text-gray-400 border-t border-b border-gray-200'}`}
           >
                <GripHorizontal className="w-3 h-3" />
           </div>
@@ -165,8 +170,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
 
         {isHeadless && (
           <iframe
+            key={`headless-${environmentMode}`}
             ref={iframeRef}
-            src={sandboxSrc}
+            srcDoc={sandboxHtml}
             title="Headless Execution"
             sandbox={SANDBOX_ATTRIBUTES} 
             className="hidden"

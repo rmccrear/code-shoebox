@@ -49,7 +49,7 @@ export const Console: React.FC<ConsoleProps> = ({
         
         {logs.map((log, i) => (
           <div key={i} className={`
-            border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre-wrap
+            border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre
             ${log.type === 'error' ? 'text-red-500 bg-red-500/5' : ''}
             ${log.type === 'warn' ? 'text-yellow-500 bg-yellow-500/5' : ''}
           `}>

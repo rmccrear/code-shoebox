@@ -1,4 +1,7 @@
 
+import React from 'react';
+import { Theme } from './theme';
+
 export interface ExecutionMessage {
   type: 'EXECUTE_CODE';
   payload: string;
@@ -6,7 +9,7 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'dom' | 'p5' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts';
+export type EnvironmentMode = 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 
 export interface EditorProps {
   initialCode: string;
@@ -14,16 +17,14 @@ export interface EditorProps {
   theme?: ThemeMode;
 }
 
-// Re-export specific props if needed by consumers
 export interface CodeShoeboxProps {
   code: string;
   onCodeChange: (code: string) => void;
   environmentMode: EnvironmentMode;
   themeMode: ThemeMode;
-  /**
-   * Optional identifier for the current editing session.
-   * Incrementing this value is recommended when resetting code (e.g. "Start Over")
-   * as it ensures the Monaco Editor's undo/redo history is cleared.
-   */
+  theme: Theme;
   sessionId?: number;
+  prediction_prompt?: React.ReactNode;
+  /** Enables verbose system logging for debugging communication issues */
+  debugMode?: boolean;
 }

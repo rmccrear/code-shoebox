@@ -46,13 +46,13 @@ export const EXPRESS_MOCK_SETUP = `
         listen(port, cb) {
             if (cb) cb();
             
-            // Signal ready via port if available, else global
+            // Signal ready via port if available, else global window.parent fallback
             const readyMsg = { type: 'SERVER_READY' };
             if (window.messagePort) {
                 window.messagePort.postMessage(readyMsg);
             } else {
                 window.parent.postMessage(readyMsg, '*');
-                // Flag for async port initialization
+                // Flag for async port initialization in common.ts interceptor
                 window.serverReadySignal = true;
             }
         }
@@ -99,7 +99,7 @@ export const EXPRESS_MOCK_SETUP = `
     window.express = function() { return appInstance; };
     window.appInstance = appInstance;
 
-    // Listen on the private port primarily
+    // Logic to handle requests coming from the parent
     const requestHandler = async (event) => {
         if (event.data && event.data.type === 'SIMULATE_REQUEST') {
             const { method, url } = event.data.payload;
@@ -114,9 +114,10 @@ export const EXPRESS_MOCK_SETUP = `
         }
     };
 
+    // Listen on the main window for initial requests (fallback)
     window.addEventListener('message', requestHandler);
     
-    // Also listen on the port once initialized
+    // Also attach to the message port once it arrives for high-performance communication
     const checkPortInterval = setInterval(() => {
         if (window.messagePort) {
             window.messagePort.addEventListener('message', requestHandler);
@@ -142,5 +143,6 @@ const EXPRESS_JS_RUNNER = `
 
 export const generateExpressHtml = (showPlaceholder: boolean = true) => {
     const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
-    return BASE_HTML_WRAPPER('', script, false); 
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument
+    return BASE_HTML_WRAPPER({ logic: script, showPlaceholder: false }); 
 };

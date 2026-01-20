@@ -19,8 +19,7 @@ button.style.padding = '8px 16px';
 button.style.cursor = 'pointer';
 
 button.onclick = () => {
-    alert('Button clicked! Securely.');
-    console.log('Button interaction detected at ' + new Date().toLocaleTimeString());
+    console.log('Button clicked! Interaction detected at ' + new Date().toLocaleTimeString());
 };
 
 root.appendChild(button);
@@ -29,7 +28,6 @@ root.appendChild(button);
 console.log('Code loaded successfully.');
 `;
 
-// Using array join to safely handle nested template literals and avoid escaping issues in complex starter code strings
 export const TYPESCRIPT_STARTER_CODE = [
   '// Welcome to TypeScript!',
   '// The browser will transpile this code before running it.',
@@ -89,6 +87,51 @@ function draw() {
   // Draw an ellipse at mouse position
   ellipse(mouseX, mouseY, 20, 20);
 }
+`;
+
+export const P5_TS_STARTER_CODE = `/**
+ * p5.js + TypeScript
+ * Using interfaces and types for creative coding!
+ */
+
+interface Particle {
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+}
+
+const particles: Particle[] = [];
+
+// Global scope p5 functions
+(window as any).setup = () => {
+  createCanvas(400, 400);
+  background(20);
+  console.log("Typed p5 setup complete");
+};
+
+(window as any).draw = () => {
+  background(20, 20);
+  
+  if (mouseIsPressed) {
+    const p: Particle = {
+      x: mouseX,
+      y: mouseY,
+      size: random(10, 30),
+      color: \`hsl(\${frameCount % 360}, 70%, 60%)\`
+    };
+    particles.push(p);
+  }
+
+  // Draw typed particles
+  particles.forEach((p, i) => {
+    noStroke();
+    fill(p.color);
+    circle(p.x, p.y, p.size);
+    p.size *= 0.95; // Shrink
+    if (p.size < 0.5) particles.splice(i, 1);
+  });
+};
 `;
 
 export const REACT_STARTER_CODE = `import React, { useState } from 'react';
@@ -234,6 +277,58 @@ export const EXPRESS_TS_STARTER_CODE = [
   'app.listen(port, () => {',
   '  console.log(`TS Server initialized on port ${port}`);',
   '});'
+].join('\n');
+
+export const HONO_STARTER_CODE = [
+  '// Modern Server Simulation using Hono!',
+  '// Hono is built on web standards like Request and Response.',
+  '',
+  'const app = new Hono();',
+  '',
+  'app.get(\'/\', (c) => {',
+  '  return c.text(\'Hono says hello!\');',
+  '});',
+  '',
+  'app.get(\'/api/hello\', (c) => {',
+  '  return c.json({',
+  '    message: \'Hono is lightweight and fast!\',',
+  '    runtime: \'Browser Sandbox\'',
+  '  });',
+  '});',
+  '',
+  '// Try sending a GET request to /user/123',
+  'app.get(\'/user/:id\', (c) => {',
+  '  const id = c.req.param(\'id\');',
+  '  return c.json({ userId: id, status: \'active\' });',
+  '});',
+  '',
+  '// Standard Export for Modern Runtimes (Cloudflare, Bun, etc)',
+  'export default app;'
+].join('\n');
+
+export const HONO_TS_STARTER_CODE = [
+  '// Hono + TypeScript',
+  'import { Hono } from \'hono\';',
+  '',
+  'const app = new Hono();',
+  '',
+  'interface Profile {',
+  '  username: string;',
+  '  bio: string;',
+  '}',
+  '',
+  'const profile: Profile = {',
+  '  username: "shoebox_dev",',
+  '  bio: "Simulating the future of web frameworks in a tab."',
+  '};',
+  '',
+  'app.get(\'/\', (c) => c.text(\'Hono TS Environment Ready\'));',
+  '',
+  'app.get(\'/profile\', (c) => {',
+  '  return c.json(profile);',
+  '});',
+  '',
+  'export default app;'
 ].join('\n');
 
 export const NODE_JS_STARTER_CODE = `/**

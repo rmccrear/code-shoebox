@@ -15,5 +15,6 @@ const DOM_EXECUTION_LOGIC = `
 `;
 
 export const generateDomHtml = (showPlaceholder: boolean = true) => {
-    return BASE_HTML_WRAPPER('', DOM_EXECUTION_LOGIC, showPlaceholder);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument
+    return BASE_HTML_WRAPPER({ logic: DOM_EXECUTION_LOGIC, showPlaceholder });
 };

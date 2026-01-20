@@ -11,8 +11,7 @@ import {
   Rows, 
   GripVertical, 
   GripHorizontal,
-  Maximize2,
-  Minimize2
+  Maximize2
 } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { OutputFrame } from './OutputFrame';
@@ -32,9 +31,8 @@ interface CodingEnvironmentProps {
   environmentMode: EnvironmentMode;
   sessionId: number;
   predictionPrompt?: React.ReactNode;
+  debugMode?: boolean;
 }
-
-type LayoutDirection = 'horizontal' | 'vertical';
 
 export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({ 
   code, 
@@ -45,65 +43,24 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   themeMode,
   environmentMode,
   sessionId,
-  predictionPrompt
+  predictionPrompt,
+  debugMode = false
 }) => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
-  const [layout, setLayout] = useState<LayoutDirection>('horizontal');
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // Resizing & Fullscreen State
-  const containerRef = useRef<HTMLDivElement>(null);
-  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
-  const [editorRatio, setEditorRatio] = useState(0.5); // 0.0 to 1.0
+  const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
+  const [editorRatio, setEditorRatio] = useState(0.5);
   const [isDragging, setIsDragging] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const hasDocs = !!getDocsForMode(environmentMode);
-  const hasPredictionTask = predictionPrompt !== undefined && predictionPrompt !== null && predictionPrompt !== '';
-  const isPredictionFulfilled = !hasPredictionTask || predictionAnswer.trim().length > 0;
-
-  // Sync with browser fullscreen changes (e.g. user presses Esc)
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!fullscreenContainerRef.current) return;
-
-    if (!document.fullscreenElement) {
-      fullscreenContainerRef.current.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
-  // Reset local state when session changes
-  useEffect(() => {
-    setPredictionAnswer('');
-    setIsPredictionLocked(false);
-  }, [sessionId]);
-
-  // Close help if mode changes to one without docs
-  useEffect(() => {
-    if (!hasDocs) setIsHelpOpen(false);
-  }, [environmentMode, hasDocs]);
+  const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
 
   const handleRunClick = () => {
-    if (hasPredictionTask) {
-        setIsPredictionLocked(true);
-    }
+    if (predictionPrompt) setIsPredictionLocked(true);
     onRun();
   };
-
-  // --- Resizing Logic ---
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -112,271 +69,97 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !containerRef.current) return;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    let newRatio = 0.5;
-
-    if (layout === 'horizontal') {
-      const relativeX = e.clientX - containerRect.left;
-      newRatio = relativeX / containerRect.width;
-    } else {
-      const relativeY = e.clientY - containerRect.top;
-      newRatio = relativeY / containerRect.height;
-    }
-
-    // Clamp ratio between 10% and 90%
-    newRatio = Math.max(0.1, Math.min(0.9, newRatio));
-    setEditorRatio(newRatio);
+    const rect = containerRef.current.getBoundingClientRect();
+    const newRatio = layout === 'horizontal' 
+      ? (e.clientX - rect.left) / rect.width 
+      : (e.clientY - rect.top) / rect.height;
+    setEditorRatio(Math.max(0.2, Math.min(0.8, newRatio)));
   }, [isDragging, layout]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
 
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = layout === 'horizontal' ? 'col-resize' : 'row-resize';
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
+      window.addEventListener('mouseup', () => setIsDragging(false));
     }
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
+      window.removeEventListener('mouseup', () => setIsDragging(false));
     };
-  }, [isDragging, handleMouseMove, handleMouseUp, layout]);
+  }, [isDragging, handleMouseMove]);
 
-  let fileName = 'script.js';
-  switch (environmentMode) {
-    case 'p5': fileName = 'sketch.js'; break;
-    case 'react': fileName = 'App.jsx'; break;
-    case 'typescript': fileName = 'script.ts'; break;
-    case 'react-ts': fileName = 'App.tsx'; break;
-    case 'express': fileName = 'server.js'; break;
-    case 'express-ts': fileName = 'server.ts'; break;
-    case 'node-js': fileName = 'index.js'; break;
-    case 'node-ts': fileName = 'index.ts'; break;
-    default: fileName = 'script.js';
-  }
-
-  const isServerMode = environmentMode === 'express' || environmentMode === 'express-ts';
+  const isServerMode = environmentMode.startsWith('express') || environmentMode.startsWith('hono');
 
   return (
-    <div 
-      ref={fullscreenContainerRef} 
-      className={`flex-1 overflow-hidden flex flex-col relative ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-white'}`}
-    >
-      
-      {/* Prediction Panel */}
-      {hasPredictionTask && (
-        <div className={`
-          shrink-0 border-b p-4 flex flex-col gap-3 transition-colors duration-300
-          ${themeMode === 'dark' ? 'bg-[#252526] border-white/10' : 'bg-blue-50/50 border-blue-100'}
-        `}>
-          <div className="flex items-start gap-3">
-             <div className={`p-2 rounded-lg shrink-0 ${themeMode === 'dark' ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
-                <Brain className="w-5 h-5" />
-             </div>
-             <div className="flex-1 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className={`text-sm font-bold uppercase tracking-wide mb-1 ${themeMode === 'dark' ? 'text-purple-400' : 'text-purple-700'}`}>
-                        Predict
-                    </h3>
-                    <div className={`text-sm leading-relaxed ${themeMode === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>
-                        {predictionPrompt}
-                    </div>
-                  </div>
-                  {isPredictionLocked && (
-                      <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ml-4 ${themeMode === 'dark' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-green-100 text-green-700 border-green-200'}`}>
-                          <Lock className="w-3 h-3" />
-                          Locked
-                      </div>
-                  )}
-                </div>
-                
-                <textarea
-                  value={predictionAnswer}
-                  onChange={(e) => setPredictionAnswer(e.target.value)}
-                  placeholder="Type your prediction here..."
-                  disabled={isPredictionLocked}
-                  className={`
-                    w-full min-h-[60px] p-3 rounded-md text-sm outline-none border focus:ring-2 transition-all resize-y
-                    disabled:opacity-60 disabled:cursor-not-allowed
-                    ${themeMode === 'dark' 
-                      ? 'bg-black/20 border-white/10 text-gray-200 placeholder-gray-500 focus:border-purple-500/50 focus:ring-purple-500/20 disabled:bg-black/40' 
-                      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-200 disabled:bg-gray-50'}
-                  `}
-                />
-             </div>
+    <div className={`flex-1 flex flex-col overflow-hidden ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-white'}`}>
+      {/* Prediction UI */}
+      {predictionPrompt && (
+        <div className={`p-4 border-b flex gap-4 ${themeMode === 'dark' ? 'bg-[#252526] border-white/10' : 'bg-blue-50 border-blue-100'}`}>
+          <div className="flex-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-purple-500 mb-2">Knowledge Check</h3>
+            <div className="text-sm opacity-80 mb-3">{predictionPrompt}</div>
+            <textarea
+              value={predictionAnswer}
+              onChange={(e) => setPredictionAnswer(e.target.value)}
+              disabled={isPredictionLocked}
+              placeholder="What will happen when the code runs?"
+              className={`w-full p-2 text-sm rounded border focus:ring-1 focus:ring-purple-500 outline-none transition-all ${themeMode === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-gray-200'}`}
+            />
           </div>
         </div>
       )}
 
-      {/* Component Navbar */}
-      <div className={`h-12 shrink-0 border-b flex items-center justify-between px-4 transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-gray-200'}`}>
-         {/* Left: File Info */}
-         <div className={`flex items-center gap-2 transition-colors ${themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            <FileCode className="w-4 h-4" />
-            <span className="text-sm font-mono opacity-80">{fileName}</span>
-            {hasPredictionTask && (
-               <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                  Read Only
-               </span>
-            )}
-         </div>
-
-         {/* Right: Actions */}
-         <div className="flex items-center gap-3">
-            {/* Layout & Fullscreen Toggles */}
-            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-md p-0.5">
-                <button
-                    onClick={() => setLayout('horizontal')}
-                    className={`p-1.5 rounded ${layout === 'horizontal' ? (themeMode === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'opacity-50 hover:opacity-100'}`}
-                    title="Split Screen (Side by Side)"
-                >
-                    <Columns className="w-3.5 h-3.5" />
-                </button>
-                <button
-                    onClick={() => setLayout('vertical')}
-                    className={`p-1.5 rounded ${layout === 'vertical' ? (themeMode === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm') : 'opacity-50 hover:opacity-100'}`}
-                    title="Vertical Split (Stacked)"
-                >
-                    <Rows className="w-3.5 h-3.5" />
-                </button>
-                <div className={`w-px h-3 mx-0.5 ${themeMode === 'dark' ? 'bg-white/10' : 'bg-black/10'}`} />
-                <button
-                    onClick={toggleFullscreen}
-                    className={`p-1.5 rounded opacity-50 hover:opacity-100 transition-opacity ${isFullscreen ? (themeMode === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600') : ''}`}
-                    title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                >
-                    {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                </button>
-            </div>
-
-            <div className={`h-4 w-px mx-1 ${themeMode === 'dark' ? 'bg-white/10' : 'bg-gray-200'}`} />
-
-            {hasDocs && (
-              <Button
-                variant="ghost"
-                onClick={() => setIsHelpOpen(!isHelpOpen)}
-                className={`!px-2 ${isHelpOpen ? 'bg-blue-500/10 text-blue-500' : ''}`}
-                title="Toggle Documentation"
-              >
-                <Book className="w-4 h-4" />
-                <span className="hidden sm:inline text-xs ml-2">Help</span>
-              </Button>
-            )}
-
-            <Button 
-                onClick={handleRunClick} 
-                disabled={isRunning || !isPredictionFulfilled}
-                className={`h-8 px-4 text-sm font-semibold shadow-sm transition-all duration-300 ${!isPredictionFulfilled ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-                icon={isRunning ? <CheckCircle2 className="w-3.5 h-3.5 animate-pulse"/> : <Play className="w-3.5 h-3.5 fill-current" />}
-            >
-                {isRunning ? 'Running...' : 'Run Code'}
-            </Button>
-         </div>
+      {/* Toolbar */}
+      <div className={`h-12 px-4 border-b flex items-center justify-between ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10 text-gray-400' : 'bg-white border-gray-100'}`}>
+        <div className="flex items-center gap-2">
+          <FileCode className="w-4 h-4" />
+          <span className="text-xs font-mono">{environmentMode}.script</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded">
+            <button onClick={() => setLayout('horizontal')} className={`p-1 rounded ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Columns size={14}/></button>
+            <button onClick={() => setLayout('vertical')} className={`p-1 rounded ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Rows size={14}/></button>
+          </div>
+          <Button 
+            onClick={handleRunClick} 
+            disabled={isRunning || !isPredictionFulfilled}
+            variant="primary"
+            className="h-8 !px-4 text-xs"
+            icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
+          >
+            {isRunning ? 'Running' : 'Run'}
+          </Button>
+        </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        
-        {/* Editor & Output Container */}
-        <div 
-            ref={containerRef}
-            className={`flex-1 flex overflow-hidden min-w-0 ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}
-        >
-          {/* Editor Pane */}
-          <section 
-            style={{ 
-                [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` 
-            }}
-            className={`
-             flex flex-col relative group transition-colors duration-300 min-w-0
-             ${themeMode === 'dark' ? 'border-gray-800' : 'border-gray-200'}
-            `}
-          >
-            <CodeEditor 
-              code={code} 
-              onChange={(val) => onChange(val || '')} 
-              themeMode={themeMode}
-              environmentMode={environmentMode}
-              sessionId={sessionId}
-              readOnly={hasPredictionTask}
-            />
-          </section>
-
-          {/* Resizer Handle */}
-          <div
-            onMouseDown={handleMouseDown}
-            className={`
-                z-20 flex items-center justify-center shrink-0 hover:bg-blue-500 hover:text-white transition-colors
-                ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-600 border-black/20' : 'bg-gray-100 text-gray-400 border-white'}
-                ${isDragging ? '!bg-blue-600 !text-white' : ''}
-                ${layout === 'horizontal' 
-                    ? 'w-3 h-full cursor-col-resize border-l border-r' 
-                    : 'h-3 w-full cursor-row-resize border-t border-b'
-                }
-            `}
-          >
-            {layout === 'horizontal' 
-                ? <GripVertical className="w-3 h-3" /> 
-                : <GripHorizontal className="w-3 h-3" />
-            }
-          </div>
-
-          {/* Output Pane */}
-          <section 
-            style={{ 
-                [layout === 'horizontal' ? 'width' : 'height']: `${(1 - editorRatio) * 100}%` 
-            }}
-            className={`
-                flex flex-col relative transition-colors duration-300 min-w-0 
-                ${themeMode === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}
-                ${isDragging ? 'pointer-events-none' : ''} /* Prevent iframe stealing mouse events */
-            `}
-          >
-            <div className="flex-1 p-2 md:p-4 h-full overflow-hidden">
-              {isServerMode ? (
-                <ServerOutput
-                   runTrigger={runTrigger}
-                   code={code}
-                   themeMode={themeMode}
-                   environmentMode={environmentMode}
-                   isBlurred={!isPredictionFulfilled}
-                />
-              ) : (
-                <OutputFrame 
-                  runTrigger={runTrigger} 
-                  code={code} 
-                  themeMode={themeMode}
-                  environmentMode={environmentMode}
-                  isBlurred={!isPredictionFulfilled}
-                  isPredictionMode={hasPredictionTask}
-                />
-              )}
-            </div>
-          </section>
+      {/* Editor & Output Workspace */}
+      <div ref={containerRef} className={`flex-1 flex overflow-hidden ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
+        <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` }} className="relative flex flex-col min-w-0 min-h-0">
+          <CodeEditor 
+            code={code} 
+            onChange={(val) => onChange(val || '')} 
+            themeMode={themeMode} 
+            environmentMode={environmentMode} 
+            sessionId={sessionId} 
+            readOnly={!!predictionPrompt && isPredictionLocked}
+          />
         </div>
 
-        {/* Help Sidebar (Conditionally Rendered Layout) */}
-        {hasDocs && isHelpOpen && (
-          <HelpSidebar 
-            isOpen={isHelpOpen} 
-            onClose={() => setIsHelpOpen(false)}
-            themeMode={themeMode}
-            environmentMode={environmentMode}
-          />
-        )}
+        <div 
+          onMouseDown={handleMouseDown} 
+          className={`flex items-center justify-center shrink-0 hover:bg-blue-500 transition-colors ${layout === 'horizontal' ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'} ${themeMode === 'dark' ? 'bg-black/20' : 'bg-gray-100'}`}
+        >
+          {layout === 'horizontal' ? <GripVertical size={12} className="opacity-20"/> : <GripHorizontal size={12} className="opacity-20"/>}
+        </div>
+
+        <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${(1 - editorRatio) * 100}%` }} className={`relative flex flex-col min-w-0 min-h-0 ${isDragging ? 'pointer-events-none' : ''}`}>
+          <div className="flex-1 p-2 md:p-4 overflow-hidden">
+            {isServerMode ? (
+              <ServerOutput runTrigger={runTrigger} code={code} themeMode={themeMode} environmentMode={environmentMode} isBlurred={!isPredictionFulfilled} debugMode={debugMode} />
+            ) : (
+              <OutputFrame runTrigger={runTrigger} code={code} themeMode={themeMode} environmentMode={environmentMode} isBlurred={!isPredictionFulfilled} isPredictionMode={!!predictionPrompt} debugMode={debugMode} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

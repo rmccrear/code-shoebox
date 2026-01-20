@@ -63,5 +63,6 @@ const P5_EXECUTION_LOGIC = `
 `;
 
 export const generateP5Html = (showPlaceholder: boolean = true) => {
-    return BASE_HTML_WRAPPER(P5_CDN, P5_EXECUTION_LOGIC, showPlaceholder);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
+    return BASE_HTML_WRAPPER({ cdns: [P5_CDN], logic: P5_EXECUTION_LOGIC, showPlaceholder });
 };

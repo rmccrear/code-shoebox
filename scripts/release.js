@@ -1,5 +1,5 @@
 
-const { execSync } = require('child_process');
+const { spawnSync, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,7 +9,7 @@ const path = require('path');
  * 2. Fetches the latest commit message.
  * 3. Creates a local git tag.
  * 4. Pushes the tag to the remote 'origin'.
- * 5. (Optional) Triggers the dist branch update.
+ * 5. Syncs the distribution branch.
  */
 
 function run() {
@@ -22,7 +22,7 @@ function run() {
 
     console.log(`🚀 Starting release process for ${tagName}...`);
 
-    // 1. Check if the working directory is clean (optional but recommended)
+    // 1. Check if the working directory is clean
     const status = execSync('git status --porcelain').toString();
     if (status) {
       console.warn('⚠️  Warning: Working directory is not clean. Proceeding anyway...');
@@ -30,7 +30,7 @@ function run() {
 
     // 2. Get the latest commit message
     const commitMessage = execSync('git log -1 --pretty=%B').toString().trim();
-    console.log(`📝 Using commit message: "${commitMessage}"`);
+    console.log(`📝 Using commit message for tag description.`);
 
     // 3. Check if tag already exists
     try {
@@ -42,16 +42,25 @@ function run() {
     }
 
     // 4. Create the tag
+    // Using spawnSync with an array of arguments avoids shell expansion/interpretation 
+    // of special characters (like backticks `) in the commit message.
     console.log(`🏷️  Tagging ${tagName}...`);
-    execSync(`git tag -a ${tagName} -m "${commitMessage}"`);
+    const tagProc = spawnSync('git', ['tag', '-a', tagName, '-m', commitMessage], { encoding: 'utf8' });
+    if (tagProc.status !== 0) {
+      throw new Error(`Failed to create tag: ${tagProc.stderr}`);
+    }
 
     // 5. Push the tag
     console.log(`⬆️  Pushing tag ${tagName} to origin...`);
-    execSync(`git push origin ${tagName}`);
+    const pushProc = spawnSync('git', ['push', 'origin', tagName], { encoding: 'utf8' });
+    if (pushProc.status !== 0) {
+      throw new Error(`Failed to push tag: ${pushProc.stderr}`);
+    }
 
     // 6. Sync the dist branch (Existing workflow)
     console.log(`📦 Updating distribution branch...`);
-    execSync('npm run publish:dist');
+    // This calls npm run, which is safe enough as it doesn't take user input
+    execSync('npm run publish:dist', { stdio: 'inherit' });
 
     console.log(`\n✅ Successfully released ${tagName}!`);
     console.log(`🔗 Check your repository releases at: https://github.com/${getRepoPath()}/releases`);

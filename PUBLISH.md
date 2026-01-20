@@ -10,14 +10,19 @@ The `release` script is the primary tool for publishing updates. It automates th
 ### Prerequisites
 - **Git CLI**: You must have `git` installed and configured.
 - **Push Access**: You must have write permissions for the repository.
-- **Clean State**: It is recommended (but not strictly required) to have a clean working directory before running the release.
+- **Clean State**: It is highly recommended to have a clean working directory.
 
 ### Step-by-Step Instructions
 
 1.  **Update the version**: 
     Open `package.json` and increment the `"version"` field (e.g., from `1.0.15` to `1.0.16`).
 2.  **Commit your changes**: 
-    Stage and commit your updates. **Important:** The message of this last commit will be used as the description for your Git tag. Make it descriptive (e.g., "feat: add SQL support and fix console scrolling").
+    Stage and commit your updates. 
+    
+    **Important:** The message of this last commit will be used as the description for your Git tag. 
+    - The script now handles special characters (like backticks or quotes) safely using `spawnSync`.
+    - If your commit message is multi-line, the entire message will be attached to the tag.
+    
     ```bash
     git add .
     git commit -m "feat: your descriptive message"
@@ -29,7 +34,7 @@ The `release` script is the primary tool for publishing updates. It automates th
 
 ### What the Release Script Does
 - **Version Check**: Reads the version you just set in `package.json`.
-- **Commit Fetching**: Automatically grabs the message from your most recent commit.
+- **Commit Fetching**: Automatically grabs the full message from your most recent commit.
 - **Tagging**: Creates an annotated Git tag (e.g., `v1.0.16`) using the version number and that commit message.
 - **Syncing**: Pushes the new tag to GitHub.
 - **Distribution**: Automatically triggers `npm run publish:dist`, which builds the library and updates the `dist` branch.
@@ -44,7 +49,7 @@ If you need to push a fix to the `dist` branch without incrementing the version 
 npm run publish:dist
 ```
 
-This is useful for documentation updates or minor internal adjustments that don't warrant a version bump.
+This is useful for documentation updates or minor internal build adjustments.
 
 ---
 
@@ -62,7 +67,17 @@ npm install github:rmccrear/code-shoebox#v1.0.15
 npm install github:rmccrear/code-shoebox#dist
 ```
 
-## Best Practices
-- **Atomic Commits**: Always commit your version bump separately or as the final commit in a feature set to ensure the tag description is accurate.
-- **GitHub Releases**: After running the script, visit the GitHub "Releases" page. You will see your new tag there. You can manually edit it to add richer release notes or attach assets if needed.
-- **Branch Protection**: If you have branch protection enabled, ensure your local credentials allow pushing tags directly to the origin.
+## Troubleshooting & FAQ
+
+#### "Tag already exists"
+If the script fails stating a tag already exists locally, you likely forgot to bump the version in `package.json`. If you truly intended to re-release the same version, you must manually delete the tag:
+```bash
+git tag -d v1.0.15
+git push origin :refs/tags/v1.0.15
+```
+
+#### "Permission Denied" or Shell Errors
+If you see errors related to `release: not found` or similar shell output during tagging, it's often due to special characters in your commit message being misinterpreted by shell-based execution. The script has been updated to use `spawnSync` to prevent this.
+
+#### Authentication Errors
+The script uses your local Git configuration. If you cannot `git push` manually, the script will also fail. Ensure your SSH keys or personal access tokens are set up correctly.

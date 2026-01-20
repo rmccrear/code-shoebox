@@ -41,9 +41,11 @@ const HEADLESS_RUNNER = (isTypescript: boolean) => `
 `;
 
 export const generateHeadlessJsHtml = () => {
-    return BASE_HTML_WRAPPER('', HEADLESS_RUNNER(false), false);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument
+    return BASE_HTML_WRAPPER({ logic: HEADLESS_RUNNER(false), showPlaceholder: false });
 };
 
 export const generateHeadlessTsHtml = () => {
-    return BASE_HTML_WRAPPER(BABEL_CDN, HEADLESS_RUNNER(true), false);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
+    return BASE_HTML_WRAPPER({ cdns: [BABEL_CDN], logic: HEADLESS_RUNNER(true), showPlaceholder: false });
 };

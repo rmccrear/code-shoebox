@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, LayoutTemplate, ArrowLeft } from 'lucide-react';
+import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, LayoutTemplate, ArrowLeft, Bug } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Demo } from './Demo';
 import { Button } from './components/Button';
@@ -12,9 +12,6 @@ import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
 
 const App: React.FC = () => {
-  // We provide a static key here to ensure this specific instance saves data.
-  // If you used <CodeShoebox /> on another page without a key (or with a different key),
-  // it would not conflict with this one.
   const {
     environmentMode,
     themeMode,
@@ -30,16 +27,14 @@ const App: React.FC = () => {
 
   const [view, setView] = useState<'editor' | 'demo'>('editor');
   const [isPredictionMode, setIsPredictionMode] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   
-  // UI State for modals
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
     title: string;
     message: string;
     onConfirm: () => void;
   }>({ title: '', message: '', onConfirm: () => {} });
-
-  // -- Handlers --
 
   const activeTheme = themes.find(t => t.name === activeThemeName) || themes[0];
 
@@ -62,10 +57,8 @@ const App: React.FC = () => {
   return (
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
       
-      {/* --- Top Chrome --- */}
       <header className={`flex items-center justify-between px-4 sm:px-6 py-3 border-b shrink-0 transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-black/10 text-gray-800'}`}>
         <div className="flex items-center gap-2">
-          {/* Logo / Branding */}
           <div className={`p-2 rounded-lg ${themeMode === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
             <Box className={`w-6 h-6 ${themeMode === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
           </div>
@@ -76,7 +69,6 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-           
            <Button 
             variant="ghost" 
             onClick={() => setView(prev => prev === 'editor' ? 'demo' : 'editor')}
@@ -87,7 +79,6 @@ const App: React.FC = () => {
             <span className="hidden sm:inline ml-2">{view === 'editor' ? "Demos" : "Editor"}</span>
           </Button>
 
-           {/* Environment Dropdown (Only show in Editor view) */}
            {view === 'editor' && (
              <div className="relative group hidden sm:block">
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm transition-colors ${themeMode === 'dark' ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}>
@@ -101,12 +92,17 @@ const App: React.FC = () => {
                     <option value="dom">DOM / JS</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>
+                    <option value="p5-ts">p5.js (TS)</option>
                     <option value="react">React (JS)</option>
                     <option value="react-ts">React (TS)</option>
                   </optgroup>
                   <optgroup label="Logic & Console" className="text-black">
                     <option value="node-js">JavaScript (Console)</option>
                     <option value="node-ts">TypeScript (Console)</option>
+                  </optgroup>
+                  <optgroup label="Modern Server (Hono)" className="text-black">
+                    <option value="hono">Hono (JS)</option>
+                    <option value="hono-ts">Hono (TS)</option>
                   </optgroup>
                   <optgroup label="Server (Express)" className="text-black">
                     <option value="express">Node / Express</option>
@@ -117,7 +113,6 @@ const App: React.FC = () => {
             </div>
            )}
 
-          {/* Theme Dropdown (Only show in Editor view) */}
           {view === 'editor' && (
             <div className="relative group hidden sm:block">
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm transition-colors ${themeMode === 'dark' ? 'border-gray-700 bg-gray-800 text-gray-200' : 'border-gray-300 bg-white text-gray-700'}`}>
@@ -139,7 +134,6 @@ const App: React.FC = () => {
 
           <div className="h-6 w-px bg-current opacity-10 mx-1" />
 
-          {/* Prediction Toggle (Only show in Editor view) */}
           {view === 'editor' && (
             <Button 
               variant="ghost" 
@@ -151,7 +145,15 @@ const App: React.FC = () => {
             </Button>
           )}
 
-          {/* Theme Toggle - Global */}
+          <Button 
+            variant="ghost" 
+            onClick={() => setDebugMode(!debugMode)}
+            className={debugMode ? (themeMode === 'dark' ? 'text-orange-400 bg-orange-500/10' : 'text-orange-600 bg-orange-100') : ''}
+            title="Toggle Diagnostic Mode"
+          >
+            <Bug className="w-4 h-4" />
+          </Button>
+
           <Button
             variant="ghost"
             onClick={toggleThemeMode}
@@ -160,7 +162,6 @@ const App: React.FC = () => {
             {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
-          {/* Start Over (Only show in Editor view) */}
           {view === 'editor' && (
             <Button 
               variant="ghost" 
@@ -174,7 +175,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* --- Main Content --- */}
       <div className="flex-1 overflow-hidden">
         {view === 'editor' ? (
           <CodeShoebox 
@@ -185,13 +185,13 @@ const App: React.FC = () => {
             theme={activeTheme}
             sessionId={sessionId}
             prediction_prompt={isPredictionMode ? getPredictionPrompt(environmentMode) : undefined}
+            debugMode={debugMode}
           />
         ) : (
           <Demo />
         )}
       </div>
 
-      {/* --- Modals --- */}
       <ConfirmationModal
         isOpen={modalOpen}
         title={modalConfig.title}

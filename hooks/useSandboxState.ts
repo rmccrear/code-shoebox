@@ -5,11 +5,14 @@ import { themes } from '../theme';
 import { 
   STARTER_CODE, 
   P5_STARTER_CODE, 
+  P5_TS_STARTER_CODE,
   REACT_STARTER_CODE, 
   TYPESCRIPT_STARTER_CODE,
   REACT_TS_STARTER_CODE,
   EXPRESS_STARTER_CODE,
   EXPRESS_TS_STARTER_CODE,
+  HONO_STARTER_CODE,
+  HONO_TS_STARTER_CODE,
   NODE_JS_STARTER_CODE,
   NODE_TS_STARTER_CODE
 } from '../constants';
@@ -18,11 +21,14 @@ import {
 const getStarterCode = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'p5': return P5_STARTER_CODE;
+    case 'p5-ts': return P5_TS_STARTER_CODE;
     case 'react': return REACT_STARTER_CODE;
     case 'typescript': return TYPESCRIPT_STARTER_CODE;
     case 'react-ts': return REACT_TS_STARTER_CODE;
     case 'express': return EXPRESS_STARTER_CODE;
     case 'express-ts': return EXPRESS_TS_STARTER_CODE;
+    case 'hono': return HONO_STARTER_CODE;
+    case 'hono-ts': return HONO_TS_STARTER_CODE;
     case 'node-js': return NODE_JS_STARTER_CODE;
     case 'node-ts': return NODE_TS_STARTER_CODE;
     default: return STARTER_CODE;

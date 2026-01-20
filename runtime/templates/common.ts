@@ -1,6 +1,7 @@
 
 /**
  * Shared HTML/CSS/JS for the sandbox environment.
+ * This acts as the "Kernel" for all execution modes.
  */
 
 export const BASE_STYLES = `
@@ -8,7 +9,7 @@ export const BASE_STYLES = `
         height: 100%;
         margin: 0;
         padding: 0;
-        overflow: hidden; /* Prevent body scroll, handle in #root */
+        overflow: hidden;
     }
 
     body { 
@@ -16,36 +17,29 @@ export const BASE_STYLES = `
         color: #333;
         background: #fff;
         transition: background-color 0.3s, color 0.3s;
-        
-        /* Flex layout */
         display: flex;
         flex-direction: column;
     }
     
-    /* Dark mode class toggled by JS */
     body.dark { background: #1a1a1a; color: #ddd; }
     
     #root {
-        flex: 1; /* Take all remaining space */
-        overflow: auto; /* Internal scrolling */
+        flex: 1;
+        overflow: auto;
         padding: 1rem;
         position: relative;
         width: 100%;
         box-sizing: border-box;
-        
-        /* Center content (like p5 canvas) but allow block flow for DOM mode */
         display: flex;
         flex-direction: column;
         align-items: center;
     }
     
-    /* Ensure immediate children of root (like divs created by user) behave normally */
     #root > * {
         max-width: 100%;
-        flex-shrink: 0; /* Prevent squishing */
+        flex-shrink: 0;
     }
 
-    /* p5 canvas styling */
     canvas {
         display: block;
         margin-bottom: 1rem;
@@ -54,133 +48,87 @@ export const BASE_STYLES = `
     }
 `;
 
-export const CONSOLE_INTERCEPTOR = `
-    // --- Console Capture System ---
-    
-    let messagePort = null;
+export const KERNEL_SCRIPTS = `
+    // --- Console & Module System ---
+    window.messagePort = null;
+    window.__MODULE_REGISTRY__ = {};
 
-    function formatMessage(msg) {
-        if (msg instanceof Error) {
-            return msg.toString();
-        }
-        if (typeof msg === 'object' && msg !== null) {
-            try {
-                return JSON.stringify(msg, null, 2);
-            } catch (e) {
-                return '[Circular Object]';
-            }
-        }
-        return String(msg);
+    window.require = function(module) {
+        if (window.__MODULE_REGISTRY__[module]) return window.__MODULE_REGISTRY__[module];
+        if (module === 'react') return window.React;
+        if (module === 'react-dom' || module === 'react-dom/client') return window.ReactDOM;
+        throw new Error('Module not found: ' + module);
+    };
+
+    function sendPayload(type, payload) {
+        const message = { type, payload };
+        if (window.messagePort) window.messagePort.postMessage(message);
+        else window.parent.postMessage(message, '*');
     }
 
-    function logToScreen(msg, type = 'log') {
-        const textContent = formatMessage(msg);
-
-        // Notify parent via established port (preferred for isolation) or global postMessage
-        const payload = { 
-            type: type === 'error' ? 'RUNTIME_ERROR' : (type === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
-            payload: textContent
+    // Intercept standard logs
+    ['log', 'error', 'warn', 'info'].forEach(method => {
+        const original = console[method];
+        console[method] = function(...args) {
+            original.apply(console, args);
+            const content = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try { return JSON.stringify(arg, null, 2); } catch(e) { return String(arg); }
+                }
+                return String(arg);
+            }).join(' ');
+            sendPayload(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), content);
         };
-
-        if (messagePort) {
-            messagePort.postMessage(payload);
-        } else {
-            window.parent.postMessage(payload, '*');
-        }
-    }
-
-    const originalLog = console.log;
-    console.log = function(...args) {
-        originalLog.apply(console, args);
-        args.forEach(arg => logToScreen(arg, 'log'));
-    };
-
-    const originalError = console.error;
-    console.error = function(...args) {
-        originalError.apply(console, args);
-        args.forEach(arg => logToScreen(arg, 'error'));
-    };
-    
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-        originalWarn.apply(console, args);
-        args.forEach(arg => logToScreen(arg, 'warn'));
-    };
-
-    // Support console.table specifically for array/object data visualization
-    const originalTable = console.table;
-    console.table = function(data) {
-        originalTable.apply(console, [data]);
-        logToScreen(data, 'log'); // We just log the JSON for now
-    };
-
-    window.onerror = function(message, source, lineno, colno, error) {
-        logToScreen(\`Error: \${message} (Line \${lineno})\`, 'error');
-        return true;
-    };
-
-    window.addEventListener('unhandledrejection', function(event) {
-        logToScreen(\`Async Error: \${event.reason}\`, 'error');
     });
 
-    // Listen for port initialization
+    console.log("[Kernel] Sandbox started. Initializing environment...");
+
+    window.onerror = (msg, src, line) => sendPayload('RUNTIME_ERROR', \`Error: \${msg} (Line \${line})\`);
+
     window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'INIT_PORT' && event.ports[0]) {
-            messagePort = event.ports[0];
-            // If the server simulator sent this, it might expect a ready signal on the port
-            if (window.serverReadySignal) {
-                messagePort.postMessage({ type: 'SERVER_READY' });
+        const { type, code, mode, payload } = event.data;
+        if (type === 'INIT_PORT' && event.ports[0]) {
+            console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
+            window.messagePort = event.ports[0];
+            window.messagePort.postMessage({ type: 'READY_SIGNAL' });
+            if (window.__SERVER_READY__) {
+                console.log("[Kernel] Server already ready, resending SERVER_READY signal via Port.");
+                window.messagePort.postMessage({ type: 'SERVER_READY' });
             }
+        }
+        if (type === 'THEME') document.body.className = mode === 'dark' ? 'dark' : '';
+        if (type === 'EXECUTE' && window.__RUN_MODE__) {
+            console.log("[Kernel] Received EXECUTE signal.");
+            const root = document.getElementById('root');
+            const placeholder = document.getElementById('placeholder');
+            if (placeholder) placeholder.style.display = 'none';
+            window.__RUN_MODE__(code, root);
         }
     });
 `;
 
-export const BASE_HTML_WRAPPER = (headContent: string, scriptContent: string, showPlaceholder: boolean = true) => `
+export const BASE_HTML_WRAPPER = (recipe: { 
+  cdns?: string[], 
+  mocks?: string, 
+  styles?: string,
+  logic: string,
+  showPlaceholder?: boolean 
+}) => `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandbox</title>
-    <style>${BASE_STYLES}</style>
-    ${headContent}
+    <style>${BASE_STYLES} ${recipe.styles || ''}</style>
+    ${(recipe.cdns || []).join('\n')}
 </head>
 <body>
     <div id="root">
-        <!-- User output goes here -->
-        ${showPlaceholder ? '<p id="placeholder" style="color: #666; font-style: italic; align-self: flex-start;">Output will appear here...</p>' : ''}
+        ${recipe.showPlaceholder !== false ? '<p id="placeholder" style="color: #888; font-style: italic;">Output will appear here...</p>' : ''}
     </div>
-
     <script>
-        ${CONSOLE_INTERCEPTOR}
-
-        window.addEventListener('message', (event) => {
-            const { type, code, mode } = event.data;
-
-            if (type === 'EXECUTE') {
-                const root = document.getElementById('root');
-                const placeholder = document.getElementById('placeholder');
-                if (placeholder) placeholder.style.display = 'none';
-                
-                // Clear root
-                // Note: We don't clear the parent console here, that's handled by the React component
-                
-                // Invoke specific runner logic
-                if (window.runMode) {
-                    window.runMode(code, root);
-                }
-            }
-            
-            if (type === 'THEME') {
-                if (mode === 'dark') {
-                    document.body.classList.add('dark');
-                } else {
-                    document.body.classList.remove('dark');
-                }
-            }
-        });
-        
-        ${scriptContent}
+        ${KERNEL_SCRIPTS}
+        ${recipe.mocks || ''}
+        ${recipe.logic}
     </script>
 </body>
 </html>

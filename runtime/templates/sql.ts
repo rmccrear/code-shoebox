@@ -151,9 +151,6 @@ const SQL_EXECUTION_LOGIC = `
             try {
                 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
                 new AsyncFunction(code); 
-                // If this doesn't throw SyntaxError, it *could* be JS.
-                // However, "SELECT * FROM X" might technically valid in some loose parser 
-                // but usually fails. Pure SQL usually fails JS parse.
                 isJs = true;
             } catch(e) {
                 isJs = false;
@@ -165,9 +162,6 @@ const SQL_EXECUTION_LOGIC = `
                  const fn = new AsyncFunction('root', code);
                  await fn(root);
                  
-                 // Note: We don't auto-render return values from JS blocks.
-                 // The user must console.log or append to root.
-                 // If root is empty and no logs, maybe show a hint?
                  if (root.innerHTML === '' && document.getElementById('console-output').innerHTML === '') {
                      const div = document.createElement('div');
                      div.innerHTML = '<i>Script executed. Use <b>console.log()</b> or append to <b>root</b> to see results.</i>';
@@ -193,7 +187,7 @@ const SQL_EXECUTION_LOGIC = `
 `;
 
 export const generateSqlHtml = (showPlaceholder: boolean = true) => {
-    // Inject custom styles into the base wrapper
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
     const headContent = `${SQL_CDN}<style>${SQL_STYLES}</style>`;
-    return BASE_HTML_WRAPPER(headContent, SQL_EXECUTION_LOGIC, showPlaceholder);
+    return BASE_HTML_WRAPPER({ cdns: [headContent], logic: SQL_EXECUTION_LOGIC, showPlaceholder });
 };

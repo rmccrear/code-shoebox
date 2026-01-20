@@ -8,11 +8,6 @@ const EXPRESS_TS_RUNNER = `
     // 1. Shim 'require' to support standard imports transpiled by Babel
     window.require = function(module) {
         if (module === 'express') {
-            // In TS/ESM: import express from 'express'; express() -> app
-            // Babel 'env' preset might treat default export as module.default depending on config,
-            // or just module() if it's commonjs interop.
-            // Our window.express is the function.
-            // Let's ensure common default import patterns work.
             const exp = window.express;
             exp.default = exp;
             return exp;
@@ -31,7 +26,6 @@ const EXPRESS_TS_RUNNER = `
 
         try {
              // Transpile with 'typescript' and 'env' presets
-             // 'env' will convert import/export to require/module.exports (CommonJS)
              const transpiled = Babel.transform(code, {
                 presets: ['env', 'typescript'],
                 filename: 'server.ts'
@@ -49,5 +43,6 @@ const EXPRESS_TS_RUNNER = `
 
 export const generateExpressTsHtml = (showPlaceholder: boolean = false) => {
     const script = EXPRESS_MOCK_SETUP + EXPRESS_TS_RUNNER;
-    return BASE_HTML_WRAPPER(BABEL_CDN, script, false);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
+    return BASE_HTML_WRAPPER({ cdns: [BABEL_CDN], logic: script, showPlaceholder: false });
 };

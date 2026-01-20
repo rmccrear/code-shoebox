@@ -17,7 +17,7 @@ const TS_EXECUTION_LOGIC = `
             }).code;
 
             // Execute the transpiled code
-            // Wrap in a function that receives 'root' to match DOM mode behavior
+            // Wrap in a function that receives 'root' to match DOM behavior
             const userFunction = new Function('root', transpiled);
             userFunction(root);
         } catch (err) {
@@ -27,5 +27,6 @@ const TS_EXECUTION_LOGIC = `
 `;
 
 export const generateTsHtml = (showPlaceholder: boolean = true) => {
-    return BASE_HTML_WRAPPER(BABEL_CDN, TS_EXECUTION_LOGIC, showPlaceholder);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
+    return BASE_HTML_WRAPPER({ cdns: [BABEL_CDN], logic: TS_EXECUTION_LOGIC, showPlaceholder });
 };

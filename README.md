@@ -14,11 +14,14 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
+  - `hono`: Modern, web-standard server environment using Hono (JS).
+  - `hono-ts`: Hono environment with TypeScript support.
   - `node-js`: Pure JavaScript environment optimized for logic and algorithms (Console only).
   - `node-ts`: Pure TypeScript environment optimized for logic and algorithms (Console only).
 - **Themable**: Full support for light/dark modes and custom color themes.
 - **State Management**: Built-in hook `useSandboxState` for easy persistence and mode switching.
 - **Pedagogical Tools**: Built-in support for code prediction exercises (PRIMM).
+- **Diagnostic Mode**: Internal logging to debug iframe communication and environment setup.
 
 ## Installation
 
@@ -89,15 +92,6 @@ const MyEditor = () => {
 
   return (
     <div style={{ height: '100vh', width: '100vw' }}>
-      {/* Optional: Add controls to change modes */}
-      <select value={environmentMode} onChange={e => setEnvironmentMode(e.target.value)}>
-        <option value="dom">JavaScript</option>
-        <option value="react">React</option>
-        <option value="p5">p5.js</option>
-        <option value="node-js">Pure Logic (JS)</option>
-        <option value="express">Node/Express</option>
-      </select>
-
       <CodeShoebox 
         code={code}
         onCodeChange={setCode}
@@ -111,175 +105,44 @@ const MyEditor = () => {
 };
 ```
 
-### 2. Manual Usage
+### Hono Usage
 
-You can also manage the state yourself if you have custom requirements (e.g., saving to a database instead of localStorage).
+When using the `hono` or `hono-ts` environments, you must **export your app instance as default**. 
+Do not use `app.fire()` or `app.listen()`, as these methods are not supported in this sandbox environment.
 
-```tsx
-import React, { useState } from 'react';
-import { CodeShoebox, themes } from 'code-shoebox';
-import 'code-shoebox/styles.css';
+**Correct Usage:**
+```javascript
+import { Hono } from 'hono';
+const app = new Hono();
 
-const MyCustomEditor = () => {
-  const [code, setCode] = useState('console.log("Hello World");');
+app.get('/', (c) => c.text('Hello Hono!'));
 
-  return (
-    <div style={{ height: '500px' }}>
-      <CodeShoebox 
-        code={code} 
-        onCodeChange={setCode}
-        environmentMode="dom"
-        theme={themes[0]}
-        themeMode="dark"
-      />
-    </div>
-  );
-};
+// Must export default
+export default app;
 ```
 
-### 3. Environment Specific Examples
+## Diagnostic Mode (Debugging)
 
-CodeShoebox supports multiple execution environments. When manually managing state, ensure you pass the correct `environmentMode` and compatible code.
+If you are experiencing issues with the code not running or logs not appearing in a specific hosting environment, you can enable **Diagnostic Mode**.
 
-#### React Mode
-Renders a React component tree. The environment includes `react`, `react-dom`, and `babel` for in-browser transpilation.
+When `debugMode` is set to `true`, the internal console will output high-visibility `[System]` logs that trace:
+- When the sandbox HTML is generated.
+- When the iframe `onLoad` event triggers.
+- When the communication ports are initialized.
+- When the `EXECUTE` signal is dispatched to the runner.
 
 ```tsx
 <CodeShoebox 
-  code={`
-    import React from 'react';
-    import { createRoot } from 'react-dom/client';
-    
-    function App() { 
-      return (
-        <div style={{ textAlign: 'center', marginTop: 50 }}>
-          <h1>Hello React</h1>
-          <p>Live rendering in the browser!</p>
-        </div>
-      );
-    }
-    
-    const root = createRoot(document.getElementById('root'));
-    root.render(<App />);
-  `}
-  onCodeChange={handleCodeChange}
-  environmentMode="react"
-  theme={activeTheme}
+  code={code}
+  onCodeChange={setCode}
+  environmentMode="dom"
+  theme={themes[0]}
   themeMode="dark"
+  debugMode={true} // Enables verbose system logs
 />
 ```
 
-#### p5.js Mode
-Automatically detects the global `setup` and `draw` functions and moves the created canvas into the output window.
-
-```tsx
-<CodeShoebox 
-  code={`
-    function setup() {
-      createCanvas(400, 400);
-      background(220);
-    }
-    
-    function draw() {
-      if (mouseIsPressed) {
-        fill(0);
-      } else {
-        fill(255);
-      }
-      ellipse(mouseX, mouseY, 50, 50);
-    }
-  `}
-  onCodeChange={handleCodeChange}
-  environmentMode="p5"
-  theme={activeTheme}
-  themeMode="light"
-/>
-```
-
-#### Headless Mode (node-js / node-ts)
-Optimized for teaching data structures and algorithms. The visual output pane is disabled to force students to use the console. Global DOM objects like `window` and `document` are shadowed to prevent browser manipulation.
-
-```tsx
-<CodeShoebox 
-  code={`
-    const users = [
-      { name: 'Alice', age: 25 },
-      { name: 'Bob', age: 30 }
-    ];
-    
-    const names = users.map(u => u.name);
-    console.log("User Names:", names);
-    console.table(users);
-  `}
-  onCodeChange={handleCodeChange}
-  environmentMode="node-js"
-  theme={activeTheme}
-  themeMode="dark"
-/>
-```
-
-#### Express (Node.js) Mode
-Simulates a Node.js Express server environment. The output pane becomes a console and API testing tool (Postman-lite).
-
-```tsx
-<CodeShoebox 
-  code={`
-    const app = express();
-    const port = 3000;
-    
-    app.get('/', (req, res) => {
-      res.json({ status: 'active', message: 'Mock server running' });
-    });
-    
-    app.get('/hello/:name', (req, res) => {
-      res.json({ greeting: 'Hello ' + req.params.name });
-    });
-    
-    app.listen(port, () => {
-      console.log('Server ready on port ' + port);
-    });
-  `}
-  onCodeChange={handleCodeChange}
-  environmentMode="express"
-  theme={activeTheme}
-  themeMode="dark"
-/>
-```
-
-#### Express + TypeScript Mode
-Identical to the Express mode but with full TypeScript support. Import `Request` and `Response` types to type your handlers.
-
-```tsx
-<CodeShoebox 
-  code={`
-    import express, { Request, Response } from 'express';
-    const app = express();
-    const port = 3000;
-    
-    interface User {
-      id: number;
-      name: string;
-    }
-    
-    const db: User[] = [{ id: 1, name: 'Alice' }];
-    
-    app.get('/users/:id', (req: Request, res: Response) => {
-       const id = parseInt(req.params.id);
-       const user = db.find(u => u.id === id);
-       if (user) res.json(user);
-       else res.status(404).json({ error: 'Not Found' });
-    });
-    
-    app.listen(port, () => console.log('Ready'));
-  `}
-  onCodeChange={handleCodeChange}
-  environmentMode="express-ts"
-  theme={activeTheme}
-  themeMode="dark"
-/>
-```
-
-### 4. Prediction Templates (Pedagogy)
+## Prediction Templates (Pedagogy)
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
 
@@ -298,10 +161,6 @@ This prop accepts **strings** or **JSX (React Nodes)**, allowing you to pass ric
   environmentMode="dom"
   theme={activeTheme}
   themeMode="dark"
-  // You can pass a string
-  // prediction_prompt="What will be the final value?"
-  
-  // Or pass JSX for formatting
   prediction_prompt={
     <div>
        <p style={{ fontWeight: 'bold' }}>Analyze the code below:</p>
@@ -321,20 +180,13 @@ The library provides multiple ways to manage saved state.
 ### 1. Persistent Mode (Explicit Key)
 Pass a manual string ID (e.g., `useSandboxState('lesson-1')`).
 *   Code, theme, and mode preferences are saved to `localStorage` namespaced by this ID.
-*   Great for courses where you want users to resume where they left off.
 
 ### 2. Scratchpad Mode (No Key)
 Pass nothing (e.g., `useSandboxState()`).
 *   State is kept in memory only.
-*   Reloading the page resets the editor to the starter code.
 
 ### 3. Automatic Key Generation (Helper Hook)
-Use the `useAutoKey` helper to generate a key based on:
-1. The page URL.
-2. The exercise prompt.
-3. The starting code (optional).
-
-This ensures the code is saved specifically for that unique configuration on that page.
+Use the `useAutoKey` helper to generate a key based on the page URL and prompt text.
 
 ```tsx
 import { CodeShoebox, useSandboxState, useAutoKey } from 'code-shoebox';
@@ -342,10 +194,7 @@ import { CodeShoebox, useSandboxState, useAutoKey } from 'code-shoebox';
 const ExerciseComponent = () => {
   const promptText = "Write a function that calculates the factorial of n.";
   const starterCode = "function factorial(n) { \n // TODO \n }";
-  
-  // Generates a hash key based on pathname + prompt + starterCode
   const persistenceKey = useAutoKey(promptText, starterCode);
-  
   const { code, setCode, ...state } = useSandboxState(persistenceKey);
 
   return (
@@ -359,56 +208,18 @@ const ExerciseComponent = () => {
 };
 ```
 
-**Note:** If you change the `promptText` or `starterCode`, the hash will change, and the user's saved code for that exercise will be reset (treated as a new exercise). Ensure your prompts are stable before releasing content.
-
-## Cookbook
-
-### Custom Branding (Theming)
-CodeShoebox uses HSL values for theming. You can inject your own brand colors easily.
-
-```tsx
-const matrixTheme = {
-  name: "Matrix",
-  light: { 
-     primary: "120 100% 25%", 
-     primaryForeground: "0 0% 100%", 
-     ring: "120 100% 25%", 
-     sidebarPrimary: "120 100% 25%",
-     sidebarPrimaryForeground: "0 0% 100%", 
-     sidebarRing: "120 100% 25%" 
-  },
-  dark: {
-    primary: "120 100% 50%", // Bright Green
-    primaryForeground: "0 0% 0%",
-    ring: "120 100% 50%",
-    sidebarPrimary: "120 100% 50%",
-    sidebarPrimaryForeground: "0 0% 0%", 
-    sidebarRing: "120 100% 50%",
-    background: "0 0% 0%", // Pure Black
-    foreground: "120 100% 50%"
-  }
-};
-
-<CodeShoebox 
-  code="// Welcome to the real world."
-  onCodeChange={setCode}
-  environmentMode="dom"
-  theme={matrixTheme}
-  themeMode="dark"
-/>
-```
-
 ## Props
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment and pre-loaded libraries available in the sandbox. |
+| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts' \| 'hono' \| 'hono-ts'` | Yes | Determines the runtime environment. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
-| `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor (clearing undo history). Handled automatically by `useSandboxState`. |
-| `prediction_prompt` | `string \| React.ReactNode` | No | If provided, locks the editor in "Read Only" mode and blurs the output until the user enters a prediction. Accepts plain text or formatted JSX (e.g., lists, bold text). |
+| `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |
+| `prediction_prompt` | `string \| React.ReactNode` | No | If provided, locks the editor in "Read Only" mode for prediction exercises. |
+| `debugMode` | `boolean` | No | Enables verbose `[System]` logs in the console to help debug setup issues. |
 
 ## Development
 

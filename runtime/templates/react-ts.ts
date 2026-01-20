@@ -54,5 +54,6 @@ const REACT_TS_EXECUTION_LOGIC = `
 `;
 
 export const generateReactTsHtml = (showPlaceholder: boolean = true) => {
-    return BASE_HTML_WRAPPER(REACT_TS_CDNS, REACT_TS_EXECUTION_LOGIC, showPlaceholder);
+    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
+    return BASE_HTML_WRAPPER({ cdns: [REACT_TS_CDNS], logic: REACT_TS_EXECUTION_LOGIC, showPlaceholder });
 };
