@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { CodingEnvironment } from './CodingEnvironment';
-import { Theme } from '../theme';
-import { ThemeMode, EnvironmentMode, CodeShoeboxProps } from '../types';
+import { CodeShoeboxProps } from '../types';
 
 export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   code,
