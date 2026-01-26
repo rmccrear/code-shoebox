@@ -221,7 +221,31 @@ const ExerciseComponent = () => {
 | `prediction_prompt` | `string \| React.ReactNode` | No | If provided, locks the editor in "Read Only" mode for prediction exercises. |
 | `debugMode` | `boolean` | No | Enables verbose `[System]` logs in the console to help debug setup issues. |
 
-## Development
+## Contributing
 
-1. Install dependencies: `npm install`
-2. Build the package: `npm run build`
+We welcome contributions! To set up the project locally and run the internal demo suite:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/rmccrear/code-shoebox.git
+    cd code-shoebox
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Start the development server:**
+    ```bash
+    npm run dev
+    ```
+    This will start a Vite server (usually at `http://localhost:5173`).
+    
+    *   **Editor View:** The default view allows you to test the component directly.
+    *   **Demo Suite:** Click the "Demos" button in the top header to access the `Demo.tsx` gallery, which showcases all available environments (p5.js, Express, Hono, etc.) with pre-loaded examples.
+
+4.  **Building for distribution:**
+    ```bash
+    npm run build
+    ```
