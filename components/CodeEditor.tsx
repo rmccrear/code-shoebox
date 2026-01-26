@@ -113,6 +113,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
                         req: {
                             param(name: string): string;
                             query(name: string): string;
+                            query(): Record<string, string>;
                         };
                     }
                     export class Hono {

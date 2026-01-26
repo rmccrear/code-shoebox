@@ -119,15 +119,18 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
             <button onClick={() => setLayout('horizontal')} className={`p-1 rounded ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Columns size={14}/></button>
             <button onClick={() => setLayout('vertical')} className={`p-1 rounded ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Rows size={14}/></button>
           </div>
-          <Button 
-            onClick={handleRunClick} 
-            disabled={isRunning || !isPredictionFulfilled}
-            variant="primary"
-            className="h-8 !px-4 text-xs"
-            icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
-          >
-            {isRunning ? 'Running' : 'Run'}
-          </Button>
+          
+          {!isServerMode && (
+            <Button 
+              onClick={handleRunClick} 
+              disabled={isRunning || !isPredictionFulfilled}
+              variant="primary"
+              className="h-8 !px-4 text-xs"
+              icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
+            >
+              {isRunning ? 'Running' : 'Run'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -154,7 +157,15 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${(1 - editorRatio) * 100}%` }} className={`relative flex flex-col min-w-0 min-h-0 ${isDragging ? 'pointer-events-none' : ''}`}>
           <div className="flex-1 p-2 md:p-4 overflow-hidden">
             {isServerMode ? (
-              <ServerOutput runTrigger={runTrigger} code={code} themeMode={themeMode} environmentMode={environmentMode} isBlurred={!isPredictionFulfilled} debugMode={debugMode} />
+              <ServerOutput 
+                runTrigger={runTrigger} 
+                code={code} 
+                themeMode={themeMode} 
+                environmentMode={environmentMode} 
+                isBlurred={!isPredictionFulfilled} 
+                debugMode={debugMode}
+                onTriggerRun={handleRunClick}
+              />
             ) : (
               <OutputFrame runTrigger={runTrigger} code={code} themeMode={themeMode} environmentMode={environmentMode} isBlurred={!isPredictionFulfilled} isPredictionMode={!!predictionPrompt} debugMode={debugMode} />
             )}

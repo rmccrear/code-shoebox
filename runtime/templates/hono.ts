@@ -56,8 +56,11 @@ export const HONO_MOCK_SETUP = `
                 return;
             }
 
+            console.log(\`[Hono] Incoming Request: \${method} \${url}\`);
+
             try {
                 // Mock the request object
+                // Note: 'url' includes query params (e.g. /path?q=1), which Request/URL handles automatically
                 const req = new Request('http://localhost' + url, { method });
                 
                 // app.fetch is the standard entry point for Hono

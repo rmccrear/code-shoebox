@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeMode, EnvironmentMode } from '../types';
 import { themes } from '../theme';
@@ -17,7 +16,6 @@ import {
   NODE_TS_STARTER_CODE
 } from '../constants';
 
-// Helper: Get starter code for a specific mode, ensuring it always returns a string
 const getStarterCode = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'p5': return P5_STARTER_CODE;
@@ -35,106 +33,58 @@ const getStarterCode = (mode: EnvironmentMode): string => {
   }
 };
 
-/**
- * Manages the state of a CodeShoebox instance.
- * @param persistenceKey (Optional) If provided, state is saved to localStorage under this namespace. 
- *                       If omitted, state is ephemeral (lost on refresh).
- */
-export const useSandboxState = (persistenceKey?: string) => {
+export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: string, defaultMode: EnvironmentMode = 'dom') => {
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : '';
   const getStorageKey = useCallback((key: string) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
 
-  // -- Initializers --
-
-  const loadSavedMode = (): EnvironmentMode => {
-    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return 'dom';
+  // Generic loader for simple string/enum values
+  const loadState = <T extends string>(keySuffix: string, fallback: T): T => {
+    if (!persistenceKey || typeof window === 'undefined') return fallback;
     try {
-      const saved = localStorage.getItem(getStorageKey('env_mode'));
-      return (saved as EnvironmentMode) || 'dom';
-    } catch { return 'dom'; }
+      const saved = localStorage.getItem(getStorageKey(keySuffix));
+      return (saved as T) || fallback;
+    } catch { return fallback; }
   };
 
-  const loadSavedThemeMode = (): ThemeMode => {
-    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return 'dark';
+  // Specialized loader for code which depends on the mode and override
+  const loadCode = useCallback((mode: EnvironmentMode): string => {
+    const fallback = initialCodeOverride ?? getStarterCode(mode);
+    if (!persistenceKey || typeof window === 'undefined') return fallback;
     try {
-      const saved = localStorage.getItem(getStorageKey('theme_mode'));
-      return (saved as ThemeMode) || 'dark';
-    } catch { return 'dark'; }
-  };
+      const saved = localStorage.getItem(getStorageKey(`code_${mode}`));
+      return saved || fallback;
+    } catch { return fallback; }
+  }, [persistenceKey, getStorageKey, initialCodeOverride]);
 
-  const loadSavedThemeName = (): string => {
-    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return themes[0].name;
-    try {
-      return localStorage.getItem(getStorageKey('theme_name')) || themes[0].name;
-    } catch { return themes[0].name; }
-  };
-
-  // Wrapped in useCallback to provide a stable reference and ensures string return type
-  const loadSavedCode = useCallback((mode: EnvironmentMode): string => {
-    const starter = getStarterCode(mode);
-    if (typeof persistenceKey !== 'string' || typeof window === 'undefined') return starter;
-    try {
-      const key = getStorageKey(`code_${mode}`);
-      const saved = localStorage.getItem(key);
-      return typeof saved === 'string' ? saved : starter;
-    } catch { return starter; }
-  }, [persistenceKey, getStorageKey]);
-
-  // -- State --
-  const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>(loadSavedMode);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(loadSavedThemeMode);
-  const [activeThemeName, setActiveThemeName] = useState<string>(loadSavedThemeName);
-  
-  // Initialize code state
-  // If persistenceKey is missing, we just load the starter code for the default mode ('dom')
-  const [code, setCode] = useState<string>(() => {
-    return loadSavedCode(environmentMode); 
-  });
-  
+  // State Initialization
+  const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>(() => loadState('env_mode', defaultMode));
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadState('theme_mode', 'dark'));
+  const [activeThemeName, setActiveThemeName] = useState<string>(() => loadState('theme_name', themes[0].name));
+  const [code, setCode] = useState<string>(() => loadCode(environmentMode));
   const [sessionId, setSessionId] = useState<number>(0);
 
-  // -- Effects (Persistence) --
-
+  // Persistence Effects
   useEffect(() => {
-    if (typeof persistenceKey !== 'string') return;
+    if (!persistenceKey) return;
     localStorage.setItem(getStorageKey('env_mode'), environmentMode);
-  }, [environmentMode, persistenceKey, getStorageKey]);
-
-  useEffect(() => {
-    if (typeof persistenceKey !== 'string') return;
-    const key = getStorageKey(`code_${environmentMode}`);
-    localStorage.setItem(key, code);
-  }, [code, environmentMode, persistenceKey, getStorageKey]);
-
-  useEffect(() => {
-    if (typeof persistenceKey !== 'string') return;
     localStorage.setItem(getStorageKey('theme_mode'), themeMode);
-  }, [themeMode, persistenceKey, getStorageKey]);
-
-  useEffect(() => {
-    if (typeof persistenceKey !== 'string') return;
     localStorage.setItem(getStorageKey('theme_name'), activeThemeName);
-  }, [activeThemeName, persistenceKey, getStorageKey]);
+    localStorage.setItem(getStorageKey(`code_${environmentMode}`), code);
+  }, [environmentMode, themeMode, activeThemeName, code, persistenceKey, getStorageKey]);
 
-  // -- Actions --
-
+  // Actions
   const switchMode = useCallback((newMode: EnvironmentMode) => {
     if (newMode === environmentMode) return;
-    
-    // 1. Load code for the NEW mode.
-    // If persistenceKey is on, this fetches from LS. If off, fetches starter code.
-    const savedCode = loadSavedCode(newMode);
-    
     setEnvironmentMode(newMode);
-    setCode(savedCode);
+    setCode(loadCode(newMode));
     setSessionId(prev => prev + 1);
-  }, [environmentMode, loadSavedCode]);
+  }, [environmentMode, loadCode]);
 
   const resetCode = useCallback(() => {
-    const starter = getStarterCode(environmentMode);
+    const starter = initialCodeOverride ?? getStarterCode(environmentMode);
     setCode(starter);
     setSessionId(prev => prev + 1);
-  }, [environmentMode]);
+  }, [environmentMode, initialCodeOverride]);
 
   return {
     environmentMode,
@@ -142,7 +92,6 @@ export const useSandboxState = (persistenceKey?: string) => {
     activeThemeName,
     code,
     sessionId,
-    // Actions
     setEnvironmentMode: switchMode,
     setThemeMode,
     setActiveThemeName,

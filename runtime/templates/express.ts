@@ -58,12 +58,25 @@ export const EXPRESS_MOCK_SETUP = `
         }
 
         async _handleRequest(method, url) {
+            // Parse URL to separate path and query
+            // We use a dummy base because 'url' is just the path+query like '/users?id=1'
+            const urlObj = new URL(url, "http://localhost");
+            const pathname = urlObj.pathname;
+            const searchParams = urlObj.searchParams;
+            
+            // Convert searchParams to a plain object
+            const query = {};
+            for (const [key, value] of searchParams) {
+                query[key] = value;
+            }
+
             console.log(\`Incoming Request: \${method} \${url}\`);
             
             const methodRoutes = this.routes[method] || {};
             
             for (const routeRegex in methodRoutes) {
-                const match = new RegExp(\`^\${routeRegex}$\`).exec(url);
+                // Match against pathname, NOT full url (which might contain query strings)
+                const match = new RegExp(\`^\${routeRegex}$\`).exec(pathname);
                 if (match) {
                     const { handler } = methodRoutes[routeRegex];
                     
@@ -77,7 +90,13 @@ export const EXPRESS_MOCK_SETUP = `
                        });
                     }
 
-                    const req = { method, url, params, query: {} };
+                    const req = { 
+                        method, 
+                        url, 
+                        path: pathname,
+                        params, 
+                        query 
+                    };
 
                     return new Promise(resolve => {
                         const res = new MockResponse(resolve);
@@ -91,7 +110,7 @@ export const EXPRESS_MOCK_SETUP = `
                 }
             }
 
-            return { status: 404, data: { error: \`Cannot \${method} \${url}\` } };
+            return { status: 404, data: { error: \`Cannot \${method} \${pathname}\` } };
         }
     }
 

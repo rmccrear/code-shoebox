@@ -1,7 +1,7 @@
-
 import React from 'react';
-import { Palette, Server, Box, Code2, Cpu, Save, Sparkles, Zap } from 'lucide-react';
+import { Palette, Server, Box, Code2, Cpu, Save, Sparkles, Zap, Brain, RotateCcw } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
+import { Button } from './components/Button';
 import { themes, Theme } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
 
@@ -76,12 +76,45 @@ const nodes: ParticleNode[] = [];
 
 const EXPRESS_DEMO_CODE = `const app = express();
 const port = 3000;
+
 const inventory = [
   { id: 1, item: "Space Suit", price: 500 },
   { id: 2, item: "Oxygen Tank", price: 150 }
 ];
+
+// Root route to guide the user
+app.get('/', (req, res) => {
+  res.json({
+    message: "Welcome to the Shop API!",
+    endpoints: [
+      "/api/inventory"
+    ]
+  });
+});
+
 app.get('/api/inventory', (req, res) => res.json(inventory));
+
 app.listen(port, () => console.log('Ready'));`;
+
+const EXPRESS_PREDICTION_CODE = `const app = express();
+
+app.get('/secure', (req, res) => {
+  const apiKey = req.query.key;
+  
+  // 1. Check if key exists
+  if (!apiKey) {
+    return res.status(400).json({ error: "Missing API Key" });
+  }
+  
+  // 2. Validate key
+  if (apiKey !== "12345") {
+    return res.status(403).json({ error: "Invalid Credentials" });
+  }
+  
+  res.json({ data: "Top Secret Info" });
+});
+
+app.listen(3000, () => console.log('Security Server Ready'));`;
 
 const HONO_DEMO_CODE = `/**
  * Hono API - Modern & Standard-compliant
@@ -149,68 +182,109 @@ const message = "Change me and reload the page!";
 console.log("Persistence Status:", message);`;
 
 export const Demo: React.FC = () => {
-    const p5State = useSandboxState(); 
-    const p5TsState = useSandboxState();
-    const expressState = useSandboxState();
-    const honoState = useSandboxState();
-    const nodeJsState = useSandboxState();
-    const nodeTsState = useSandboxState();
-    const persistenceState = useSandboxState('demo_persistence');
+    // Giving each demo a unique key prevents state collision in localStorage
+    // using '_v2' effectively resets the "legacy" data that was causing issues.
+    const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5'); 
+    const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
+    const expressState = useSandboxState('demo_express_legacy_v2', EXPRESS_DEMO_CODE, 'express');
+    const expressPredictionState = useSandboxState('demo_express_prediction_v2', EXPRESS_PREDICTION_CODE, 'express');
+    const honoState = useSandboxState('demo_hono_v2', HONO_DEMO_CODE, 'hono');
+    const nodeJsState = useSandboxState('demo_node_js_v2', NODE_JS_DEMO_CODE, 'node-js');
+    const nodeTsState = useSandboxState('demo_node_ts_v2', NODE_TS_DEMO_CODE, 'node-ts');
+    const persistenceState = useSandboxState('demo_persistence_v2', PERSISTENCE_DEMO_CODE, 'dom');
+
+    const handleResetAll = () => {
+        if (window.confirm("Reset all demos to their original state? This will erase your changes.")) {
+            p5State.resetCode();
+            p5TsState.resetCode();
+            expressState.resetCode();
+            expressPredictionState.resetCode();
+            honoState.resetCode();
+            nodeJsState.resetCode();
+            nodeTsState.resetCode();
+            persistenceState.resetCode();
+        }
+    };
 
     return (
         <div className="h-full w-full overflow-y-auto bg-gray-50 dark:bg-[#121212] transition-colors duration-300 pb-20">
             <div className="max-w-5xl mx-auto py-12 px-6 space-y-20">
-                <header>
-                    <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Cookbook Demos</h1>
-                    <p className="text-lg opacity-70 dark:text-gray-300">Isolated sandboxes for various educational needs.</p>
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-6 mb-12">
+                    <div>
+                        <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Cookbook Demos</h1>
+                        <p className="text-lg opacity-70 dark:text-gray-300">Isolated sandboxes for various educational needs.</p>
+                    </div>
+                    <Button onClick={handleResetAll} variant="secondary" className="text-xs whitespace-nowrap" icon={<RotateCcw className="w-4 h-4"/>}>
+                        Reset Persistence
+                    </Button>
                 </header>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Save className="w-6 h-6 text-indigo-500" /> Persistence</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={persistenceState.code.includes('Persistence Demo') ? persistenceState.code : PERSISTENCE_DEMO_CODE} onCodeChange={persistenceState.setCode} environmentMode="dom" theme={themes[0]} themeMode="dark" />
+                        {/* Note: We pass expressState.environmentMode which comes from the hook, ensuring sync */}
+                        <CodeShoebox code={persistenceState.code} onCodeChange={persistenceState.setCode} environmentMode={persistenceState.environmentMode} theme={themes[0]} themeMode="dark" />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Palette className="w-6 h-6 text-pink-500" /> Creative Coding</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={p5State.code.includes('createCanvas') ? p5State.code : P5_DEMO_CODE} onCodeChange={p5State.setCode} environmentMode="p5" theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={p5State.code} onCodeChange={p5State.setCode} environmentMode={p5State.environmentMode} theme={themes[2]} themeMode="dark" />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Sparkles className="w-6 h-6 text-yellow-400" /> Typed Graphics (p5.js + TS)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={p5TsState.code.includes('interface ParticleNode') ? p5TsState.code : P5_TS_DEMO_CODE} onCodeChange={p5TsState.setCode} environmentMode="p5-ts" theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={p5TsState.code} onCodeChange={p5TsState.setCode} environmentMode={p5TsState.environmentMode} theme={themes[2]} themeMode="dark" />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Zap className="w-6 h-6 text-yellow-500" /> Modern API (Hono)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={honoState.code.includes('Hono') ? honoState.code : HONO_DEMO_CODE} onCodeChange={honoState.setCode} environmentMode="hono" theme={themes[1]} themeMode="dark" />
+                        <CodeShoebox code={honoState.code} onCodeChange={honoState.setCode} environmentMode={honoState.environmentMode} theme={themes[1]} themeMode="dark" />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Cpu className="w-6 h-6 text-yellow-500" /> Logic (Headless JS)</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={nodeJsState.code.includes('trackMeets') ? nodeJsState.code : NODE_JS_DEMO_CODE} onCodeChange={nodeJsState.setCode} environmentMode="node-js" theme={themes[0]} themeMode="dark" />
+                        <CodeShoebox code={nodeJsState.code} onCodeChange={nodeJsState.setCode} environmentMode={nodeJsState.environmentMode} theme={themes[0]} themeMode="dark" />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-teal-500" /> Logic (Headless TS)</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={nodeTsState.code.includes('TodoList') ? nodeTsState.code : NODE_TS_DEMO_CODE} onCodeChange={nodeTsState.setCode} environmentMode="node-ts" theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={nodeTsState.code} onCodeChange={nodeTsState.setCode} environmentMode={nodeTsState.environmentMode} theme={themes[2]} themeMode="dark" />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Brain className="w-6 h-6 text-purple-500" /> Prediction Challenge</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox 
+                            code={expressPredictionState.code} 
+                            onCodeChange={expressPredictionState.setCode} 
+                            environmentMode="express" 
+                            theme={themes[1]} 
+                            themeMode="dark" 
+                            prediction_prompt={
+                                <div>
+                                    <p className="font-bold mb-2">Analyze the security logic:</p>
+                                    <p>If you request <code className="bg-black/20 px-1 rounded">/secure?key=abc</code>, what HTTP status code and error message will be returned?</p>
+                                </div>
+                            }
+                        />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Server className="w-6 h-6 text-orange-500" /> Legacy API (Express)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={expressState.code.includes('express') ? expressState.code : EXPRESS_DEMO_CODE} onCodeChange={expressState.setCode} environmentMode="express" theme={themes[1]} themeMode="dark" />
+                        <CodeShoebox code={expressState.code} onCodeChange={expressState.setCode} environmentMode={expressState.environmentMode} theme={themes[1]} themeMode="dark" />
                     </div>
                 </section>
             </div>
