@@ -61,7 +61,8 @@ export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: s
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadState('theme_mode', 'dark'));
   const [activeThemeName, setActiveThemeName] = useState<string>(() => loadState('theme_name', themes[0].name));
   const [code, setCode] = useState<string>(() => loadCode(environmentMode));
-  const [sessionId, setSessionId] = useState<number>(0);
+  // Seed with a random number to avoid collision on initial render across multiple instances
+  const [sessionId, setSessionId] = useState<number>(() => Math.floor(Math.random() * 1000000));
 
   // Persistence Effects
   useEffect(() => {

@@ -222,43 +222,42 @@ export const Demo: React.FC = () => {
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Save className="w-6 h-6 text-indigo-500" /> Persistence</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        {/* Note: We pass expressState.environmentMode which comes from the hook, ensuring sync */}
-                        <CodeShoebox code={persistenceState.code} onCodeChange={persistenceState.setCode} environmentMode={persistenceState.environmentMode} theme={themes[0]} themeMode="dark" />
+                        <CodeShoebox code={persistenceState.code} onCodeChange={persistenceState.setCode} environmentMode={persistenceState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={persistenceState.sessionId} />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Palette className="w-6 h-6 text-pink-500" /> Creative Coding</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={p5State.code} onCodeChange={p5State.setCode} environmentMode={p5State.environmentMode} theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={p5State.code} onCodeChange={p5State.setCode} environmentMode={p5State.environmentMode} theme={themes[2]} themeMode="dark" sessionId={p5State.sessionId} />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Sparkles className="w-6 h-6 text-yellow-400" /> Typed Graphics (p5.js + TS)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={p5TsState.code} onCodeChange={p5TsState.setCode} environmentMode={p5TsState.environmentMode} theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={p5TsState.code} onCodeChange={p5TsState.setCode} environmentMode={p5TsState.environmentMode} theme={themes[2]} themeMode="dark" sessionId={p5TsState.sessionId} />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Zap className="w-6 h-6 text-yellow-500" /> Modern API (Hono)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={honoState.code} onCodeChange={honoState.setCode} environmentMode={honoState.environmentMode} theme={themes[1]} themeMode="dark" />
+                        <CodeShoebox code={honoState.code} onCodeChange={honoState.setCode} environmentMode={honoState.environmentMode} theme={themes[1]} themeMode="dark" sessionId={honoState.sessionId} />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Cpu className="w-6 h-6 text-yellow-500" /> Logic (Headless JS)</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={nodeJsState.code} onCodeChange={nodeJsState.setCode} environmentMode={nodeJsState.environmentMode} theme={themes[0]} themeMode="dark" />
+                        <CodeShoebox code={nodeJsState.code} onCodeChange={nodeJsState.setCode} environmentMode={nodeJsState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={nodeJsState.sessionId} />
                     </div>
                 </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-teal-500" /> Logic (Headless TS)</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={nodeTsState.code} onCodeChange={nodeTsState.setCode} environmentMode={nodeTsState.environmentMode} theme={themes[2]} themeMode="dark" />
+                        <CodeShoebox code={nodeTsState.code} onCodeChange={nodeTsState.setCode} environmentMode={nodeTsState.environmentMode} theme={themes[2]} themeMode="dark" sessionId={nodeTsState.sessionId} />
                     </div>
                 </section>
 
@@ -271,6 +270,7 @@ export const Demo: React.FC = () => {
                             environmentMode="express" 
                             theme={themes[1]} 
                             themeMode="dark" 
+                            sessionId={expressPredictionState.sessionId}
                             prediction_prompt={
                                 <div>
                                     <p className="font-bold mb-2">Analyze the security logic:</p>
@@ -284,7 +284,7 @@ export const Demo: React.FC = () => {
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Server className="w-6 h-6 text-orange-500" /> Legacy API (Express)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={expressState.code} onCodeChange={expressState.setCode} environmentMode={expressState.environmentMode} theme={themes[1]} themeMode="dark" />
+                        <CodeShoebox code={expressState.code} onCodeChange={expressState.setCode} environmentMode={expressState.environmentMode} theme={themes[1]} themeMode="dark" sessionId={expressState.sessionId} />
                     </div>
                 </section>
             </div>
