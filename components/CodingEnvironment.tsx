@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Play, 
@@ -116,8 +115,20 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded">
-            <button onClick={() => setLayout('horizontal')} className={`p-1 rounded ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Columns size={14}/></button>
-            <button onClick={() => setLayout('vertical')} className={`p-1 rounded ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}><Rows size={14}/></button>
+            <button 
+              onClick={() => setLayout('horizontal')} 
+              title="Split View (Side by Side)"
+              className={`p-1 rounded ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}
+            >
+              <Columns size={14}/>
+            </button>
+            <button 
+              onClick={() => setLayout('vertical')} 
+              title="Vertical View (Stacked)"
+              className={`p-1 rounded ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}
+            >
+              <Rows size={14}/>
+            </button>
           </div>
           
           {!isServerMode && (
