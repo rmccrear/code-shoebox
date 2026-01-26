@@ -110,24 +110,28 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       {/* Toolbar */}
       <div className={`h-12 px-4 border-b flex items-center justify-between ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10 text-gray-400' : 'bg-white border-gray-100'}`}>
         <div className="flex items-center gap-2">
-          <FileCode className="w-4 h-4" />
-          <span className="text-xs font-mono">{environmentMode}.script</span>
+          <FileCode className="w-4 h-4 text-blue-500" />
+          <span className="text-xs font-mono font-medium hidden sm:inline">{environmentMode}.script</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded">
+        
+        <div className="flex items-center gap-4">
+          {/* Enhanced Layout Switcher */}
+          <div className="flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5">
             <button 
               onClick={() => setLayout('horizontal')} 
               title="Split View (Side by Side)"
-              className={`p-1 rounded ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === 'horizontal' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-500' : 'opacity-40 hover:opacity-60'}`}
             >
-              <Columns size={14}/>
+              <Columns size={12}/>
+              <span className="hidden md:inline">Split</span>
             </button>
             <button 
               onClick={() => setLayout('vertical')} 
               title="Vertical View (Stacked)"
-              className={`p-1 rounded ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm' : 'opacity-40'}`}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === 'vertical' ? 'bg-white dark:bg-gray-700 shadow-sm text-blue-500' : 'opacity-40 hover:opacity-60'}`}
             >
-              <Rows size={14}/>
+              <Rows size={12}/>
+              <span className="hidden md:inline">Stacked</span>
             </button>
           </div>
           
@@ -136,10 +140,10 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
               onClick={handleRunClick} 
               disabled={isRunning || !isPredictionFulfilled}
               variant="primary"
-              className="h-8 !px-4 text-xs"
+              className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
               icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
             >
-              {isRunning ? 'Running' : 'Run'}
+              {isRunning ? 'RUNNING...' : 'RUN CODE'}
             </Button>
           )}
         </div>
@@ -160,13 +164,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
         <div 
           onMouseDown={handleMouseDown} 
-          className={`flex items-center justify-center shrink-0 hover:bg-blue-500 transition-colors ${layout === 'horizontal' ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'} ${themeMode === 'dark' ? 'bg-black/20' : 'bg-gray-100'}`}
+          className={`flex items-center justify-center shrink-0 hover:bg-blue-500/50 transition-colors z-10 ${layout === 'horizontal' ? 'w-1.5 cursor-col-resize' : 'h-1.5 cursor-row-resize'} ${themeMode === 'dark' ? 'bg-black/40' : 'bg-gray-100'}`}
         >
-          {layout === 'horizontal' ? <GripVertical size={12} className="opacity-20"/> : <GripHorizontal size={12} className="opacity-20"/>}
+          {layout === 'horizontal' ? <GripVertical size={10} className="opacity-20"/> : <GripHorizontal size={10} className="opacity-20"/>}
         </div>
 
         <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${(1 - editorRatio) * 100}%` }} className={`relative flex flex-col min-w-0 min-h-0 ${isDragging ? 'pointer-events-none' : ''}`}>
-          <div className="flex-1 p-2 md:p-4 overflow-hidden">
+          <div className="flex-1 p-2 md:p-3 overflow-hidden">
             {isServerMode ? (
               <ServerOutput 
                 runTrigger={runTrigger} 
