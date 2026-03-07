@@ -13,6 +13,26 @@ const REACT_CDNS = [
   BABEL_CDN
 ];
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
+const P5_RUNTIME_STYLES = `
+  #root {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  canvas.p5Canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    border: 2px solid rgba(37, 99, 235, 0.85);
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  body.dark canvas.p5Canvas {
+    border-color: rgba(96, 165, 250, 0.95);
+  }
+`;
 // Hono CDN - Using a module script to inject into window
 const HONO_CDN = '<script type="module">import { Hono } from "https://esm.sh/hono@4.1.0"; window.Hono = Hono;</script>';
 
@@ -47,6 +67,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
   p5: {
     name: "p5.js",
     cdns: [P5_CDN],
+    styles: P5_RUNTIME_STYLES,
     logic: `
       let instance = null;
       window.__RUN_MODE__ = (code, root) => {
@@ -67,6 +88,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     name: "p5.js TS",
     cdns: [P5_CDN, BABEL_CDN],
     babelPresets: ['typescript', 'env'],
+    styles: P5_RUNTIME_STYLES,
     logic: `
       let instance = null;
       window.__RUN_MODE__ = (code, root) => {

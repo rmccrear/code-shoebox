@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, LayoutTemplate, ArrowLeft, Bug } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, ArrowLeft, Bug } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Demo } from './Demo';
 import { Button } from './components/Button';
@@ -10,6 +10,58 @@ import { EnvironmentMode } from './types';
 import { getPredictionPrompt } from './prompts';
 import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
+
+const EDITOR_HASH_PRESETS: Record<string, { mode: EnvironmentMode; code: string }> = {
+  'ts-express-rest-demo': {
+    mode: 'express-ts',
+    code: `import type { Request, Response } from 'express';
+const app = express();
+const inventory = [
+  { id: 1, item: "Space Suit", price: 500 },
+  { id: 2, item: "Oxygen Tank", price: 150 }
+];
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ message: "Welcome to the Shop API!", endpoints: ["/api/inventory"] });
+});
+app.get('/api/inventory', (_req: Request, res: Response) => res.json(inventory));
+app.listen(3000, () => console.log('Ready'));`
+  },
+  'hono-api-demo': {
+    mode: 'hono',
+    code: `const app = new Hono();
+app.get('/', (c) => c.text('Hono running on Web Standards!'));
+app.get('/api/stats', (c) => c.json({ engine: "Hono", version: "4.x", environment: "CodeShoebox" }));
+export default app;`
+  },
+  'p5-ts-demo': {
+    mode: 'p5-ts',
+    code: `(window as any).setup = () => {
+  createCanvas(400, 250);
+};
+(window as any).draw = () => {
+  background(12);
+  fill(0, 200, 255);
+  circle(mouseX, mouseY, 28);
+};`
+  },
+  'ts-logic-demo': {
+    mode: 'node-ts',
+    code: `interface Task { id: number; title: string; }
+const tasks: Task[] = [{ id: 1, title: "Ship hash presets" }];
+console.table(tasks);`
+  }
+};
+
+const HASH_ALIASES: Record<string, string> = {
+  'express-rest-demo': 'ts-express-rest-demo'
+};
+
+const MODE_TO_HASH: Partial<Record<EnvironmentMode, string>> = {
+  'express-ts': 'ts-express-rest-demo',
+  'hono': 'hono-api-demo',
+  'p5-ts': 'p5-ts-demo',
+  'node-ts': 'ts-logic-demo'
+};
 
 const App: React.FC = () => {
   const {
@@ -26,6 +78,7 @@ const App: React.FC = () => {
   } = useSandboxState('demo_workspace_v1'); 
 
   const [view, setView] = useState<'editor' | 'demo'>('editor');
+  const [editorMountKey, setEditorMountKey] = useState(0);
   const [isPredictionMode, setIsPredictionMode] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   
@@ -54,6 +107,49 @@ const App: React.FC = () => {
     setThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const syncHashForMode = (mode: EnvironmentMode) => {
+    const nextHash = MODE_TO_HASH[mode];
+    const currentHash = window.location.hash.replace(/^#/, '');
+
+    if (nextHash) {
+      if (currentHash !== nextHash) {
+        window.location.hash = nextHash;
+      }
+      return;
+    }
+
+    if (currentHash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
+  const applyEditorPreset = (rawHash: string) => {
+    const hash = decodeURIComponent(rawHash);
+    const resolvedHash = HASH_ALIASES[hash] || hash;
+    const preset = EDITOR_HASH_PRESETS[resolvedHash];
+    if (!preset) return false;
+
+    setView('editor');
+    setIsPredictionMode(false);
+    setEnvironmentMode(preset.mode);
+    setCode(preset.code);
+    setEditorMountKey(prev => prev + 1);
+    return true;
+  };
+
+  useEffect(() => {
+    const applyHashPreset = () => {
+      const rawHash = window.location.hash.replace(/^#/, '');
+      if (!rawHash) return;
+      applyEditorPreset(rawHash);
+    };
+
+    applyHashPreset();
+    window.addEventListener('hashchange', applyHashPreset);
+
+    return () => window.removeEventListener('hashchange', applyHashPreset);
+  }, [setCode, setEnvironmentMode]);
+
   return (
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
       
@@ -69,15 +165,25 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-           <Button 
-            variant="ghost" 
-            onClick={() => setView(prev => prev === 'editor' ? 'demo' : 'editor')}
-            title={view === 'editor' ? "View Demos" : "Back to Editor"}
-            className={view === 'demo' ? 'bg-blue-500/10 text-blue-500' : ''}
-          >
-            {view === 'editor' ? <LayoutTemplate className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-            <span className="hidden sm:inline ml-2">{view === 'editor' ? "Demos" : "Editor"}</span>
-          </Button>
+          {view === 'editor' ? (
+            <Button
+              variant="ghost"
+              onClick={() => setView('demo')}
+              title="Open Gallery"
+            >
+              <span className="hidden sm:inline">Gallery</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => setView('editor')}
+              title="Back to Editor"
+              className="bg-blue-500/10 text-blue-500"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Editor</span>
+            </Button>
+          )}
 
            {view === 'editor' && (
              <div className="relative group hidden sm:block">
@@ -85,7 +191,15 @@ const App: React.FC = () => {
                 <Code2 className="w-4 h-4 opacity-70" />
                 <select 
                   value={environmentMode}
-                  onChange={(e) => setEnvironmentMode(e.target.value as EnvironmentMode)}
+                  onChange={(e) => {
+                    const mode = e.target.value as EnvironmentMode;
+                    setEnvironmentMode(mode);
+                    syncHashForMode(mode);
+                    const hash = MODE_TO_HASH[mode];
+                    if (hash) {
+                      applyEditorPreset(hash);
+                    }
+                  }}
                   className="bg-transparent border-none outline-none appearance-none cursor-pointer pr-4 font-medium"
                 >
                   <optgroup label="Web & UI" className="text-black">
@@ -178,6 +292,7 @@ const App: React.FC = () => {
       <div className="flex-1 overflow-hidden">
         {view === 'editor' ? (
           <CodeShoebox 
+            key={editorMountKey}
             code={code}
             onCodeChange={setCode}
             environmentMode={environmentMode}

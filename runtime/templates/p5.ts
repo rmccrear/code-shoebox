@@ -2,6 +2,23 @@
 import { BASE_HTML_WRAPPER } from "./common";
 
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
+const P5_STYLES = `
+    #root {
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 0.5rem;
+    }
+
+    canvas.p5Canvas {
+        margin: 0;
+        border: 2px solid rgba(37, 99, 235, 0.85);
+        border-radius: 6px;
+    }
+
+    body.dark canvas.p5Canvas {
+        border-color: rgba(96, 165, 250, 0.95);
+    }
+`;
 
 const P5_EXECUTION_LOGIC = `
     let currentP5Instance = null;
@@ -63,6 +80,10 @@ const P5_EXECUTION_LOGIC = `
 `;
 
 export const generateP5Html = (showPlaceholder: boolean = true) => {
-    // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
-    return BASE_HTML_WRAPPER({ cdns: [P5_CDN], logic: P5_EXECUTION_LOGIC, showPlaceholder });
+    return BASE_HTML_WRAPPER({
+        cdns: [P5_CDN],
+        styles: P5_STYLES,
+        logic: P5_EXECUTION_LOGIC,
+        showPlaceholder
+    });
 };

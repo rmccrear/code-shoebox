@@ -211,7 +211,7 @@ export const Demo: React.FC = () => {
             <div className="max-w-5xl mx-auto py-12 px-6 space-y-20">
                 <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-6 mb-12">
                     <div>
-                        <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Cookbook Demos</h1>
+                        <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Gallery</h1>
                         <p className="text-lg opacity-70 dark:text-gray-300">Isolated sandboxes for various educational needs.</p>
                     </div>
                     <Button onClick={handleResetAll} variant="secondary" className="text-xs whitespace-nowrap" icon={<RotateCcw className="w-4 h-4"/>}>
