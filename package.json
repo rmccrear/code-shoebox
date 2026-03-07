@@ -12,8 +12,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsup export.ts --format cjs,esm --dts --clean && npx tailwindcss -i ./styles/input.css -o ./dist/styles.css",
+    "build:demo": "vite build --outDir .demo-site",
     "prepublishOnly": "npm run build",
     "publish:dist": "npm run build && node scripts/prepare-dist.js && npx gh-pages -d dist -b dist",
+    "publish:demo": "node scripts/publish-demo.js",
     "release": "node scripts/release.js",
     "lint": "eslint ."
   },

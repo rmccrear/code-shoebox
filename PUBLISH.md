@@ -53,6 +53,21 @@ This is useful for documentation updates or minor internal build adjustments.
 
 ---
 
+## Publishing the Demo to GitHub Pages
+
+To build the demo app, publish it to the `demo` branch, and open the live GitHub Pages URL:
+
+```bash
+npm run publish:demo
+```
+
+What this does:
+- Builds the Vite app with the correct GitHub Pages base path.
+- Publishes the output to the `demo` branch (created automatically if it does not exist).
+- Opens `https://<owner>.github.io/<repo>/` in your browser.
+
+---
+
 ## How to Install the Published Package
 
 Once the release script finishes, users can install the specific version via GitHub:
