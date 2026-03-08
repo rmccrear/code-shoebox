@@ -47,6 +47,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [serverReady, setServerReady] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const startupTimeoutRef = useRef<number | null>(null);
 
   const [consoleHeight, setConsoleHeight] = useState(150);
   const [isDragging, setIsDragging] = useState(false);
@@ -206,6 +207,31 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
           console.warn("ServerOutput: onTriggerRun prop missing");
       }
   };
+
+  useEffect(() => {
+    if (!isLoading || !pendingRequest || serverReady || runtimeError) {
+      if (startupTimeoutRef.current) {
+        window.clearTimeout(startupTimeoutRef.current);
+        startupTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    startupTimeoutRef.current = window.setTimeout(() => {
+      setIsLoading(false);
+      setPendingRequest(null);
+      setServerReady(false);
+      setRuntimeError("Server startup timed out. For Express, ensure your code calls app.listen(...). For Hono, export default app (or call app.fire/app.listen).");
+      addSystemLog('Server startup timed out while waiting for SERVER_READY.');
+    }, 5000);
+
+    return () => {
+      if (startupTimeoutRef.current) {
+        window.clearTimeout(startupTimeoutRef.current);
+        startupTimeoutRef.current = null;
+      }
+    };
+  }, [isLoading, pendingRequest, serverReady, runtimeError, addSystemLog]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
