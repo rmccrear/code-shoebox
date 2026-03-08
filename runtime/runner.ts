@@ -80,7 +80,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
           }));
         });
         observer.observe(document.body, { childList: true });
-        try { eval(code); instance = new p5(); } catch (e) { console.error(e); }
+        try { window.eval(code); instance = new p5(); } catch (e) { console.error(e); }
       };
     `
   },
@@ -106,7 +106,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
             presets: ['env', 'typescript'], 
             filename: 'sketch.ts' 
           }).code;
-          eval(transpiled); 
+          window.eval(transpiled); 
           instance = new p5(); 
         } catch (e) { console.error(e); }
       };
