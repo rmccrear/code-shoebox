@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, ArrowLeft, Bug } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Demo } from './Demo';
@@ -10,58 +10,7 @@ import { EnvironmentMode } from './types';
 import { getPredictionPrompt } from './prompts';
 import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
-
-const EDITOR_HASH_PRESETS: Record<string, { mode: EnvironmentMode; code: string }> = {
-  'ts-express-rest-demo': {
-    mode: 'express-ts',
-    code: `import type { Request, Response } from 'express';
-const app = express();
-const inventory = [
-  { id: 1, item: "Space Suit", price: 500 },
-  { id: 2, item: "Oxygen Tank", price: 150 }
-];
-app.get('/', (_req: Request, res: Response) => {
-  res.json({ message: "Welcome to the Shop API!", endpoints: ["/api/inventory"] });
-});
-app.get('/api/inventory', (_req: Request, res: Response) => res.json(inventory));
-app.listen(3000, () => console.log('Ready'));`
-  },
-  'hono-api-demo': {
-    mode: 'hono',
-    code: `const app = new Hono();
-app.get('/', (c) => c.text('Hono running on Web Standards!'));
-app.get('/api/stats', (c) => c.json({ engine: "Hono", version: "4.x", environment: "CodeShoebox" }));
-export default app;`
-  },
-  'p5-ts-demo': {
-    mode: 'p5-ts',
-    code: `(window as any).setup = () => {
-  createCanvas(400, 250);
-};
-(window as any).draw = () => {
-  background(12);
-  fill(0, 200, 255);
-  circle(mouseX, mouseY, 28);
-};`
-  },
-  'ts-logic-demo': {
-    mode: 'node-ts',
-    code: `interface Task { id: number; title: string; }
-const tasks: Task[] = [{ id: 1, title: "Ship hash presets" }];
-console.table(tasks);`
-  }
-};
-
-const HASH_ALIASES: Record<string, string> = {
-  'express-rest-demo': 'ts-express-rest-demo'
-};
-
-const MODE_TO_HASH: Partial<Record<EnvironmentMode, string>> = {
-  'express-ts': 'ts-express-rest-demo',
-  'hono': 'hono-api-demo',
-  'p5-ts': 'p5-ts-demo',
-  'node-ts': 'ts-logic-demo'
-};
+import { useEditorHashPresets } from './hooks/useEditorHashPresets';
 
 const App: React.FC = () => {
   const {
@@ -107,48 +56,13 @@ const App: React.FC = () => {
     setThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const syncHashForMode = (mode: EnvironmentMode) => {
-    const nextHash = MODE_TO_HASH[mode];
-    const currentHash = window.location.hash.replace(/^#/, '');
-
-    if (nextHash) {
-      if (currentHash !== nextHash) {
-        window.location.hash = nextHash;
-      }
-      return;
-    }
-
-    if (currentHash) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  };
-
-  const applyEditorPreset = (rawHash: string) => {
-    const hash = decodeURIComponent(rawHash);
-    const resolvedHash = HASH_ALIASES[hash] || hash;
-    const preset = EDITOR_HASH_PRESETS[resolvedHash];
-    if (!preset) return false;
-
-    setView('editor');
-    setIsPredictionMode(false);
-    setEnvironmentMode(preset.mode);
-    setCode(preset.code);
-    setEditorMountKey(prev => prev + 1);
-    return true;
-  };
-
-  useEffect(() => {
-    const applyHashPreset = () => {
-      const rawHash = window.location.hash.replace(/^#/, '');
-      if (!rawHash) return;
-      applyEditorPreset(rawHash);
-    };
-
-    applyHashPreset();
-    window.addEventListener('hashchange', applyHashPreset);
-
-    return () => window.removeEventListener('hashchange', applyHashPreset);
-  }, [setCode, setEnvironmentMode]);
+  const { syncHashForMode } = useEditorHashPresets({
+    setView,
+    setIsPredictionMode,
+    setEnvironmentMode,
+    setCode,
+    bumpEditorMountKey: () => setEditorMountKey(prev => prev + 1)
+  });
 
   return (
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
@@ -195,10 +109,6 @@ const App: React.FC = () => {
                     const mode = e.target.value as EnvironmentMode;
                     setEnvironmentMode(mode);
                     syncHashForMode(mode);
-                    const hash = MODE_TO_HASH[mode];
-                    if (hash) {
-                      applyEditorPreset(hash);
-                    }
                   }}
                   className="bg-transparent border-none outline-none appearance-none cursor-pointer pr-4 font-medium"
                 >

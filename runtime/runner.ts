@@ -212,9 +212,10 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
             var module = { exports: exports };
             
             // Transpile to handle 'export default'
-            const transpiled = Babel.transform(code, { 
-                presets: ['env'], 
-                filename: 'index.js' 
+            const transpiled = Babel.transform(code, {
+                presets: [['env', { modules: 'commonjs' }]],
+                filename: 'index.js',
+                sourceType: 'module'
             }).code;
 
             // Execute code
@@ -259,7 +260,11 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
             var exports = {};
             var module = { exports: exports };
 
-            const transpiled = Babel.transform(code, { presets: ['env', 'typescript'], filename: 'server.ts' }).code;
+            const transpiled = Babel.transform(code, {
+              presets: [['env', { modules: 'commonjs' }], 'typescript'],
+              filename: 'server.ts',
+              sourceType: 'module'
+            }).code;
             
             new Function('module', 'exports', transpiled)(module, exports);
 
