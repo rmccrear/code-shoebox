@@ -180,8 +180,14 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         root.innerHTML = '';
         if (window.appInstance) window.appInstance.routes = { GET: {} };
         try {
-          const transpiled = Babel.transform(code, { presets: ['env', 'typescript'], filename: 'server.ts' }).code;
-          eval(transpiled);
+          var exports = {};
+          var module = { exports: exports };
+          const transpiled = Babel.transform(code, {
+            presets: [['env', { modules: 'commonjs' }], 'typescript'],
+            filename: 'server.ts',
+            sourceType: 'module'
+          }).code;
+          new Function('module', 'exports', transpiled)(module, exports);
         } catch (e) { console.error(e); }
       };
     `
