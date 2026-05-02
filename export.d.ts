@@ -27,44 +27,27 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'dom' | 'p5' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts';
+type EnvironmentMode = 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 interface EditorProps {
     initialCode: string;
     onChange: (code: string) => void;
     theme?: ThemeMode;
 }
-
 interface CodeShoeboxProps {
-    /** The current code to display in the editor */
     code: string;
-    /** Callback when code changes */
     onCodeChange: (code: string) => void;
-    /** The execution environment (DOM, p5, React) */
     environmentMode: EnvironmentMode;
-    /** The theme definition object containing colors */
-    theme: Theme;
-    /** Light or Dark mode */
     themeMode: ThemeMode;
-    /**
-     * A unique key/id for the session.
-     * Changing this value forces the editor to reset (clearing history/undo stack).
-     */
+    theme: Theme;
     sessionId?: number;
-    /**
-     * Optional prompt to display in a prediction panel.
-     * If present, code editing is disabled and output is blurred until user enters a prediction.
-     * Accepts text or JSX elements.
-     */
     prediction_prompt?: react__default.ReactNode;
+    /** Enables verbose system logging for debugging communication issues */
+    debugMode?: boolean;
 }
+
 declare const CodeShoebox: react__default.FC<CodeShoeboxProps>;
 
-/**
- * Manages the state of a CodeShoebox instance.
- * @param persistenceKey (Optional) If provided, state is saved to localStorage under this namespace.
- *                       If omitted, state is ephemeral (lost on refresh).
- */
-declare const useSandboxState: (persistenceKey?: string) => {
+declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: string, defaultMode?: EnvironmentMode) => {
     environmentMode: EnvironmentMode;
     themeMode: ThemeMode;
     activeThemeName: string;
