@@ -65,8 +65,42 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         if (environmentMode === 'react-ts') {
              monaco.languages.typescript.typescriptDefaults.addExtraLib(
                 `
-                declare module 'react' { var x: any; export = x; }
-                declare module 'react-dom/client' { var x: any; export = x; }
+                declare namespace React {
+                    type ReactNode = any;
+                    interface FC<P = {}> {
+                        (props: P): ReactNode;
+                    }
+                    interface Dispatch<A> {
+                        (value: A): void;
+                    }
+                    type SetStateAction<S> = S | ((prevState: S) => S);
+                }
+
+                declare module 'react' {
+                    export type ReactNode = any;
+                    export interface FC<P = {}> {
+                        (props: P): ReactNode;
+                    }
+                    export interface Dispatch<A> {
+                        (value: A): void;
+                    }
+                    export type SetStateAction<S> = S | ((prevState: S) => S);
+                    export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
+
+                    const React: {
+                        FC: FC<any>;
+                        useState: typeof useState;
+                    };
+                    export default React;
+                }
+
+                declare module 'react-dom/client' {
+                    export interface Root {
+                        render(children: any): void;
+                        unmount(): void;
+                    }
+                    export function createRoot(container: Element | DocumentFragment): Root;
+                }
                 `,
                 'react-shim.d.ts'
              );

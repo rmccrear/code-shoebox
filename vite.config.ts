@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -10,5 +11,13 @@ export default defineConfig({
   },
   build: {
     target: 'esnext'
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./test/setup.ts'],
+    // Source is browser/iframe-driven; only run our own unit specs.
+    include: ['**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', '.demo-site', '.agents', '.claude']
   }
 });
