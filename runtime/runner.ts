@@ -1,5 +1,5 @@
 
-import { EnvironmentMode, EnvironmentRecipe, BabelPreset } from "./types";
+import { EnvironmentMode, EnvironmentRecipe } from "./types";
 import { BASE_HTML_WRAPPER } from "./templates/common";
 import { EXPRESS_MOCK_SETUP } from "./templates/express";
 import { HONO_MOCK_SETUP } from "./templates/hono";

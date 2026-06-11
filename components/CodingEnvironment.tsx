@@ -1,24 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Play, 
-  CheckCircle2, 
-  FileCode, 
-  Book, 
-  Brain, 
-  Lock, 
-  Columns, 
-  Rows, 
-  GripVertical, 
-  GripHorizontal,
-  Maximize2
+import {
+  Play,
+  CheckCircle2,
+  FileCode,
+  Columns,
+  Rows,
+  GripVertical,
+  GripHorizontal
 } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
-import { HelpSidebar } from './HelpSidebar';
 import { Button } from './Button';
 import { ThemeMode, EnvironmentMode } from '../types';
-import { getDocsForMode } from '../docs';
 
 interface CodingEnvironmentProps {
   code: string;
@@ -45,7 +39,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   predictionPrompt,
   debugMode = false
 }) => {
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
   const [layout, setLayout] = useState<'horizontal' | 'vertical'>('horizontal');
@@ -53,7 +46,6 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasDocs = !!getDocsForMode(environmentMode);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
 
   const handleRunClick = () => {

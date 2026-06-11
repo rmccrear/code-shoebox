@@ -160,7 +160,7 @@ const EXPRESS_JS_RUNNER = `
     };
 `;
 
-export const generateExpressHtml = (showPlaceholder: boolean = true) => {
+export const generateExpressHtml = () => {
     const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
     // Fixed: BASE_HTML_WRAPPER expects a single object argument
     return BASE_HTML_WRAPPER({ logic: script, showPlaceholder: false }); 

@@ -41,7 +41,7 @@ const EXPRESS_TS_RUNNER = `
     };
 `;
 
-export const generateExpressTsHtml = (showPlaceholder: boolean = false) => {
+export const generateExpressTsHtml = () => {
     const script = EXPRESS_MOCK_SETUP + EXPRESS_TS_RUNNER;
     // Fixed: BASE_HTML_WRAPPER expects a single object argument with cdns as string[]
     return BASE_HTML_WRAPPER({ cdns: [BABEL_CDN], logic: script, showPlaceholder: false });

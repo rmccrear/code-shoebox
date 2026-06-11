@@ -1,8 +1,8 @@
 import React from 'react';
-import { Palette, Server, Box, Code2, Cpu, Save, Sparkles, Zap, Brain, RotateCcw } from 'lucide-react';
+import { Palette, Server, Code2, Cpu, Save, Sparkles, Zap, Brain, RotateCcw } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Button } from './components/Button';
-import { themes, Theme } from './theme';
+import { themes } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
 
 const P5_DEMO_CODE = `function setup() {

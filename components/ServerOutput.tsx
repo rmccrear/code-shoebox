@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Send, Server, Clock, AlertCircle, XCircle, GripHorizontal } from 'lucide-react';
+import { Server, Clock, AlertCircle, GripHorizontal } from 'lucide-react';
 import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
 import { ThemeMode, EnvironmentMode } from '../types';
 import { PreviewContainer } from './PreviewContainer';
@@ -39,7 +39,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
   const [route, setRoute] = useState('/');
-  const [method, setMethod] = useState('GET');
+  const [method] = useState('GET');
   const [response, setResponse] = useState<RequestResponse | null>(null);
   
   // New state for managing the "Smart Send" workflow
