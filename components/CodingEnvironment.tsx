@@ -61,22 +61,27 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const newRatio = layout === 'horizontal' 
-      ? (e.clientX - rect.left) / rect.width 
+    const newRatio = layout === 'horizontal'
+      ? (e.clientX - rect.left) / rect.width
       : (e.clientY - rect.top) / rect.height;
     setEditorRatio(Math.max(0.2, Math.min(0.8, newRatio)));
   }, [isDragging, layout]);
 
+  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', () => setIsDragging(false));
+      window.addEventListener('mouseup', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', () => setIsDragging(false));
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const isServerMode = environmentMode.startsWith('express') || environmentMode.startsWith('hono');
 
