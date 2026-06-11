@@ -18,12 +18,12 @@ interface ConsoleProps {
   className?: string;
 }
 
-export const Console: React.FC<ConsoleProps> = ({ 
-  logs, 
-  onClear, 
-  themeMode, 
-  className = '' 
-}) => {
+export const Console = React.memo(function Console({
+  logs,
+  onClear,
+  themeMode,
+  className = ''
+}: ConsoleProps) {
   return (
     <div className={`flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-gray-50'}`}>
       {/* Console Header */}
@@ -62,4 +62,4 @@ export const Console: React.FC<ConsoleProps> = ({
       </div>
     </div>
   );
-};
+});

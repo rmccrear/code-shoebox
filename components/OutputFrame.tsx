@@ -6,6 +6,12 @@ import { PreviewContainer } from './PreviewContainer';
 import { Console, LogEntry } from './Console';
 import { GripHorizontal } from 'lucide-react';
 
+const MAX_CONSOLE_LOGS = 500;
+const appendLog = (prev: LogEntry[], entry: LogEntry): LogEntry[] =>
+  prev.length >= MAX_CONSOLE_LOGS
+    ? [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry]
+    : [...prev, entry];
+
 interface OutputFrameProps {
   runTrigger: number;
   code: string;
@@ -36,11 +42,11 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
 
   const addSystemLog = useCallback((msg: string, type: 'log' | 'error' | 'warn' = 'log') => {
-    setLogs(prev => [...prev, {
+    setLogs(prev => appendLog(prev, {
         type,
         content: `[System] ${msg}`,
         timestamp: Date.now()
-    }]);
+    }));
   }, []);
 
   // Use sessionId implicitly via key on the iframe component in CodingEnvironment if possible,
@@ -56,11 +62,11 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     channelRef.current.port1.onmessage = (event) => {
         const { type, payload } = event.data;
         if (type === 'CONSOLE_LOG' || type === 'RUNTIME_ERROR' || type === 'CONSOLE_WARN') {
-             setLogs(prev => [...prev, {
+             setLogs(prev => appendLog(prev, {
                  type: type === 'RUNTIME_ERROR' ? 'error' : (type === 'CONSOLE_WARN' ? 'warn' : 'log'),
                  content: payload,
                  timestamp: Date.now()
-             }]);
+             }));
         }
         else if (type === 'READY_SIGNAL' && debugMode) {
              addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');

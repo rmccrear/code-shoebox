@@ -7,6 +7,12 @@ import { PreviewContainer } from './PreviewContainer';
 import { Button } from './Button';
 import { Console, LogEntry } from './Console';
 
+const MAX_CONSOLE_LOGS = 500;
+const appendLog = (prev: LogEntry[], entry: LogEntry): LogEntry[] =>
+  prev.length >= MAX_CONSOLE_LOGS
+    ? [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry]
+    : [...prev, entry];
+
 interface ServerOutputProps {
   runTrigger: number;
   code: string;
@@ -53,7 +59,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const addSystemLog = useCallback((msg: string) => {
-    setLogs(prev => [...prev, { type: 'log', content: `[System] ${msg}`, timestamp: Date.now() }]);
+    setLogs(prev => appendLog(prev, { type: 'log', content: `[System] ${msg}`, timestamp: Date.now() }));
   }, []);
 
   const clearConsole = useCallback(() => setLogs([]), []);
@@ -100,17 +106,17 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
             setRuntimeError(payload);
             setIsLoading(false);
             setPendingRequest(null); // Cancel any pending request
-            setLogs(prev => [...prev, { type: 'error', content: payload, timestamp: Date.now() }]);
+            setLogs(prev => appendLog(prev, { type: 'error', content: payload, timestamp: Date.now() }));
             setServerReady(false); 
             break;
             
         case 'CONSOLE_LOG':
         case 'CONSOLE_WARN':
-            setLogs(prev => [...prev, {
+            setLogs(prev => appendLog(prev, {
                 type: type === 'CONSOLE_WARN' ? 'warn' : 'log',
                 content: payload,
                 timestamp: Date.now()
-            }]);
+            }));
             break;
             
         case 'CONSOLE_CLEAR':
