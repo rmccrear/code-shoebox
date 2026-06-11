@@ -58,4 +58,16 @@ describe('useSandboxState', () => {
     const keys = Object.keys(localStorage).filter((k) => k.startsWith('cs_'));
     expect(keys).toEqual([]);
   });
+
+  it('falls back to the default mode when localStorage holds an unknown mode', () => {
+    localStorage.setItem('cs_lesson-x_env_mode', 'sql');
+    const { result } = renderHook(() => useSandboxState('lesson-x'));
+    expect(result.current.environmentMode).toBe('dom');
+  });
+
+  it('honors a valid persisted mode', () => {
+    localStorage.setItem('cs_lesson-y_env_mode', 'p5');
+    const { result } = renderHook(() => useSandboxState('lesson-y'));
+    expect(result.current.environmentMode).toBe('p5');
+  });
 });
