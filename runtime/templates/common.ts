@@ -86,6 +86,7 @@ export const KERNEL_SCRIPTS = `
     window.onerror = (msg, src, line) => sendPayload('RUNTIME_ERROR', \`Error: \${msg} (Line \${line})\`);
 
     window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
         const { type, code, mode, payload } = event.data;
         if (type === 'INIT_PORT' && event.ports[0]) {
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");

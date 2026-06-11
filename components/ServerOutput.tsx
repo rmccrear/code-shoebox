@@ -141,6 +141,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   // Fallback Window listener
   useEffect(() => {
       const globalListener = (event: MessageEvent) => {
+          if (event.source !== iframeRef.current?.contentWindow) return;
           if (event.data && typeof event.data === 'object' && event.data.type) {
               handleSandboxMessage(event.data);
           }

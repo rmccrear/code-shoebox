@@ -134,7 +134,10 @@ export const EXPRESS_MOCK_SETUP = `
     };
 
     // Listen on the main window for initial requests (fallback)
-    window.addEventListener('message', requestHandler);
+    window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        requestHandler(event);
+    });
     
     // Also attach to the message port once it arrives for high-performance communication
     const checkPortInterval = setInterval(() => {

@@ -65,4 +65,20 @@ describe('getSandboxHtml', () => {
     expect(SANDBOX_ATTRIBUTES).toContain('allow-scripts');
     expect(SANDBOX_ATTRIBUTES).not.toContain('allow-same-origin');
   });
+
+  it('guards every window message listener with an event.source check', () => {
+    const GUARD = 'event.source !== window.parent';
+    for (const mode of ALL_MODES) {
+      const html = getSandboxHtml(mode);
+      // The kernel listener guard must be present in every mode.
+      expect(html, `mode=${mode} missing kernel guard`).toContain(GUARD);
+    }
+    // Express and hono modes embed the kernel guard PLUS one in their mock
+    // fallback window listener — so the string must appear at least twice.
+    for (const mode of ['express', 'express-ts', 'hono', 'hono-ts'] as EnvironmentMode[]) {
+      const html = getSandboxHtml(mode);
+      const occurrences = html.split(GUARD).length - 1;
+      expect(occurrences, `mode=${mode} expected >=2 source guards, got ${occurrences}`).toBeGreaterThanOrEqual(2);
+    }
+  });
 });

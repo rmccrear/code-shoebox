@@ -87,8 +87,11 @@ export const HONO_MOCK_SETUP = `
         }
     };
 
-    window.addEventListener('message', requestHandler);
-    
+    window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        requestHandler(event);
+    });
+
     // Attach to messagePort if available
     const checkPortInterval = setInterval(() => {
         if (window.messagePort) {
