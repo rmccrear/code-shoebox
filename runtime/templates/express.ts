@@ -1,7 +1,4 @@
 
-import { BASE_HTML_WRAPPER } from "./common";
-
-// Export the mock logic so it can be reused by express-ts
 export const EXPRESS_MOCK_SETUP = `
     // --- Mock Express & Response Objects ---
 
@@ -148,23 +145,3 @@ export const EXPRESS_MOCK_SETUP = `
         }
     }, 50);
 `;
-
-const EXPRESS_JS_RUNNER = `
-    window.runMode = function(code, root) {
-        root.innerHTML = '';
-        if (window.appInstance) {
-            window.appInstance.routes = { GET: {} };
-        }
-        try {
-            window.eval(code);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-`;
-
-export const generateExpressHtml = () => {
-    const script = EXPRESS_MOCK_SETUP + EXPRESS_JS_RUNNER;
-    // Fixed: BASE_HTML_WRAPPER expects a single object argument
-    return BASE_HTML_WRAPPER({ logic: script, showPlaceholder: false }); 
-};
