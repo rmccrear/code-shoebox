@@ -16,6 +16,11 @@ import {
   NODE_TS_STARTER_CODE
 } from '../constants';
 
+const VALID_MODES: readonly EnvironmentMode[] = [
+  'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
+];
+
 const getStarterCode = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'p5': return P5_STARTER_CODE;
@@ -38,11 +43,13 @@ export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: s
   const getStorageKey = useCallback((key: string) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
 
   // Generic loader for simple string/enum values
-  const loadState = <T extends string>(keySuffix: string, fallback: T): T => {
+  const loadState = <T extends string>(keySuffix: string, fallback: T, validValues?: readonly string[]): T => {
     if (!persistenceKey || typeof window === 'undefined') return fallback;
     try {
       const saved = localStorage.getItem(getStorageKey(keySuffix));
-      return (saved as T) || fallback;
+      if (!saved) return fallback;
+      if (validValues && !validValues.includes(saved)) return fallback;
+      return saved as T;
     } catch { return fallback; }
   };
 
@@ -57,9 +64,9 @@ export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: s
   }, [persistenceKey, getStorageKey, initialCodeOverride]);
 
   // State Initialization
-  const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>(() => loadState('env_mode', defaultMode));
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadState('theme_mode', 'dark'));
-  const [activeThemeName, setActiveThemeName] = useState<string>(() => loadState('theme_name', themes[0].name));
+  const [environmentMode, setEnvironmentMode] = useState<EnvironmentMode>(() => loadState('env_mode', defaultMode, VALID_MODES));
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadState('theme_mode', 'dark', ['light', 'dark']));
+  const [activeThemeName, setActiveThemeName] = useState<string>(() => loadState('theme_name', themes[0].name, themes.map(t => t.name)));
   const [code, setCode] = useState<string>(() => loadCode(environmentMode));
   // Seed with a random number to avoid collision on initial render across multiple instances
   const [sessionId, setSessionId] = useState<number>(() => Math.floor(Math.random() * 1000000));
