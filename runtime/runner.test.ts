@@ -26,11 +26,24 @@ describe('getSandboxHtml', () => {
   it('embeds React + Babel CDNs only for React modes', () => {
     for (const mode of ['react', 'react-ts'] as EnvironmentMode[]) {
       const html = getSandboxHtml(mode);
-      expect(html, mode).toContain('react@18/umd/react.development.js');
-      expect(html, mode).toContain('react-dom@18');
-      expect(html, mode).toContain('@babel/standalone');
+      expect(html, mode).toContain('react@18.3.1/umd/react.development.js');
+      expect(html, mode).toContain('react-dom@18.3.1');
+      expect(html, mode).toContain('@babel/standalone@7.26.4');
     }
     expect(getSandboxHtml('dom')).not.toContain('react@18');
+  });
+
+  it('uses pinned CDN versions for all transpiled modes', () => {
+    // react and react-ts get both React UMD and Babel pinned
+    expect(getSandboxHtml('react')).toContain('react@18.3.1');
+    expect(getSandboxHtml('react')).toContain('@babel/standalone@7.26.4');
+    // typescript mode only needs Babel
+    expect(getSandboxHtml('typescript')).toContain('@babel/standalone@7.26.4');
+    // no mode should contain the old unpinned Babel URL
+    const unpinnedBabel = /unpkg\.com\/@babel\/standalone\/babel/;
+    for (const mode of ALL_MODES) {
+      expect(getSandboxHtml(mode), `mode=${mode} has unpinned Babel URL`).not.toMatch(unpinnedBabel);
+    }
   });
 
   it('embeds the p5 CDN for p5 modes', () => {

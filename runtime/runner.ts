@@ -6,10 +6,13 @@ import { HONO_MOCK_SETUP } from "./templates/hono";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 
-const BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+// CDN deps are pinned to exact versions for reproducible sandbox behavior.
+// Bump deliberately: change the version, then manually verify every affected
+// mode in `npm run dev` (see ENVIRONMENTS_README.md for the mode inventory).
+const BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>';
 const REACT_CDNS = [
-  '<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>',
-  '<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>',
+  '<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>',
+  '<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>',
   BABEL_CDN
 ];
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
