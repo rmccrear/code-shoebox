@@ -16,11 +16,15 @@ your row when done.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001  | Establish verification baseline (typecheck, lint, CI) | P1 | M | — | TODO |
-| 002  | Add event.source checks to window message listeners | P1 | S | 001 | TODO |
-| 003  | Delete the dead legacy template layer | P2 | S | 001 | TODO |
-| 004  | Pin sandbox CDN dependency versions | P2 | S | 003 | TODO |
-| 005  | Small fixes: splitter leak, log cap, localStorage validation, README version | P2 | S | 001 | TODO |
+| 001  | Establish verification baseline (typecheck, lint, CI) | P1 | M | — | DONE (advisor/001-verification-baseline @ bd0f15d, reviewed+approved 2026-06-10) |
+| 002  | Add event.source checks to window message listeners | P1 | S | 001 | DONE (advisor/002-postmessage-source-checks @ fb070a5, reviewed+approved 2026-06-11; needs one human browser smoke-test — see notes) |
+| 003  | Delete the dead legacy template layer | P2 | S | 001 | DONE (advisor/003-delete-dead-template-layer @ 5d8b966, reviewed+approved 2026-06-11) |
+| 004  | Pin sandbox CDN dependency versions | P2 | S | 003 | DONE (advisor/004-pin-cdn-versions @ 9d3e2a1, reviewed+approved 2026-06-11; human browser smoke-test of typescript+react modes recommended) |
+| 005  | Small fixes: splitter leak, log cap, localStorage validation, README version | P2 | S | 001 | DONE (advisor/005-small-fixes @ 2b74f8c, reviewed+approved 2026-06-11) |
+| 006  | Add an HTML & CSS environment mode (feature) | P2 | M | 001 (gates); merge 005 first | TODO (planned 2026-06-11 @ d71625e) |
+
+All five branches form a linear stack on `main` (d71625e): 001 → 002 → 003 → 004 → 005.
+Merging `advisor/005-small-fixes` brings in everything (fast-forward from main).
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -37,6 +41,11 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 002 and 003 both edit `runtime/templates/express.ts` (002 wraps the mock's
   window listener inside `EXPRESS_MOCK_SETUP`, which 003 keeps). No conflict
   in either order, but numeric order avoids drift-check noise.
+- 006 (feature, planned separately on 2026-06-11 against main @ d71625e)
+  should run after the 001–005 stack is merged: it relies on the typecheck/
+  lint/test gates from 001, adds an entry to `ENV_RECIPES` in
+  `runtime/runner.ts` (touched by 004's CDN pinning — additive, no conflict),
+  and must register the new mode in 005's localStorage mode validation.
 
 ## Findings considered and rejected
 
