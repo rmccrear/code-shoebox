@@ -113,7 +113,8 @@ const App: React.FC = () => {
                   className="bg-transparent border-none outline-none appearance-none cursor-pointer pr-4 font-medium"
                 >
                   <optgroup label="Web & UI" className="text-black">
-                    <option value="html">HTML & CSS</option>
+                    <option value="html">HTML (single file)</option>
+                    <option value="html-css">HTML & CSS (style.css)</option>
                     <option value="dom">DOM / JS</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>

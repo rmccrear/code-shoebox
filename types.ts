@@ -9,7 +9,7 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'html' | 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 
 export interface EditorProps {
   initialCode: string;

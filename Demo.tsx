@@ -4,6 +4,7 @@ import { CodeShoebox } from './components/CodeShoebox';
 import { Button } from './components/Button';
 import { themes } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
+import { serializeFileBundle } from './runtime/fileBundle';
 
 const HTML_DEMO_CODE = `<!DOCTYPE html>
 <html>
@@ -45,6 +46,53 @@ const HTML_DEMO_CODE = `<!DOCTYPE html>
   </div>
 </body>
 </html>`;
+
+const HTML_CSS_DEMO_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Recipe Card</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card">
+    <h1>Lemonade</h1>
+    <p class="meta">3 ingredients &middot; 5 minutes</p>
+    <ol>
+      <li>Squeeze four lemons.</li>
+      <li>Stir in sugar and cold water.</li>
+      <li>Serve over ice.</li>
+    </ol>
+  </div>
+</body>
+</html>`,
+  'style.css': `body {
+  font-family: Georgia, serif;
+  background: #fefce8;
+  margin: 2rem;
+}
+
+.card {
+  max-width: 380px;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  margin: 0;
+  color: #ca8a04;
+}
+
+.meta {
+  color: #a16207;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+ol li { margin-bottom: 0.5rem; }`
+});
 
 const P5_DEMO_CODE = `function setup() {
   createCanvas(400, 400);
@@ -226,6 +274,7 @@ export const Demo: React.FC = () => {
     // Giving each demo a unique key prevents state collision in localStorage
     // using '_v2' effectively resets the "legacy" data that was causing issues.
     const htmlState = useSandboxState('demo_html_v1', HTML_DEMO_CODE, 'html');
+    const htmlCssState = useSandboxState('demo_html_css_v1', HTML_CSS_DEMO_CODE, 'html-css');
     const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5');
     const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
     const expressState = useSandboxState('demo_express_legacy_v2', EXPRESS_DEMO_CODE, 'express');
@@ -238,6 +287,7 @@ export const Demo: React.FC = () => {
     const handleResetAll = () => {
         if (window.confirm("Reset all demos to their original state? This will erase your changes.")) {
             htmlState.resetCode();
+            htmlCssState.resetCode();
             p5State.resetCode();
             p5TsState.resetCode();
             expressState.resetCode();
@@ -266,6 +316,13 @@ export const Demo: React.FC = () => {
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-emerald-500" /> Web Page (HTML & CSS)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
                         <CodeShoebox code={htmlState.code} onCodeChange={htmlState.setCode} environmentMode={htmlState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlState.sessionId} />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-sky-500" /> Two Files (index.html + style.css)</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox code={htmlCssState.code} onCodeChange={htmlCssState.setCode} environmentMode={htmlCssState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlCssState.sessionId} />
                     </div>
                 </section>
 

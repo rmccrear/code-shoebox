@@ -40,9 +40,10 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
-  // HTML & CSS mode: full-height output with no console panel, rendered on
-  // mount and live-updated as the user types (safe: the mode cannot run JS).
-  const isHtmlMode = environmentMode === 'html';
+  // HTML modes (single-file and tabbed): full-height output with no console
+  // panel, rendered on mount and live-updated as the user types (safe: these
+  // modes cannot run JS).
+  const isHtmlMode = environmentMode === 'html' || environmentMode === 'html-css';
 
   const addSystemLog = useCallback((msg: string, type: 'log' | 'error' | 'warn' = 'log') => {
     setLogs(prev => appendLog(prev, {

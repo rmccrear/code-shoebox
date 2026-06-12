@@ -1,4 +1,6 @@
 
+import { serializeFileBundle } from './runtime/fileBundle';
+
 export const APP_NAME = "CodeShoebox";
 
 export const HTML_STARTER_CODE = `<!DOCTYPE html>
@@ -26,6 +28,35 @@ export const HTML_STARTER_CODE = `<!DOCTYPE html>
 </body>
 </html>
 `;
+
+export const HTML_CSS_STARTER_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Two Files</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Hello, style.css!</h1>
+  <p>The styles for this page live in the <strong>style.css</strong> tab.</p>
+</body>
+</html>
+`,
+  'style.css': `body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  color: #6366f1;
+}
+
+strong {
+  background: #fef08a;
+  padding: 0 4px;
+}
+`
+});
 
 export const STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.

@@ -1,4 +1,5 @@
 import { EnvironmentMode } from './types';
+import { serializeFileBundle } from './runtime/fileBundle';
 
 export interface EditorDemoPreset {
   id: string;
@@ -39,6 +40,47 @@ export const EDITOR_DEMO_PRESETS: EditorDemoPreset[] = [
   </div>
 </body>
 </html>`
+  },
+  {
+    id: 'html-css-tabs-demo',
+    mode: 'html-css',
+    code: serializeFileBundle({
+      'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Linked Styles</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Two tabs, one page</h1>
+  <ul class="checklist">
+    <li>Markup lives in index.html</li>
+    <li>Styles live in style.css</li>
+    <li>The link tag connects them</li>
+  </ul>
+</body>
+</html>`,
+      'style.css': `body {
+  font-family: sans-serif;
+  margin: 2rem;
+  background: #f8fafc;
+}
+
+h1 { color: #0ea5e9; }
+
+.checklist {
+  list-style: none;
+  padding: 0;
+}
+
+.checklist li {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: white;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 4px;
+}`
+    })
   },
   {
     id: 'ts-express-rest-demo',

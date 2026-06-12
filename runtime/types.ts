@@ -5,7 +5,7 @@
  * This ensures that 'hono' and 'hono-ts' are recognized as valid modes in the runtime, 
  * resolving "is not assignable" errors in OutputFrame.tsx and ServerOutput.tsx.
  */
-export type EnvironmentMode = 'html' | 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 
 export interface SandboxConfig {
   allowScripts: boolean;

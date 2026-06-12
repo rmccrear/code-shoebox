@@ -22,7 +22,7 @@ CodeShoebox runs code entirely within the browser using a sandboxed `<iframe>`. 
 
 These environments are designed for standard DOM manipulation and vanilla JavaScript/TypeScript logic.
 
-### `html` (HTML & CSS)
+### `html` (HTML, single file)
 *   **Engine:** Nested `<iframe sandbox="">` — the editor buffer is rendered **verbatim** as the inner frame's `srcdoc`, exactly like opening a saved `.html` file. No transpiler.
 *   **Pre-loaded Libraries:** None (no CDNs).
 *   **Capabilities:**
@@ -35,6 +35,18 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   No console panel in this mode.
     *   The page is theme-independent: always a default white canvas, regardless of the shoebox dark/light theme.
     *   Clicking an `<a href>` navigates the inner frame away (e.g. to MDN); pressing Run or typing brings the page back. Accepted behavior, not a bug.
+
+### `html-css` (HTML & CSS, two tabs: index.html + style.css)
+*   **Engine:** Same nested `<iframe sandbox="">` as the `html` mode, plus file-bundle resolution: the editor shows two tabs, and the page's `<link rel="stylesheet" href="style.css">` is resolved against the `style.css` tab (inlined as a `<style>` block before rendering).
+*   **Code format:** The single `code` string is a JSON envelope — `{"__csFiles__":1,"files":{"index.html":"…","style.css":"…"}}` (see `runtime/fileBundle.ts`). Any plain non-envelope string is treated as a bare `index.html` with an empty `style.css`.
+*   **Capabilities:**
+    *   **Strict link semantics:** the CSS tab applies only when the HTML actually links it. If `style.css` has content but isn't linked, a blue hint banner shows the exact `<link>` line to add.
+    *   Exactly two files, fixed names. Per-tab Monaco models preserve per-file undo history.
+    *   Everything else as in the `html` mode: live preview + Run, scripts blocked with the amber banner, no console, white theme-independent page, external absolute URLs work.
+*   **Limitations:**
+    *   Only the literal `href="style.css"` resolves to the tab; other *relative* hrefs (`main.css`) silently load nothing.
+    *   No additional files, renames, or a JS tab.
+    *   The rendered document is parsed and re-serialized to splice the styles in (the single-file `html` mode remains byte-verbatim).
 
 ### `dom` (DOM / JS)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).

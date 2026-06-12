@@ -9,20 +9,26 @@ interface CodeEditorProps {
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
   sessionId: number;
+  /** Active filename for multi-file modes (html-css); selects the Monaco model and language. */
+  activeFile?: string;
   readOnly?: boolean;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ 
-  code, 
-  onChange, 
-  themeMode, 
-  environmentMode, 
+export const CodeEditor: React.FC<CodeEditorProps> = ({
+  code,
+  onChange,
+  themeMode,
+  environmentMode,
   sessionId,
-  readOnly = false 
+  activeFile,
+  readOnly = false
 }) => {
   // Construct a deterministic path.
   const modelPath = useMemo(() => {
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
+    // Multi-file modes get one Monaco model per file, preserving per-file
+    // undo history across tab switches.
+    if (environmentMode === 'html-css') return `${basePath}-${activeFile || 'index.html'}`;
     switch (environmentMode) {
       case 'typescript': 
       case 'express-ts':
@@ -38,17 +44,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         return `${basePath}.jsx`;
       case 'p5': 
         return `${basePath}.js`;
-      default: 
+      default:
         return `${basePath}.js`;
     }
-  }, [sessionId, environmentMode]);
+  }, [sessionId, environmentMode, activeFile]);
 
   const language = useMemo(() => {
     if (environmentMode === 'html') return 'html';
+    if (environmentMode === 'html-css') return activeFile === 'style.css' ? 'css' : 'html';
     const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'];
     if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';
-  }, [environmentMode]);
+  }, [environmentMode, activeFile]);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();

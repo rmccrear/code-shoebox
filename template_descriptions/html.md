@@ -1,4 +1,4 @@
-# Environment: HTML & CSS
+# Environment: HTML (single file)
 **ID:** `html`
 
 ## Overview

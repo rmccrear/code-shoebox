@@ -39,40 +39,54 @@ const P5_RUNTIME_STYLES = `
 // Hono CDN - Using a module script to inject into window
 const HONO_CDN = '<script type="module">import { Hono } from "https://esm.sh/hono@4.1.0"; window.Hono = Hono;</script>';
 
+// Shared by the html / html-css modes: full-bleed nested frame plus the
+// notice banners rendered above the learner's page.
+const HTML_RUNTIME_STYLES = `
+  #root {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .cs-script-banner,
+  .cs-hint-banner {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .cs-script-banner {
+    background: #fef3c7;
+    color: #92400e;
+    border-bottom: 1px solid #fcd34d;
+  }
+
+  .cs-hint-banner {
+    background: #dbeafe;
+    color: #1e40af;
+    border-bottom: 1px solid #93c5fd;
+  }
+
+  .cs-html-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    display: block;
+    background: #fff;
+  }
+`;
+
 /**
  * Registry of environment configurations.
  * This makes it trivial to add new modes without creating new files.
  */
 const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
   html: {
-    name: "HTML & CSS",
+    name: "HTML (single file)",
     showPlaceholder: false,
-    styles: `
-      #root {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        padding: 0;
-      }
-
-      .cs-script-banner {
-        flex-shrink: 0;
-        padding: 6px 12px;
-        font-size: 12px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #fef3c7;
-        color: #92400e;
-        border-bottom: 1px solid #fcd34d;
-      }
-
-      .cs-html-frame {
-        flex: 1;
-        width: 100%;
-        border: none;
-        display: block;
-        background: #fff;
-      }
-    `,
+    styles: HTML_RUNTIME_STYLES,
     logic: `
       window.__RUN_MODE__ = (code, root) => {
         root.innerHTML = '';
@@ -93,6 +107,56 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         frame.setAttribute('sandbox', '');
         frame.className = 'cs-html-frame';
         frame.srcdoc = code;
+        root.appendChild(frame);
+      };
+    `
+  },
+  'html-css': {
+    name: "HTML & CSS (style.css)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        // Inline copy of parseFileBundle from runtime/fileBundle.ts — the
+        // iframe kernel cannot import modules. Keep the two in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? { html: String(parsed.files['index.html'] ?? ''), css: String(parsed.files['style.css'] ?? '') }
+            : { html: code, css: '' };
+        } catch (e) { files = { html: code, css: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+
+        if (doc.querySelector('script')) {
+          const banner = document.createElement('div');
+          banner.className = 'cs-script-banner';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          root.appendChild(banner);
+        }
+
+        // Strict link semantics: only a literal style.css href resolves to
+        // the css tab. Scripts are still blocked by the inner sandbox=""
+        // attribute below, not by stripping — do not change either rule.
+        const links = doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]');
+        links.forEach((link) => {
+          const style = doc.createElement('style');
+          style.textContent = files.css;
+          link.replaceWith(style);
+        });
+        if (links.length === 0 && files.css.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+          root.appendChild(hint);
+        }
+
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', '');
+        frame.className = 'cs-html-frame';
+        frame.srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
         root.appendChild(frame);
       };
     `

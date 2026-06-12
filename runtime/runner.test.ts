@@ -3,7 +3,7 @@ import { getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'html', 'html-css', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -68,6 +68,21 @@ describe('getSandboxHtml', () => {
     expect(getSandboxHtml('dom')).toContain('id="placeholder"');
     expect(getSandboxHtml('express')).not.toContain('id="placeholder"');
     expect(getSandboxHtml('hono')).not.toContain('id="placeholder"');
+  });
+
+  it('builds the html-css mode around the same sandboxed frame plus bundle parsing and link resolution', () => {
+    const html = getSandboxHtml('html-css');
+    expect(html).toContain("setAttribute('sandbox', '')");
+    // Inline bundle parser (kept in sync with runtime/fileBundle.ts).
+    expect(html).toContain('__csFiles__');
+    // Strict link semantics + the unlinked-stylesheet hint banner.
+    expect(html).toContain('link[rel="stylesheet"][href="style.css"]');
+    expect(html).toContain('cs-hint-banner');
+    expect(html).toContain('cs-script-banner');
+    expect(html).not.toContain('id="placeholder"');
+    expect(html).not.toContain('unpkg.com');
+    expect(html).not.toContain('esm.sh');
+    expect(html).not.toContain('cdnjs');
   });
 
   it('builds the html mode around a nested fully-sandboxed iframe with no CDNs', () => {

@@ -4,6 +4,7 @@ import {
   resolvePresetFromHash,
   getPresetHashForMode
 } from './demoPresets';
+import { parseFileBundle } from './runtime/fileBundle';
 
 describe('demoPresets', () => {
   it('resolves a preset by its id', () => {
@@ -31,6 +32,15 @@ describe('demoPresets', () => {
     const preset = resolvePresetFromHash('html-css-demo');
     expect(preset?.mode).toBe('html');
     expect(getPresetHashForMode('html')).toBe('html-css-demo');
+  });
+
+  it('resolves the html-css mode preset and its code is a valid file bundle', () => {
+    const preset = resolvePresetFromHash('html-css-tabs-demo');
+    expect(preset?.mode).toBe('html-css');
+    expect(getPresetHashForMode('html-css')).toBe('html-css-tabs-demo');
+    const files = parseFileBundle(preset!.code);
+    expect(files['index.html']).toContain('<link rel="stylesheet" href="style.css">');
+    expect(files['style.css'].length).toBeGreaterThan(0);
   });
 
   it('maps a mode to its preset hash and round-trips back', () => {

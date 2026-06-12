@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Play,
   CheckCircle2,
@@ -13,6 +13,12 @@ import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
 import { ThemeMode, EnvironmentMode } from '../types';
+import { parseFileBundle, serializeFileBundle, WebFileBundle } from '../runtime/fileBundle';
+
+const TAB_FILES = ['index.html', 'style.css'] as const;
+
+const getDisplayFilename = (mode: EnvironmentMode): string =>
+  mode === 'html' ? 'index.html' : `${mode}.script`;
 
 interface CodingEnvironmentProps {
   code: string;
@@ -47,6 +53,25 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+
+  // html-css is the (only) multi-file mode: `code` is a serialized bundle
+  // and the editor shows one file at a time behind a tab strip.
+  const isTabbedMode = environmentMode === 'html-css';
+  const [activeFile, setActiveFile] = useState<keyof WebFileBundle>('index.html');
+  const files = useMemo(
+    () => (isTabbedMode ? parseFileBundle(code) : null),
+    [isTabbedMode, code]
+  );
+
+  const editorCode = isTabbedMode && files ? files[activeFile] : code;
+  const handleEditorChange = (value: string | undefined) => {
+    const next = value || '';
+    if (isTabbedMode && files) {
+      onChange(serializeFileBundle({ ...files, [activeFile]: next }));
+    } else {
+      onChange(next);
+    }
+  };
 
   const handleRunClick = () => {
     if (predictionPrompt) setIsPredictionLocked(true);
@@ -108,7 +133,25 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       <div className={`h-12 px-4 border-b flex items-center justify-between ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10 text-gray-400' : 'bg-white border-gray-100'}`}>
         <div className="flex items-center gap-2">
           <FileCode className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-mono font-medium hidden sm:inline">{environmentMode}.script</span>
+          {isTabbedMode ? (
+            <div className="flex items-center gap-1">
+              {TAB_FILES.map((file) => (
+                <button
+                  key={file}
+                  onClick={() => setActiveFile(file)}
+                  className={`px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${
+                    activeFile === file
+                      ? (themeMode === 'dark' ? 'bg-white/10 text-blue-400' : 'bg-blue-50 text-blue-600')
+                      : 'opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  {file}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs font-mono font-medium hidden sm:inline">{getDisplayFilename(environmentMode)}</span>
+          )}
         </div>
         
         <div className="flex items-center gap-4">
@@ -149,12 +192,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       {/* Editor & Output Workspace */}
       <div ref={containerRef} className={`flex-1 flex overflow-hidden ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
         <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` }} className="relative flex flex-col min-w-0 min-h-0">
-          <CodeEditor 
-            code={code} 
-            onChange={(val) => onChange(val || '')} 
-            themeMode={themeMode} 
-            environmentMode={environmentMode} 
-            sessionId={sessionId} 
+          <CodeEditor
+            code={editorCode}
+            onChange={handleEditorChange}
+            themeMode={themeMode}
+            environmentMode={environmentMode}
+            sessionId={sessionId}
+            activeFile={isTabbedMode ? activeFile : undefined}
             readOnly={!!predictionPrompt && isPredictionLocked}
           />
         </div>

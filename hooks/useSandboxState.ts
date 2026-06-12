@@ -4,6 +4,7 @@ import { themes } from '../theme';
 import {
   STARTER_CODE,
   HTML_STARTER_CODE,
+  HTML_CSS_STARTER_CODE,
   P5_STARTER_CODE, 
   P5_TS_STARTER_CODE,
   REACT_STARTER_CODE, 
@@ -18,13 +19,14 @@ import {
 } from '../constants';
 
 const VALID_MODES: readonly EnvironmentMode[] = [
-  'html', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'html', 'html-css', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
 const getStarterCode = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'html': return HTML_STARTER_CODE;
+    case 'html-css': return HTML_CSS_STARTER_CODE;
     case 'p5': return P5_STARTER_CODE;
     case 'p5-ts': return P5_TS_STARTER_CODE;
     case 'react': return REACT_STARTER_CODE;
