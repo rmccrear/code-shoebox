@@ -1,6 +1,32 @@
 
 export const APP_NAME = "CodeShoebox";
 
+export const HTML_STARTER_CODE = `<!DOCTYPE html>
+<html>
+<head>
+  <title>My First Page</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+    }
+    h1 { color: #6366f1; }
+    .highlight {
+      background: #fef08a;
+      padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello, HTML!</h1>
+  <p>This is a <span class="highlight">real
+     web page</span>. Edit it and press Run.</p>
+  <a href="https://developer.mozilla.org">
+    Learn more at MDN</a>
+</body>
+</html>
+`;
+
 export const STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.
 // 'root' is a reference to the main container div.

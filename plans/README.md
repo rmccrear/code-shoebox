@@ -21,7 +21,8 @@ your row when done.
 | 003  | Delete the dead legacy template layer | P2 | S | 001 | DONE (advisor/003-delete-dead-template-layer @ 5d8b966, reviewed+approved 2026-06-11) |
 | 004  | Pin sandbox CDN dependency versions | P2 | S | 003 | DONE (advisor/004-pin-cdn-versions @ 9d3e2a1, reviewed+approved 2026-06-11; human browser smoke-test of typescript+react modes recommended) |
 | 005  | Small fixes: splitter leak, log cap, localStorage validation, README version | P2 | S | 001 | DONE (advisor/005-small-fixes @ 2b74f8c, reviewed+approved 2026-06-11) |
-| 006  | Add an HTML & CSS environment mode (feature) | P2 | M | 001 (gates); merge 005 first | TODO (planned 2026-06-11 @ d71625e) |
+| 006  | Add an HTML & CSS environment mode (feature) | P2 | M | 001 (gates); merge 005 first | DONE (implemented on advisor/006-html-css-mode 2026-06-11; typecheck/lint/29 tests pass; human browser smoke-test pending — see plan Verification §3) |
+| 007  | Two-tab HTML & CSS mode: index.html + style.css (feature) | P2 | M–L | 006 (committed) | TODO (planned 2026-06-11; design confirmed with maintainer) |
 
 All five branches form a linear stack on `main` (d71625e): 001 → 002 → 003 → 004 → 005.
 Merging `advisor/005-small-fixes` brings in everything (fast-forward from main).

@@ -30,8 +30,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       case 'p5-ts':
       case 'node-ts': 
         return `${basePath}.ts`;
-      case 'react-ts': 
+      case 'react-ts':
         return `${basePath}.tsx`;
+      case 'html':
+        return `${basePath}.html`;
       case 'react': 
         return `${basePath}.jsx`;
       case 'p5': 
@@ -42,6 +44,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [sessionId, environmentMode]);
 
   const language = useMemo(() => {
+    if (environmentMode === 'html') return 'html';
     const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'];
     if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';

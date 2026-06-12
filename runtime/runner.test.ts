@@ -3,7 +3,7 @@ import { getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'html', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -68,6 +68,20 @@ describe('getSandboxHtml', () => {
     expect(getSandboxHtml('dom')).toContain('id="placeholder"');
     expect(getSandboxHtml('express')).not.toContain('id="placeholder"');
     expect(getSandboxHtml('hono')).not.toContain('id="placeholder"');
+  });
+
+  it('builds the html mode around a nested fully-sandboxed iframe with no CDNs', () => {
+    const html = getSandboxHtml('html');
+    // The inner frame's empty sandbox attribute is the script-blocking mechanism.
+    expect(html).toContain("setAttribute('sandbox', '')");
+    // Script detection only feeds the learner-facing banner.
+    expect(html).toContain('cs-script-banner');
+    expect(html).toContain('DOMParser');
+    // Renders on mount, so no placeholder; loads nothing from the network.
+    expect(html).not.toContain('id="placeholder"');
+    expect(html).not.toContain('unpkg.com');
+    expect(html).not.toContain('esm.sh');
+    expect(html).not.toContain('cdnjs');
   });
 
   it('suppresses the placeholder in prediction mode even for visual modes', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSandboxState } from './useSandboxState';
+import { HTML_STARTER_CODE } from '../constants';
 
 describe('useSandboxState', () => {
   it('defaults to dom mode with the dom starter code', () => {
@@ -31,6 +32,14 @@ describe('useSandboxState', () => {
     expect(result.current.environmentMode).toBe('p5');
     expect(result.current.code).not.toBe(domCode);
     expect(result.current.sessionId).toBe(initialSession + 1);
+  });
+
+  it('switching to html mode loads its starter and persists under its own key', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('html'));
+    expect(result.current.code).toBe(HTML_STARTER_CODE);
+    act(() => result.current.setCode('<h1>mine</h1>'));
+    expect(localStorage.getItem('cs_lesson-1_code_html')).toBe('<h1>mine</h1>');
   });
 
   it('restores previously saved code when switching back to a mode', () => {

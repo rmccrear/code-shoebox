@@ -27,6 +27,12 @@ describe('demoPresets', () => {
     expect(resolvePresetFromHash('no-such-preset')).toBeUndefined();
   });
 
+  it('resolves the html mode preset', () => {
+    const preset = resolvePresetFromHash('html-css-demo');
+    expect(preset?.mode).toBe('html');
+    expect(getPresetHashForMode('html')).toBe('html-css-demo');
+  });
+
   it('maps a mode to its preset hash and round-trips back', () => {
     const hash = getPresetHashForMode('hono');
     expect(hash).toBe('hono-api-demo');

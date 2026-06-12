@@ -22,6 +22,20 @@ CodeShoebox runs code entirely within the browser using a sandboxed `<iframe>`. 
 
 These environments are designed for standard DOM manipulation and vanilla JavaScript/TypeScript logic.
 
+### `html` (HTML & CSS)
+*   **Engine:** Nested `<iframe sandbox="">` — the editor buffer is rendered **verbatim** as the inner frame's `srcdoc`, exactly like opening a saved `.html` file. No transpiler.
+*   **Pre-loaded Libraries:** None (no CDNs).
+*   **Capabilities:**
+    *   Full documents (`<!DOCTYPE html>` … `</html>`) and bare fragments both render; `<title>`, `<meta>`, and `<body class/style>` attributes are honored.
+    *   **Live preview:** the page re-renders ~500 ms after typing stops; the Run button remains as a manual re-render.
+    *   External resources work: `<link rel="stylesheet">`, web fonts, and `<img>` URLs.
+    *   Renders immediately on load (no first Run needed).
+*   **Limitations:**
+    *   **JavaScript never executes.** The inner frame's empty `sandbox` attribute blocks scripts at the browser level; a banner above the page points learners at the `dom` mode. (Do not "fix" this — it is the security/pedagogy model.)
+    *   No console panel in this mode.
+    *   The page is theme-independent: always a default white canvas, regardless of the shoebox dark/light theme.
+    *   Clicking an `<a href>` navigates the inner frame away (e.g. to MDN); pressing Run or typing brings the page back. Accepted behavior, not a bug.
+
 ### `dom` (DOM / JS)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).
 *   **Pre-loaded Libraries:** None.

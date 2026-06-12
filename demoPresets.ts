@@ -9,6 +9,38 @@ export interface EditorDemoPreset {
 
 export const EDITOR_DEMO_PRESETS: EditorDemoPreset[] = [
   {
+    id: 'html-css-demo',
+    mode: 'html',
+    code: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Flexbox Cards</title>
+  <style>
+    body { font-family: sans-serif; margin: 1.5rem; background: #f8fafc; }
+    .row { display: flex; gap: 1rem; }
+    .card {
+      flex: 1;
+      padding: 1rem;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-top: 4px solid #6366f1;
+    }
+    .card h2 { margin: 0 0 0.4rem; font-size: 1rem; }
+    .card p { margin: 0; font-size: 0.85rem; color: #475569; }
+  </style>
+</head>
+<body>
+  <h1>My Flexbox Gallery</h1>
+  <div class="row">
+    <div class="card"><h2>HTML</h2><p>Structure the page.</p></div>
+    <div class="card"><h2>CSS</h2><p>Style every element.</p></div>
+    <div class="card"><h2>Flexbox</h2><p>Lay out the cards.</p></div>
+  </div>
+</body>
+</html>`
+  },
+  {
     id: 'ts-express-rest-demo',
     mode: 'express-ts',
     aliases: ['express-rest-demo'],

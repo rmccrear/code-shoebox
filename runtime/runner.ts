@@ -44,6 +44,59 @@ const HONO_CDN = '<script type="module">import { Hono } from "https://esm.sh/hon
  * This makes it trivial to add new modes without creating new files.
  */
 const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
+  html: {
+    name: "HTML & CSS",
+    showPlaceholder: false,
+    styles: `
+      #root {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+      }
+
+      .cs-script-banner {
+        flex-shrink: 0;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #fef3c7;
+        color: #92400e;
+        border-bottom: 1px solid #fcd34d;
+      }
+
+      .cs-html-frame {
+        flex: 1;
+        width: 100%;
+        border: none;
+        display: block;
+        background: #fff;
+      }
+    `,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        // The buffer renders verbatim as the srcdoc of a nested iframe with
+        // sandbox="" — script execution is blocked by the browser sandbox
+        // itself (nested sandbox flags intersect, so the outer frame's
+        // allow-scripts does not leak in). The DOMParser pass below only
+        // DETECTS script tags to show the learner a banner; it must not be
+        // "upgraded" to stripping, and sandbox="" must stay empty.
+        const probe = new DOMParser().parseFromString(code, 'text/html');
+        if (probe.querySelector('script')) {
+          const banner = document.createElement('div');
+          banner.className = 'cs-script-banner';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          root.appendChild(banner);
+        }
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', '');
+        frame.className = 'cs-html-frame';
+        frame.srcdoc = code;
+        root.appendChild(frame);
+      };
+    `
+  },
   dom: {
     name: "DOM",
     logic: `

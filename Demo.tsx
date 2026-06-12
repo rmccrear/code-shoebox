@@ -1,9 +1,50 @@
 import React from 'react';
-import { Palette, Server, Code2, Cpu, Save, Sparkles, Zap, Brain, RotateCcw } from 'lucide-react';
+import { Palette, Server, Code2, Cpu, Save, Sparkles, Zap, Brain, RotateCcw, FileCode } from 'lucide-react';
 import { CodeShoebox } from './components/CodeShoebox';
 import { Button } from './components/Button';
 import { themes } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
+
+const HTML_DEMO_CODE = `<!DOCTYPE html>
+<html>
+<head>
+  <title>My Profile</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      background: #f1f5f9;
+    }
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      max-width: 420px;
+      padding: 1.25rem;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+    }
+    .profile h1 { margin: 0; font-size: 1.2rem; }
+    .profile p { margin: 0.25rem 0 0; color: #64748b; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="profile">
+    <div class="avatar"></div>
+    <div>
+      <h1>Shoebox Learner</h1>
+      <p>Edits HTML, watches it render live.</p>
+    </div>
+  </div>
+</body>
+</html>`;
 
 const P5_DEMO_CODE = `function setup() {
   createCanvas(400, 400);
@@ -184,7 +225,8 @@ console.log("Persistence Status:", message);`;
 export const Demo: React.FC = () => {
     // Giving each demo a unique key prevents state collision in localStorage
     // using '_v2' effectively resets the "legacy" data that was causing issues.
-    const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5'); 
+    const htmlState = useSandboxState('demo_html_v1', HTML_DEMO_CODE, 'html');
+    const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5');
     const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
     const expressState = useSandboxState('demo_express_legacy_v2', EXPRESS_DEMO_CODE, 'express');
     const expressPredictionState = useSandboxState('demo_express_prediction_v2', EXPRESS_PREDICTION_CODE, 'express');
@@ -195,6 +237,7 @@ export const Demo: React.FC = () => {
 
     const handleResetAll = () => {
         if (window.confirm("Reset all demos to their original state? This will erase your changes.")) {
+            htmlState.resetCode();
             p5State.resetCode();
             p5TsState.resetCode();
             expressState.resetCode();
@@ -218,6 +261,13 @@ export const Demo: React.FC = () => {
                         Reset Persistence
                     </Button>
                 </header>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-emerald-500" /> Web Page (HTML & CSS)</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox code={htmlState.code} onCodeChange={htmlState.setCode} environmentMode={htmlState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlState.sessionId} />
+                    </div>
+                </section>
 
                 <section>
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Save className="w-6 h-6 text-indigo-500" /> Persistence</h2></div>
