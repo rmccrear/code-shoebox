@@ -56,6 +56,8 @@ describe('getSandboxHtml', () => {
     // Express modes register the express mock in the module registry.
     expect(getSandboxHtml('express')).toContain("window.__MODULE_REGISTRY__['express']");
     expect(getSandboxHtml('express-ts')).toContain("window.__MODULE_REGISTRY__['express']");
+    expect(getSandboxHtml('express')).toContain('[Express Mock] Simulation error');
+    expect(getSandboxHtml('express-ts')).toContain('[Express Mock] Simulation error');
     // Hono modes install the server bridge + import Hono via ESM.
     for (const mode of ['hono', 'hono-ts'] as EnvironmentMode[]) {
       const html = getSandboxHtml(mode);

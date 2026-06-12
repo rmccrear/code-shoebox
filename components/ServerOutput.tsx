@@ -54,6 +54,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
   const [serverReady, setServerReady] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const startupTimeoutRef = useRef<number | null>(null);
+  const requestTimeoutRef = useRef<number | null>(null);
 
   const [consoleHeight, setConsoleHeight] = useState(150);
   const [isDragging, setIsDragging] = useState(false);
@@ -129,32 +130,27 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
     }
   }, [debugMode, addSystemLog, clearConsole, sendSimulatedRequest]);
 
-  // Primary MessageChannel listener
+  const sandboxMessageRef = useRef(handleSandboxMessage);
   useEffect(() => {
-    const channel = new MessageChannel();
-    channelRef.current = channel;
-    
-    channel.port1.onmessage = (event) => {
-        handleSandboxMessage(event.data);
-    };
-
-    return () => {
-        channel.port1.close();
-        channelRef.current = null;
-    };
+    sandboxMessageRef.current = handleSandboxMessage;
   }, [handleSandboxMessage]);
+
+  useEffect(() => () => {
+    channelRef.current?.port1.close();
+    channelRef.current = null;
+  }, []);
 
   // Fallback Window listener
   useEffect(() => {
       const globalListener = (event: MessageEvent) => {
           if (event.source !== iframeRef.current?.contentWindow) return;
           if (event.data && typeof event.data === 'object' && event.data.type) {
-              handleSandboxMessage(event.data);
+              sandboxMessageRef.current(event.data);
           }
       };
       window.addEventListener('message', globalListener);
       return () => window.removeEventListener('message', globalListener);
-  }, [handleSandboxMessage]);
+  }, []);
 
   const sandboxHtml = useMemo(() => {
     return getSandboxHtml(environmentMode);
@@ -192,10 +188,13 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
 
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog('Server Iframe loaded.');
-    if (iframeRef.current?.contentWindow && channelRef.current) {
-        iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channelRef.current.port2]);
-        iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
-    }
+    if (!iframeRef.current?.contentWindow) return;
+    channelRef.current?.port1.close();
+    const channel = new MessageChannel();
+    channelRef.current = channel;
+    channel.port1.onmessage = (event) => sandboxMessageRef.current(event.data);
+    iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
+    iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
   };
 
   const handleSendClick = () => {
@@ -239,6 +238,30 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
       }
     };
   }, [isLoading, pendingRequest, serverReady, runtimeError, addSystemLog]);
+
+  // In-flight request timeout: SERVER_READY arrived, but no response followed.
+  useEffect(() => {
+    if (!isLoading || pendingRequest || runtimeError) {
+      if (requestTimeoutRef.current) {
+        window.clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    requestTimeoutRef.current = window.setTimeout(() => {
+      setIsLoading(false);
+      setRuntimeError("Request timed out. Check that your route handler sends a response: res.send()/res.json() for Express, or return a Response for Hono.");
+      addSystemLog('Request timed out while waiting for REQUEST_COMPLETE.');
+    }, 10000);
+
+    return () => {
+      if (requestTimeoutRef.current) {
+        window.clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+    };
+  }, [isLoading, pendingRequest, runtimeError, addSystemLog]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();

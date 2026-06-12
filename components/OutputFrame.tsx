@@ -53,36 +53,35 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     }));
   }, []);
 
-  // Use sessionId implicitly via key on the iframe component in CodingEnvironment if possible,
-  // or here to force re-render on mode change.
-  const sandboxHtml = useMemo(() => {
-    if (debugMode) addSystemLog(`Generating Sandbox HTML for mode: ${environmentMode}`);
-    return getSandboxHtml(environmentMode, isPredictionMode);
-  }, [environmentMode, isPredictionMode, debugMode, addSystemLog]);
+  const sandboxHtml = useMemo(
+    () => getSandboxHtml(environmentMode, isPredictionMode),
+    [environmentMode, isPredictionMode]
+  );
 
-  useEffect(() => {
-    channelRef.current = new MessageChannel();
-    
-    channelRef.current.port1.onmessage = (event) => {
-        const { type, payload } = event.data;
-        if (type === 'CONSOLE_LOG' || type === 'RUNTIME_ERROR' || type === 'CONSOLE_WARN') {
-             setLogs(prev => appendLog(prev, {
-                 type: type === 'RUNTIME_ERROR' ? 'error' : (type === 'CONSOLE_WARN' ? 'warn' : 'log'),
-                 content: payload,
-                 timestamp: Date.now()
-             }));
-        }
-        else if (type === 'READY_SIGNAL' && debugMode) {
-             addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
-        }
-    };
-
-    return () => {
-        if (channelRef.current) {
-            channelRef.current.port1.close();
-        }
-    };
+  const handleKernelMessage = useCallback((data: any) => {
+    if (!data || typeof data !== 'object') return;
+    const { type, payload } = data;
+    if (type === 'CONSOLE_LOG' || type === 'RUNTIME_ERROR' || type === 'CONSOLE_WARN') {
+      setLogs(prev => appendLog(prev, {
+        type: type === 'RUNTIME_ERROR' ? 'error' : (type === 'CONSOLE_WARN' ? 'warn' : 'log'),
+        content: payload,
+        timestamp: Date.now()
+      }));
+    } else if (type === 'READY_SIGNAL' && debugMode) {
+      addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
+    }
   }, [debugMode, addSystemLog]);
+
+  // Keep the latest message handler without recreating the transferred port.
+  const kernelMessageRef = useRef(handleKernelMessage);
+  useEffect(() => {
+    kernelMessageRef.current = handleKernelMessage;
+  }, [handleKernelMessage]);
+
+  useEffect(() => () => {
+    channelRef.current?.port1.close();
+    channelRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (runTrigger > 0) {
@@ -118,12 +117,15 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
 
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog('Iframe "onLoad" event fired.');
-    if (iframeRef.current?.contentWindow && channelRef.current) {
-      iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channelRef.current.port2]);
-      iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
-      if (isHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
-      if (debugMode) addSystemLog('Channel Ports initialized.');
-    }
+    if (!iframeRef.current?.contentWindow) return;
+    channelRef.current?.port1.close();
+    const channel = new MessageChannel();
+    channelRef.current = channel;
+    channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
+    iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
+    iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
+    if (isHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    if (debugMode) addSystemLog('Channel Ports initialized.');
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {

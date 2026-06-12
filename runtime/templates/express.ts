@@ -98,10 +98,18 @@ export const EXPRESS_MOCK_SETUP = `
                     return new Promise(resolve => {
                         const res = new MockResponse(resolve);
                         try {
-                            handler(req, res);
+                            const out = handler(req, res);
+                            if (out && typeof out.catch === 'function') {
+                                out.catch(e => {
+                                    const message = e && e.message ? e.message : String(e);
+                                    console.warn(message);
+                                    resolve({ status: 500, data: { error: message } });
+                                });
+                            }
                         } catch (e) {
-                            console.error(e);
-                            resolve({ status: 500, data: { error: e.message } });
+                            const message = e && e.message ? e.message : String(e);
+                            console.warn(message);
+                            resolve({ status: 500, data: { error: message } });
                         }
                     });
                 }
@@ -119,13 +127,18 @@ export const EXPRESS_MOCK_SETUP = `
     const requestHandler = async (event) => {
         if (event.data && event.data.type === 'SIMULATE_REQUEST') {
             const { method, url } = event.data.payload;
-            const response = await appInstance._handleRequest(method, url);
-            const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
-            
-            if (window.messagePort) {
-                window.messagePort.postMessage(completeMsg);
-            } else {
-                window.parent.postMessage(completeMsg, '*');
+            try {
+                const response = await appInstance._handleRequest(method, url);
+                const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
+                
+                if (window.messagePort) {
+                    window.messagePort.postMessage(completeMsg);
+                } else {
+                    window.parent.postMessage(completeMsg, '*');
+                }
+            } catch (err) {
+                console.error("[Express Mock] Simulation error:", err);
+                sendPayload('RUNTIME_ERROR', err.message);
             }
         }
     };
