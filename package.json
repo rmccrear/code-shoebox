@@ -59,6 +59,14 @@
     "playground",
     "p5.js"
   ],
-  "author": "",
-  "license": "MIT"
+  "author": "Robert McCreary Mannino",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rmccrear/code-shoebox.git"
+  },
+  "homepage": "https://github.com/rmccrear/code-shoebox#readme",
+  "license": "MIT",
+  "overrides": {
+    "dompurify": "^3.4.0"
+  }
 }

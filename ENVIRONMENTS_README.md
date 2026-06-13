@@ -1,7 +1,7 @@
 
 # CodeShoebox Runtime Environments
 
-This document provides a detailed inventory of the execution environments available in CodeShoebox (`v1.0.15`). 
+This document provides a detailed inventory of the execution environments available in CodeShoebox.
 
 CodeShoebox runs code entirely within the browser using a sandboxed `<iframe>`. There is no backend Node.js server executing user code.
 

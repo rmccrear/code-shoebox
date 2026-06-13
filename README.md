@@ -7,6 +7,8 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 - **Secure Execution**: Uses a sandboxed iframe with strict permissions (`allow-scripts`).
 - **Monaco Editor**: Full-featured code editing experience via `@monaco-editor/react`.
 - **Multiple Environments**:
+  - `html`: Static HTML pages with live preview (no JavaScript execution).
+  - `html-css`: Two-tab HTML & CSS editing (`index.html` + `style.css`) with live preview.
   - `dom`: Standard JavaScript manipulation.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
