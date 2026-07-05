@@ -134,6 +134,25 @@ export default app;`
     code: `interface Task { id: number; title: string; }
 const tasks: Task[] = [{ id: 1, title: "Ship hash presets" }];
 console.table(tasks);`
+  },
+  {
+    id: 'p5play-demo',
+    mode: 'p5play',
+    code: `// p5.play sprites, Game Lab style: top-level code, no setup() needed
+var ball = createSprite(50, 200, 30, 30);
+ball.shapeColor = color(0, 200, 255);
+ball.velocityX = 3;
+
+function draw() {
+  background(12);
+  if (ball.x > 425) {
+    ball.x = -25; // wrap around
+  }
+  if (keyDown("space")) {
+    ball.rotation = ball.rotation + 5;
+  }
+  drawSprites();
+}`
   }
 ];
 

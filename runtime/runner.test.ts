@@ -3,7 +3,7 @@ import { getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'dom', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'html', 'html-css', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -50,6 +50,18 @@ describe('getSandboxHtml', () => {
     expect(getSandboxHtml('p5')).toContain('p5.min.js');
     expect(getSandboxHtml('p5-ts')).toContain('p5.min.js');
     expect(getSandboxHtml('dom')).not.toContain('p5.min.js');
+  });
+
+  it('embeds p5, the compat shim, and p5.play in order for p5play mode', () => {
+    const html = getSandboxHtml('p5play');
+    const p5At = html.indexOf('p5.min.js');
+    const shimAt = html.indexOf('alphaTint');
+    const playAt = html.indexOf('p5.play.js');
+    expect(p5At).toBeGreaterThan(-1);
+    expect(shimAt).toBeGreaterThan(p5At);
+    expect(playAt).toBeGreaterThan(shimAt);
+    // plain p5 mode must not pull the sprite library
+    expect(getSandboxHtml('p5')).not.toContain('p5.play.js');
   });
 
   it('wires up the server mock setup for server modes', () => {

@@ -8,6 +8,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
     case 'p5':
     case 'p5-ts':
       return "Look at the conditional statement in the draw loop. What color will the shape fill with when the mouse is pressed?";
+    case 'p5play':
+      return "Look at how the sprite's properties change inside the draw loop. Where will the sprite be after the program runs for a few seconds?";
     case 'react':
       return "What is the starting value of the 'count' state variable rendered on the screen?";
     case 'react-ts':

@@ -16,6 +16,18 @@ const REACT_CDNS = [
   BABEL_CDN
 ];
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
+// p5.play v2, code-dot-org fork (LGPL-2.1) — the sprite library behind Code.org
+// Game Lab (createSprite, drawSprites, keyDown, isTouching...). Pinned to a
+// commit SHA via jsDelivr. Must load AFTER p5; the inline shim in between
+// bridges the two methods the fork expects from Code.org's own p5 build.
+const P5PLAY_CDNS = [
+  P5_CDN,
+  `<script>
+    p5.prototype.alphaTint = function (a) { this.tint(255, a * 255); };
+    p5.prototype.randomNumber = function (min, max) { return Math.floor(this.random(min, max + 1)); };
+  </script>`,
+  '<script src="https://cdn.jsdelivr.net/gh/code-dot-org/p5.play@6b9a6ac479ce38a134cfc2fb9cadd50310741669/lib/p5.play.js"></script>'
+];
 const P5_RUNTIME_STYLES = `
   #root {
     padding: 0;
@@ -180,6 +192,35 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         try {
           const transpiled = Babel.transform(code, { presets: ['env', 'typescript'], filename: 'script.ts' }).code;
           new Function('root', transpiled)(root);
+        } catch (e) { console.error(e); }
+      };
+    `
+  },
+  p5play: {
+    name: "p5.js + p5.play",
+    cdns: P5PLAY_CDNS,
+    styles: P5_RUNTIME_STYLES,
+    logic: `
+      let instance = null;
+      window.__RUN_MODE__ = (code, root) => {
+        if (instance) instance.remove();
+        root.innerHTML = '';
+        window.setup = window.draw = null;
+        const observer = new MutationObserver(m => {
+          m.forEach(mutation => mutation.addedNodes.forEach(node => {
+            if (node.tagName === 'CANVAS' && node.classList.contains('p5Canvas')) root.appendChild(node);
+          }));
+        });
+        observer.observe(document.body, { childList: true });
+        try {
+          // Game Lab semantics: the canvas and p5 globals exist BEFORE student
+          // code runs, so top-level statements like createSprite() work.
+          // p5's redraw() looks up window.draw each frame, so a draw() defined
+          // by the eval below is picked up even though the instance already exists.
+          instance = new p5();
+          window.createCanvas(400, 400);
+          window.eval(code);
+          if (typeof window.setup === 'function') window.setup();
         } catch (e) { console.error(e); }
       };
     `

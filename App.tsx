@@ -119,6 +119,7 @@ const App: React.FC = () => {
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>
                     <option value="p5-ts">p5.js (TS)</option>
+                    <option value="p5play">p5.js + p5.play</option>
                     <option value="react">React (JS)</option>
                     <option value="react-ts">React (TS)</option>
                   </optgroup>
