@@ -16,17 +16,12 @@ const REACT_CDNS = [
   BABEL_CDN
 ];
 const P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
-// p5.play v2, code-dot-org fork (LGPL-2.1) — the sprite library behind Code.org
-// Game Lab (createSprite, drawSprites, keyDown, isTouching...). Pinned to a
-// commit SHA via jsDelivr. Must load AFTER p5; the inline shim in between
-// bridges the two methods the fork expects from Code.org's own p5 build.
+// p5.play v2, rmccrear/code-dot-org fork (LGPL-2.1) — the sprite library behind
+// Code.org Game Lab (createSprite, drawSprites, keyDown, isTouching...).
+// Pinned to a jsDelivr GitHub tag with stock p5.js compat baked in.
 const P5PLAY_CDNS = [
   P5_CDN,
-  `<script>
-    p5.prototype.alphaTint = function (a) { this.tint(255, a * 255); };
-    p5.prototype.randomNumber = function (min, max) { return Math.floor(this.random(min, max + 1)); };
-  </script>`,
-  '<script src="https://cdn.jsdelivr.net/gh/code-dot-org/p5.play@6b9a6ac479ce38a134cfc2fb9cadd50310741669/lib/p5.play.js"></script>'
+  '<script src="https://cdn.jsdelivr.net/gh/rmccrear/p5.play@v2.0.0-codex.1/lib/p5.play.js"></script>'
 ];
 const P5_RUNTIME_STYLES = `
   #root {

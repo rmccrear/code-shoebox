@@ -52,14 +52,14 @@ describe('getSandboxHtml', () => {
     expect(getSandboxHtml('dom')).not.toContain('p5.min.js');
   });
 
-  it('embeds p5, the compat shim, and p5.play in order for p5play mode', () => {
+  it('embeds p5 and the tagged p5.play fork in order for p5play mode', () => {
     const html = getSandboxHtml('p5play');
     const p5At = html.indexOf('p5.min.js');
-    const shimAt = html.indexOf('alphaTint');
-    const playAt = html.indexOf('p5.play.js');
+    const playUrl = 'https://cdn.jsdelivr.net/gh/rmccrear/p5.play@v2.0.0-codex.1/lib/p5.play.js';
+    const playAt = html.indexOf(playUrl);
     expect(p5At).toBeGreaterThan(-1);
-    expect(shimAt).toBeGreaterThan(p5At);
-    expect(playAt).toBeGreaterThan(shimAt);
+    expect(html).not.toContain('alphaTint');
+    expect(playAt).toBeGreaterThan(p5At);
     // plain p5 mode must not pull the sprite library
     expect(getSandboxHtml('p5')).not.toContain('p5.play.js');
   });
