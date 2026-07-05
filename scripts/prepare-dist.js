@@ -25,10 +25,21 @@ if (fs.existsSync(readmePath)) {
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
 // 2. STRIP "dist/" from the paths
-// The files will be at the root of the repo on the dist branch
-packageJson.main = "export.js";
-packageJson.module = "export.mjs";
+// The files will be at the root of the repo on the dist branch.
+// Filenames must match what tsup actually emits: export.js (ESM),
+// export.cjs (CJS), export.d.ts. The exports map takes precedence over
+// main/module in modern resolvers, so it must be rewritten too.
+packageJson.main = "export.cjs";
+packageJson.module = "export.js";
 packageJson.types = "export.d.ts";
+packageJson.exports = {
+  ".": {
+    "types": "./export.d.ts",
+    "import": "./export.js",
+    "require": "./export.cjs"
+  },
+  "./styles.css": "./styles.css"
+};
 
 // Add the style definition so bundlers find the CSS
 packageJson.style = "styles.css";
