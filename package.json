@@ -4,7 +4,7 @@
   "type": "module",
   "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
   "main": "export.js",
-  "module": "export.mjs",
+  "module": "export.js",
   "types": "export.d.ts",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
