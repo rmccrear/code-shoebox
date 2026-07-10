@@ -689,6 +689,10 @@ video {
   height: 0.375rem;
 }
 
+.h-10 {
+  height: 2.5rem;
+}
+
 .h-12 {
   height: 3rem;
 }
@@ -833,6 +837,10 @@ video {
   flex-direction: column;
 }
 
+.items-end {
+  align-items: flex-end;
+}
+
 .items-center {
   align-items: center;
 }
@@ -847,6 +855,10 @@ video {
 
 .justify-between {
   justify-content: space-between;
+}
+
+.gap-1 {
+  gap: 0.25rem;
 }
 
 .gap-1\.5 {
@@ -931,12 +943,21 @@ video {
   border-radius: 0.75rem;
 }
 
+.rounded-t-md {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+}
+
 .border {
   border-width: 1px;
 }
 
 .border-b {
   border-bottom-width: 1px;
+}
+
+.border-b-0 {
+  border-bottom-width: 0px;
 }
 
 .border-l {
@@ -1226,6 +1247,10 @@ video {
 
 .pr-4 {
   padding-right: 1rem;
+}
+
+.pt-2 {
+  padding-top: 0.5rem;
 }
 
 .text-center {
@@ -1576,8 +1601,14 @@ video {
 */
 
 .monaco-editor-container .monaco-editor,
-.monaco-editor-container .monaco-editor .inputarea {
+.monaco-editor-container .monaco-editor .inputarea,
+.monaco-editor-container .monaco-editor .view-line,
+.monaco-editor-container .monaco-editor .view-line span,
+.monaco-editor-container .monaco-editor textarea {
   text-align: left !important;
+  letter-spacing: 0 !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "liga" 0, "calt" 0 !important;
 }
 
 /* Ensure z-index context is correct for widgets/hovers */
@@ -1610,6 +1641,16 @@ video {
 .hover\:bg-gray-600:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(75 85 99 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:text-gray-200:hover {
+  --tw-text-opacity: 1;
+  color: rgb(229 231 235 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-gray-800:hover {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity, 1));
 }
 
 .hover\:text-white:hover {

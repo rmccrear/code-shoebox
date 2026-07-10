@@ -34,6 +34,8 @@ __export(export_exports, {
   baseTheme: () => baseTheme,
   borisTheme: () => borisTheme,
   modernLabTheme: () => modernLabTheme,
+  parseHtmlCssFiles: () => parseHtmlCssFiles,
+  serializeHtmlCssFiles: () => serializeHtmlCssFiles,
   themes: () => themes,
   useAutoKey: () => useAutoKey,
   useSandboxState: () => useSandboxState
@@ -50,7 +52,49 @@ var import_lucide_react4 = require("lucide-react");
 // components/CodeEditor.tsx
 var import_react = require("react");
 var import_react2 = __toESM(require("@monaco-editor/react"), 1);
+
+// utils/htmlCssFiles.ts
+var HTML_CSS_CODE_VERSION = "codeshoebox/html-css/v1";
+var EMPTY_FILES = {
+  html: "",
+  css: ""
+};
+var serializeHtmlCssFiles = (files) => {
+  const bundle = {
+    version: HTML_CSS_CODE_VERSION,
+    html: files.html,
+    css: files.css
+  };
+  return JSON.stringify(bundle, null, 2);
+};
+var parseHtmlCssFiles = (code) => {
+  if (!code.trim()) return EMPTY_FILES;
+  try {
+    const parsed = JSON.parse(code);
+    if (parsed && parsed.version === HTML_CSS_CODE_VERSION && typeof parsed.html === "string" && typeof parsed.css === "string") {
+      return {
+        html: parsed.html,
+        css: parsed.css
+      };
+    }
+  } catch {
+  }
+  const styleMatch = code.match(/<style\b[^>]*>([\s\S]*?)<\/style>/i);
+  if (!styleMatch) {
+    return {
+      html: code,
+      css: ""
+    };
+  }
+  return {
+    html: code.replace(styleMatch[0], "").trim(),
+    css: styleMatch[1].trim()
+  };
+};
+
+// components/CodeEditor.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
+var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 var CodeEditor = ({
   code,
   onChange,
@@ -59,7 +103,15 @@ var CodeEditor = ({
   sessionId,
   readOnly = false
 }) => {
+  const [activeHtmlCssFile, setActiveHtmlCssFile] = (0, import_react.useState)("html");
+  const isHtmlCssMode = environmentMode === "html-css";
+  const htmlCssFiles = (0, import_react.useMemo)(() => parseHtmlCssFiles(code), [code]);
+  const editorValue = isHtmlCssMode ? htmlCssFiles[activeHtmlCssFile] : code;
   const modelPath = (0, import_react.useMemo)(() => {
+    if (environmentMode === "html-css") {
+      const fileName = activeHtmlCssFile === "html" ? "index.html" : "styles.css";
+      return `sandbox-html-css-${sessionId}/${fileName}`;
+    }
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     switch (environmentMode) {
       case "typescript":
@@ -77,14 +129,35 @@ var CodeEditor = ({
       default:
         return `${basePath}.js`;
     }
-  }, [sessionId, environmentMode]);
+  }, [sessionId, environmentMode, activeHtmlCssFile]);
   const language = (0, import_react.useMemo)(() => {
+    if (environmentMode === "html-css") {
+      return activeHtmlCssFile === "html" ? "html" : "css";
+    }
     const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
     if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";
-  }, [environmentMode]);
+  }, [environmentMode, activeHtmlCssFile]);
+  const handleChange = (value) => {
+    if (!isHtmlCssMode) {
+      onChange(value);
+      return;
+    }
+    onChange(serializeHtmlCssFiles({
+      ...htmlCssFiles,
+      [activeHtmlCssFile]: value || ""
+    }));
+  };
   const handleEditorDidMount = (editor, monaco) => {
     editor.focus();
+    const refreshEditorMetrics = () => {
+      monaco.editor.remeasureFonts();
+      editor.layout();
+    };
+    refreshEditorMetrics();
+    window.requestAnimationFrame(refreshEditorMetrics);
+    window.setTimeout(refreshEditorMetrics, 250);
+    document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
     if (language === "typescript") {
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         jsx: monaco.languages.typescript.JsxEmit.React,
@@ -214,33 +287,51 @@ var CodeEditor = ({
       }
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    import_react2.default,
-    {
-      height: "100%",
-      path: modelPath,
-      language,
-      theme: themeMode === "dark" ? "vs-dark" : "light",
-      value: code,
-      onChange,
-      onMount: handleEditorDidMount,
-      loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
-      options: {
-        readOnly,
-        minimap: { enabled: false },
-        fontSize: 14,
-        wordWrap: "on",
-        automaticLayout: true,
-        padding: { top: 16, bottom: 16 },
-        scrollBeyondLastLine: false,
-        fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
-        fixedOverflowWidgets: true,
-        renderValidationDecorations: "on",
-        lineHeight: 24
-      }
-    },
-    modelPath
-  ) });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "monaco-editor-container h-full w-full overflow-hidden flex flex-col", children: [
+    isHtmlCssMode && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `h-10 shrink-0 flex items-end gap-1 px-3 pt-2 border-b ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-gray-50 border-gray-200"}`, children: [
+      { id: "html", label: "index.html" },
+      { id: "css", label: "styles.css" }
+    ].map((file) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      "button",
+      {
+        type: "button",
+        onClick: () => setActiveHtmlCssFile(file.id),
+        disabled: readOnly,
+        className: `h-8 px-3 text-xs font-mono border border-b-0 rounded-t-md transition-colors ${activeHtmlCssFile === file.id ? themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900" : themeMode === "dark" ? "bg-transparent border-transparent text-gray-400 hover:text-gray-200" : "bg-transparent border-transparent text-gray-500 hover:text-gray-800"}`,
+        children: file.label
+      },
+      file.id
+    )) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex-1 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      import_react2.default,
+      {
+        height: "100%",
+        path: modelPath,
+        language,
+        theme: themeMode === "dark" ? "vs-dark" : "light",
+        value: editorValue,
+        onChange: handleChange,
+        onMount: handleEditorDidMount,
+        loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
+        options: {
+          readOnly,
+          minimap: { enabled: false },
+          fontSize: 14,
+          wordWrap: "on",
+          automaticLayout: true,
+          padding: { top: 16, bottom: 16 },
+          scrollBeyondLastLine: false,
+          fontFamily: EDITOR_FONT_FAMILY,
+          fontLigatures: false,
+          fixedOverflowWidgets: true,
+          renderValidationDecorations: "on",
+          lineHeight: 24,
+          letterSpacing: 0
+        }
+      },
+      modelPath
+    ) })
+  ] });
 };
 
 // components/OutputFrame.tsx
@@ -631,6 +722,94 @@ var ENV_RECIPES = {
       };
     `
   },
+  "html-css": {
+    name: "HTML + CSS",
+    styles: `
+      #root {
+        display: block;
+        align-items: initial;
+      }
+    `,
+    logic: `
+      const HTML_CSS_CODE_VERSION = "${HTML_CSS_CODE_VERSION}";
+
+      const parseHtmlCssFiles = (code) => {
+        try {
+          const parsed = JSON.parse(code);
+          if (
+            parsed &&
+            parsed.version === HTML_CSS_CODE_VERSION &&
+            typeof parsed.html === 'string' &&
+            typeof parsed.css === 'string'
+          ) {
+            return { html: parsed.html, css: parsed.css };
+          }
+        } catch (e) {}
+
+        const styleMatch = code.match(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/i);
+        if (!styleMatch) return { html: code, css: '' };
+
+        return {
+          html: code.replace(styleMatch[0], '').trim(),
+          css: styleMatch[1].trim()
+        };
+      };
+
+      const sanitizeElement = (element) => {
+        Array.from(element.attributes || []).forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith('on') || name === 'srcdoc' || value.startsWith('javascript:')) {
+            element.removeAttribute(attr.name);
+          }
+        });
+      };
+
+      const sanitizeTree = (node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          sanitizeElement(node);
+          node.querySelectorAll('*').forEach(sanitizeElement);
+        }
+      };
+
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        try {
+          const files = parseHtmlCssFiles(code);
+          const parsed = new DOMParser().parseFromString(files.html, 'text/html');
+          const scriptCount = parsed.querySelectorAll('script').length;
+          const fragment = document.createDocumentFragment();
+
+          parsed.querySelectorAll('script').forEach(script => script.remove());
+
+          if (files.css.trim()) {
+            const cssStyle = document.createElement('style');
+            cssStyle.textContent = files.css;
+            fragment.appendChild(cssStyle);
+          }
+
+          parsed.querySelectorAll('style').forEach(style => {
+            const safeStyle = document.createElement('style');
+            safeStyle.textContent = style.textContent || '';
+            fragment.appendChild(safeStyle);
+            style.remove();
+          });
+
+          Array.from(parsed.body.childNodes).forEach(node => {
+            const safeNode = document.importNode(node, true);
+            sanitizeTree(safeNode);
+            fragment.appendChild(safeNode);
+          });
+
+          root.appendChild(fragment);
+
+          if (scriptCount > 0) {
+            console.warn('Script tags are ignored in html-css mode.');
+          }
+        } catch (e) { console.error(e); }
+      };
+    `
+  },
   typescript: {
     name: "TypeScript",
     cdns: [BABEL_CDN],
@@ -1001,6 +1180,7 @@ var OutputFrame = ({
   const [consoleHeight, setConsoleHeight] = (0, import_react3.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react3.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
+  const showConsole = environmentMode !== "html-css";
   const addSystemLog = (0, import_react3.useCallback)((msg, type = "log") => {
     setLogs((prev) => [...prev, {
       type,
@@ -1103,7 +1283,7 @@ var OutputFrame = ({
           },
           `${environmentMode}-${isPredictionMode}`
         ) }),
-        !isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        !isHeadless && showConsole && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "div",
           {
             onMouseDown: handleMouseDown,
@@ -1111,7 +1291,7 @@ var OutputFrame = ({
             children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react2.GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        showConsole && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
         isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "iframe",
           {
@@ -1435,6 +1615,7 @@ var CodingEnvironment = ({
   const containerRef = (0, import_react5.useRef)(null);
   const hasDocs = !!getDocsForMode(environmentMode);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const editorLabel = environmentMode === "html-css" ? "HTML + CSS" : `${environmentMode}.script`;
   const handleRunClick = () => {
     if (predictionPrompt) setIsPredictionLocked(true);
     onRun();
@@ -1478,10 +1659,7 @@ var CodingEnvironment = ({
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.FileCode, { className: "w-4 h-4 text-blue-500" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: [
-          environmentMode,
-          ".script"
-        ] })
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: editorLabel })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-4", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
@@ -1734,6 +1912,44 @@ root.appendChild(button);
 // Example 3: Console logging
 console.log('Code loaded successfully.');
 `;
+var HTML_CSS_STARTER_CODE = serializeHtmlCssFiles({
+  html: `<main class="gallery-card">
+  <figure>
+    <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80" alt="A laptop on a desk">
+    <figcaption>Workspace photo</figcaption>
+  </figure>
+</main>`,
+  css: `body {
+  background: #f6f7fb;
+}
+
+.gallery-card {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+figure {
+  margin: 0;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 12px 28px rgba(31, 41, 55, 0.16);
+}
+
+img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+figcaption {
+  padding: 12px 16px;
+  font: 600 15px system-ui, sans-serif;
+  color: #253044;
+}`
+});
 var TYPESCRIPT_STARTER_CODE = [
   "// Welcome to TypeScript!",
   "// The browser will transpile this code before running it.",
@@ -2098,6 +2314,8 @@ myTodos.showTasks();
 // hooks/useSandboxState.ts
 var getStarterCode = (mode) => {
   switch (mode) {
+    case "html-css":
+      return HTML_CSS_STARTER_CODE;
     case "p5":
       return P5_STARTER_CODE;
     case "p5-ts":
@@ -2210,6 +2428,8 @@ var useAutoKey = (identifier, initialCode = "", prefix = "auto") => {
   baseTheme,
   borisTheme,
   modernLabTheme,
+  parseHtmlCssFiles,
+  serializeHtmlCssFiles,
   themes,
   useAutoKey,
   useSandboxState

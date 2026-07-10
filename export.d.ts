@@ -27,7 +27,7 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'dom' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type EnvironmentMode = 'dom' | 'html-css' | 'p5' | 'p5-ts' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 interface EditorProps {
     initialCode: string;
     onChange: (code: string) => void;
@@ -73,4 +73,11 @@ declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: s
  */
 declare const useAutoKey: (identifier: string, initialCode?: string, prefix?: string) => string;
 
-export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
+interface HtmlCssFiles {
+    html: string;
+    css: string;
+}
+declare const serializeHtmlCssFiles: (files: HtmlCssFiles) => string;
+declare const parseHtmlCssFiles: (code: string) => HtmlCssFiles;
+
+export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, parseHtmlCssFiles, serializeHtmlCssFiles, themes, useAutoKey, useSandboxState };
