@@ -34,6 +34,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
+  const showConsole = environmentMode !== 'html-css';
 
   const addSystemLog = useCallback((msg: string, type: 'log' | 'error' | 'warn' = 'log') => {
     setLogs(prev => [...prev, {
@@ -155,7 +156,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
           </div>
         )}
 
-        {!isHeadless && (
+        {!isHeadless && showConsole && (
           <div 
               onMouseDown={handleMouseDown}
               className={`h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors ${themeMode === 'dark' ? 'bg-[#252526] text-gray-600 border-t border-b border-black/20' : 'bg-gray-100 text-gray-400 border-t border-b border-gray-200'}`}
@@ -164,9 +165,11 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
           </div>
         )}
 
-        <div style={{ height: isHeadless ? '100%' : consoleHeight }} className="shrink-0 min-h-0">
-             <Console logs={logs} onClear={() => setLogs([])} themeMode={themeMode} />
-        </div>
+        {showConsole && (
+          <div style={{ height: isHeadless ? '100%' : consoleHeight }} className="shrink-0 min-h-0">
+              <Console logs={logs} onClear={() => setLogs([])} themeMode={themeMode} />
+          </div>
+        )}
 
         {isHeadless && (
           <iframe

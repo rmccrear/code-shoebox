@@ -3,3 +3,4 @@ export { useSandboxState } from './hooks/useSandboxState';
 export { useAutoKey } from './hooks/useAutoKey';
 export * from './types';
 export * from './theme';
+export { parseHtmlCssFiles, serializeHtmlCssFiles } from './utils/htmlCssFiles';

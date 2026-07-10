@@ -34,6 +34,20 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   No Babel transpilation (syntax is limited to what the user's browser supports natively).
     *   `import` / `export` syntax is not supported.
 
+### `html-css` (HTML / CSS)
+*   **Engine:** Browser HTML parser.
+*   **Editor:** Two fake files, `index.html` and `styles.css`, shown as tabs in a single Monaco editor area.
+*   **Pre-loaded Libraries:** None.
+*   **Capabilities:**
+    *   Renders direct HTML markup inside the sandboxed iframe.
+    *   Combines `styles.css` with `index.html` at runtime by injecting a `<style>` tag into the preview.
+    *   Loads standard image URLs and other browser-supported media.
+    *   Hides the console so students focus on visual output.
+*   **Limitations:**
+    *   User JavaScript is not executed.
+    *   `<script>` tags are removed before rendering.
+    *   Inline JavaScript attributes such as `onclick` and `javascript:` URLs are stripped.
+
 ### `typescript` (TypeScript)
 *   **Engine:** Babel Standalone (in-browser transpilation).
 *   **Pre-loaded Libraries:** Babel (`@babel/standalone`).

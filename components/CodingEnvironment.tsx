@@ -55,6 +55,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const hasDocs = !!getDocsForMode(environmentMode);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const editorLabel = environmentMode === 'html-css' ? 'HTML + CSS' : `${environmentMode}.script`;
 
   const handleRunClick = () => {
     if (predictionPrompt) setIsPredictionLocked(true);
@@ -111,7 +112,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       <div className={`h-12 px-4 border-b flex items-center justify-between ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10 text-gray-400' : 'bg-white border-gray-100'}`}>
         <div className="flex items-center gap-2">
           <FileCode className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-mono font-medium hidden sm:inline">{environmentMode}.script</span>
+          <span className="text-xs font-mono font-medium hidden sm:inline">{editorLabel}</span>
         </div>
         
         <div className="flex items-center gap-4">

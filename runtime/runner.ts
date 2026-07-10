@@ -3,6 +3,7 @@ import { EnvironmentMode, EnvironmentRecipe, BabelPreset } from "./types";
 import { BASE_HTML_WRAPPER } from "./templates/common";
 import { EXPRESS_MOCK_SETUP } from "./templates/express";
 import { HONO_MOCK_SETUP } from "./templates/hono";
+import { HTML_CSS_CODE_VERSION } from "../utils/htmlCssFiles";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 
@@ -27,6 +28,94 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
       window.__RUN_MODE__ = (code, root) => {
         root.innerHTML = '';
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
+  'html-css': {
+    name: "HTML + CSS",
+    styles: `
+      #root {
+        display: block;
+        align-items: initial;
+      }
+    `,
+    logic: `
+      const HTML_CSS_CODE_VERSION = "${HTML_CSS_CODE_VERSION}";
+
+      const parseHtmlCssFiles = (code) => {
+        try {
+          const parsed = JSON.parse(code);
+          if (
+            parsed &&
+            parsed.version === HTML_CSS_CODE_VERSION &&
+            typeof parsed.html === 'string' &&
+            typeof parsed.css === 'string'
+          ) {
+            return { html: parsed.html, css: parsed.css };
+          }
+        } catch (e) {}
+
+        const styleMatch = code.match(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/i);
+        if (!styleMatch) return { html: code, css: '' };
+
+        return {
+          html: code.replace(styleMatch[0], '').trim(),
+          css: styleMatch[1].trim()
+        };
+      };
+
+      const sanitizeElement = (element) => {
+        Array.from(element.attributes || []).forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith('on') || name === 'srcdoc' || value.startsWith('javascript:')) {
+            element.removeAttribute(attr.name);
+          }
+        });
+      };
+
+      const sanitizeTree = (node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          sanitizeElement(node);
+          node.querySelectorAll('*').forEach(sanitizeElement);
+        }
+      };
+
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        try {
+          const files = parseHtmlCssFiles(code);
+          const parsed = new DOMParser().parseFromString(files.html, 'text/html');
+          const scriptCount = parsed.querySelectorAll('script').length;
+          const fragment = document.createDocumentFragment();
+
+          parsed.querySelectorAll('script').forEach(script => script.remove());
+
+          if (files.css.trim()) {
+            const cssStyle = document.createElement('style');
+            cssStyle.textContent = files.css;
+            fragment.appendChild(cssStyle);
+          }
+
+          parsed.querySelectorAll('style').forEach(style => {
+            const safeStyle = document.createElement('style');
+            safeStyle.textContent = style.textContent || '';
+            fragment.appendChild(safeStyle);
+            style.remove();
+          });
+
+          Array.from(parsed.body.childNodes).forEach(node => {
+            const safeNode = document.importNode(node, true);
+            sanitizeTree(safeNode);
+            fragment.appendChild(safeNode);
+          });
+
+          root.appendChild(fragment);
+
+          if (scriptCount > 0) {
+            console.warn('Script tags are ignored in html-css mode.');
+          }
+        } catch (e) { console.error(e); }
       };
     `
   },

@@ -1,4 +1,6 @@
 
+import { serializeHtmlCssFiles } from "./utils/htmlCssFiles";
+
 export const APP_NAME = "CodeShoebox";
 
 export const STARTER_CODE = `// Welcome to your coding sandbox!
@@ -27,6 +29,45 @@ root.appendChild(button);
 // Example 3: Console logging
 console.log('Code loaded successfully.');
 `;
+
+export const HTML_CSS_STARTER_CODE = serializeHtmlCssFiles({
+  html: `<main class="gallery-card">
+  <figure>
+    <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80" alt="A laptop on a desk">
+    <figcaption>Workspace photo</figcaption>
+  </figure>
+</main>`,
+  css: `body {
+  background: #f6f7fb;
+}
+
+.gallery-card {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+figure {
+  margin: 0;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 12px 28px rgba(31, 41, 55, 0.16);
+}
+
+img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+figcaption {
+  padding: 12px 16px;
+  font: 600 15px system-ui, sans-serif;
+  color: #253044;
+}`
+});
 
 export const TYPESCRIPT_STARTER_CODE = [
   '// Welcome to TypeScript!',

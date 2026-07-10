@@ -90,6 +90,7 @@ const App: React.FC = () => {
                 >
                   <optgroup label="Web & UI" className="text-black">
                     <option value="dom">DOM / JS</option>
+                    <option value="html-css">HTML / CSS</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>
                     <option value="p5-ts">p5.js (TS)</option>

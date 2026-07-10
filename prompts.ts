@@ -5,6 +5,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'dom':
       return "Examine the code below. What message will be logged to the console when the 'Click Me' button is pressed?";
+    case 'html-css':
+      return "Look at the HTML and CSS below. What caption text will appear under the image?";
     case 'p5':
     case 'p5-ts':
       return "Look at the conditional statement in the draw loop. What color will the shape fill with when the mouse is pressed?";

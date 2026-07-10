@@ -8,8 +8,10 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 - **Monaco Editor**: Full-featured code editing experience via `@monaco-editor/react`.
 - **Multiple Environments**:
   - `dom`: Standard JavaScript manipulation.
+  - `html-css`: Two-tab HTML and CSS preview without user JavaScript execution.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
+  - `p5-ts`: p5.js creative coding with TypeScript support.
   - `react`: Live React component rendering with in-browser Babel transpilation.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
@@ -214,7 +216,7 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts' \| 'hono' \| 'hono-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'dom' \| 'html-css' \| 'p5' \| 'p5-ts' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts' \| 'hono' \| 'hono-ts'` | Yes | Determines the runtime environment. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |

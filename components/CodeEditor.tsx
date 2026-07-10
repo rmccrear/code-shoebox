@@ -1,7 +1,10 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
+import { parseHtmlCssFiles, serializeHtmlCssFiles } from '../utils/htmlCssFiles';
+
+const EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
 interface CodeEditorProps {
   code: string;
@@ -20,8 +23,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   sessionId,
   readOnly = false 
 }) => {
+  const [activeHtmlCssFile, setActiveHtmlCssFile] = useState<'html' | 'css'>('html');
+  const isHtmlCssMode = environmentMode === 'html-css';
+  const htmlCssFiles = useMemo(() => parseHtmlCssFiles(code), [code]);
+  const editorValue = isHtmlCssMode ? htmlCssFiles[activeHtmlCssFile] : code;
+
   // Construct a deterministic path.
   const modelPath = useMemo(() => {
+    if (environmentMode === 'html-css') {
+      const fileName = activeHtmlCssFile === 'html' ? 'index.html' : 'styles.css';
+      return `sandbox-html-css-${sessionId}/${fileName}`;
+    }
+
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     switch (environmentMode) {
       case 'typescript': 
@@ -39,16 +52,44 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
       default: 
         return `${basePath}.js`;
     }
-  }, [sessionId, environmentMode]);
+  }, [sessionId, environmentMode, activeHtmlCssFile]);
 
   const language = useMemo(() => {
+    if (environmentMode === 'html-css') {
+      return activeHtmlCssFile === 'html' ? 'html' : 'css';
+    }
+
     const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'];
     if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';
-  }, [environmentMode]);
+  }, [environmentMode, activeHtmlCssFile]);
+
+  const handleChange = (value: string | undefined) => {
+    if (!isHtmlCssMode) {
+      onChange(value);
+      return;
+    }
+
+    onChange(serializeHtmlCssFiles({
+      ...htmlCssFiles,
+      [activeHtmlCssFile]: value || ''
+    }));
+  };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();
+
+    const refreshEditorMetrics = () => {
+      monaco.editor.remeasureFonts();
+      editor.layout();
+    };
+
+    refreshEditorMetrics();
+    window.requestAnimationFrame(refreshEditorMetrics);
+    window.setTimeout(refreshEditorMetrics, 250);
+    document.fonts?.ready
+      .then(refreshEditorMetrics)
+      .catch(() => undefined);
     
     // Configure compiler options for TS
     if (language === 'typescript') {
@@ -190,31 +231,61 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   };
 
   return (
-    <div className="monaco-editor-container h-full w-full overflow-hidden">
-      <Editor
-        key={modelPath} // Force full re-render of Editor component when path changes
-        height="100%"
-        path={modelPath}
-        language={language}
-        theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
-        value={code}
-        onChange={onChange}
-        onMount={handleEditorDidMount}
-        loading={<div className="h-full w-full flex items-center justify-center text-sm opacity-50">Loading Editor...</div>}
-        options={{
-          readOnly: readOnly,
-          minimap: { enabled: false },
-          fontSize: 14,
-          wordWrap: 'on',
-          automaticLayout: true,
-          padding: { top: 16, bottom: 16 },
-          scrollBeyondLastLine: false,
-          fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
-          fixedOverflowWidgets: true,
-          renderValidationDecorations: 'on',
-          lineHeight: 24,
-        }}
-      />
+    <div className="monaco-editor-container h-full w-full overflow-hidden flex flex-col">
+      {isHtmlCssMode && (
+        <div className={`h-10 shrink-0 flex items-end gap-1 px-3 pt-2 border-b ${themeMode === 'dark' ? 'bg-[#252526] border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+          {[
+            { id: 'html' as const, label: 'index.html' },
+            { id: 'css' as const, label: 'styles.css' }
+          ].map(file => (
+            <button
+              key={file.id}
+              type="button"
+              onClick={() => setActiveHtmlCssFile(file.id)}
+              disabled={readOnly}
+              className={`h-8 px-3 text-xs font-mono border border-b-0 rounded-t-md transition-colors ${
+                activeHtmlCssFile === file.id
+                  ? themeMode === 'dark'
+                    ? 'bg-[#1e1e1e] border-white/10 text-white'
+                    : 'bg-white border-gray-200 text-gray-900'
+                  : themeMode === 'dark'
+                    ? 'bg-transparent border-transparent text-gray-400 hover:text-gray-200'
+                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {file.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex-1 min-h-0">
+        <Editor
+          key={modelPath} // Force full re-render of Editor component when path changes
+          height="100%"
+          path={modelPath}
+          language={language}
+          theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
+          value={editorValue}
+          onChange={handleChange}
+          onMount={handleEditorDidMount}
+          loading={<div className="h-full w-full flex items-center justify-center text-sm opacity-50">Loading Editor...</div>}
+          options={{
+            readOnly: readOnly,
+            minimap: { enabled: false },
+            fontSize: 14,
+            wordWrap: 'on',
+            automaticLayout: true,
+            padding: { top: 16, bottom: 16 },
+            scrollBeyondLastLine: false,
+            fontFamily: EDITOR_FONT_FAMILY,
+            fontLigatures: false,
+            fixedOverflowWidgets: true,
+            renderValidationDecorations: 'on',
+            lineHeight: 24,
+            letterSpacing: 0,
+          }}
+        />
+      </div>
     </div>
   );
 };
