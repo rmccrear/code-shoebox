@@ -34,8 +34,6 @@ __export(export_exports, {
   baseTheme: () => baseTheme,
   borisTheme: () => borisTheme,
   modernLabTheme: () => modernLabTheme,
-  parseHtmlCssFiles: () => parseHtmlCssFiles,
-  serializeHtmlCssFiles: () => serializeHtmlCssFiles,
   themes: () => themes,
   useAutoKey: () => useAutoKey,
   useSandboxState: () => useSandboxState
@@ -43,56 +41,15 @@ __export(export_exports, {
 module.exports = __toCommonJS(export_exports);
 
 // components/CodeShoebox.tsx
-var import_react6 = require("react");
+var import_react7 = require("react");
 
 // components/CodingEnvironment.tsx
-var import_react5 = require("react");
+var import_react6 = require("react");
 var import_lucide_react4 = require("lucide-react");
 
 // components/CodeEditor.tsx
 var import_react = require("react");
 var import_react2 = __toESM(require("@monaco-editor/react"), 1);
-
-// utils/htmlCssFiles.ts
-var HTML_CSS_CODE_VERSION = "codeshoebox/html-css/v1";
-var EMPTY_FILES = {
-  html: "",
-  css: ""
-};
-var serializeHtmlCssFiles = (files) => {
-  const bundle = {
-    version: HTML_CSS_CODE_VERSION,
-    html: files.html,
-    css: files.css
-  };
-  return JSON.stringify(bundle, null, 2);
-};
-var parseHtmlCssFiles = (code) => {
-  if (!code.trim()) return EMPTY_FILES;
-  try {
-    const parsed = JSON.parse(code);
-    if (parsed && parsed.version === HTML_CSS_CODE_VERSION && typeof parsed.html === "string" && typeof parsed.css === "string") {
-      return {
-        html: parsed.html,
-        css: parsed.css
-      };
-    }
-  } catch {
-  }
-  const styleMatch = code.match(/<style\b[^>]*>([\s\S]*?)<\/style>/i);
-  if (!styleMatch) {
-    return {
-      html: code,
-      css: ""
-    };
-  }
-  return {
-    html: code.replace(styleMatch[0], "").trim(),
-    css: styleMatch[1].trim()
-  };
-};
-
-// components/CodeEditor.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 var CodeEditor = ({
@@ -101,18 +58,12 @@ var CodeEditor = ({
   themeMode,
   environmentMode,
   sessionId,
+  activeFile,
   readOnly = false
 }) => {
-  const [activeHtmlCssFile, setActiveHtmlCssFile] = (0, import_react.useState)("html");
-  const isHtmlCssMode = environmentMode === "html-css";
-  const htmlCssFiles = (0, import_react.useMemo)(() => parseHtmlCssFiles(code), [code]);
-  const editorValue = isHtmlCssMode ? htmlCssFiles[activeHtmlCssFile] : code;
   const modelPath = (0, import_react.useMemo)(() => {
-    if (environmentMode === "html-css") {
-      const fileName = activeHtmlCssFile === "html" ? "index.html" : "styles.css";
-      return `sandbox-html-css-${sessionId}/${fileName}`;
-    }
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
+    if (environmentMode === "html-css") return `${basePath}-${activeFile || "index.html"}`;
     switch (environmentMode) {
       case "typescript":
       case "express-ts":
@@ -122,6 +73,8 @@ var CodeEditor = ({
         return `${basePath}.ts`;
       case "react-ts":
         return `${basePath}.tsx`;
+      case "html":
+        return `${basePath}.html`;
       case "react":
         return `${basePath}.jsx`;
       case "p5":
@@ -129,25 +82,14 @@ var CodeEditor = ({
       default:
         return `${basePath}.js`;
     }
-  }, [sessionId, environmentMode, activeHtmlCssFile]);
+  }, [sessionId, environmentMode, activeFile]);
   const language = (0, import_react.useMemo)(() => {
-    if (environmentMode === "html-css") {
-      return activeHtmlCssFile === "html" ? "html" : "css";
-    }
+    if (environmentMode === "html") return "html";
+    if (environmentMode === "html-css") return activeFile === "style.css" ? "css" : "html";
     const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
     if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";
-  }, [environmentMode, activeHtmlCssFile]);
-  const handleChange = (value) => {
-    if (!isHtmlCssMode) {
-      onChange(value);
-      return;
-    }
-    onChange(serializeHtmlCssFiles({
-      ...htmlCssFiles,
-      [activeHtmlCssFile]: value || ""
-    }));
-  };
+  }, [environmentMode, activeFile]);
   const handleEditorDidMount = (editor, monaco) => {
     editor.focus();
     const refreshEditorMetrics = () => {
@@ -170,8 +112,42 @@ var CodeEditor = ({
       if (environmentMode === "react-ts") {
         monaco.languages.typescript.typescriptDefaults.addExtraLib(
           `
-                declare module 'react' { var x: any; export = x; }
-                declare module 'react-dom/client' { var x: any; export = x; }
+                declare namespace React {
+                    type ReactNode = any;
+                    interface FC<P = {}> {
+                        (props: P): ReactNode;
+                    }
+                    interface Dispatch<A> {
+                        (value: A): void;
+                    }
+                    type SetStateAction<S> = S | ((prevState: S) => S);
+                }
+
+                declare module 'react' {
+                    export type ReactNode = any;
+                    export interface FC<P = {}> {
+                        (props: P): ReactNode;
+                    }
+                    export interface Dispatch<A> {
+                        (value: A): void;
+                    }
+                    export type SetStateAction<S> = S | ((prevState: S) => S);
+                    export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
+
+                    const React: {
+                        FC: FC<any>;
+                        useState: typeof useState;
+                    };
+                    export default React;
+                }
+
+                declare module 'react-dom/client' {
+                    export interface Root {
+                        render(children: any): void;
+                        unmount(): void;
+                    }
+                    export function createRoot(container: Element | DocumentFragment): Root;
+                }
                 `,
           "react-shim.d.ts"
         );
@@ -287,55 +263,39 @@ var CodeEditor = ({
       }
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "monaco-editor-container h-full w-full overflow-hidden flex flex-col", children: [
-    isHtmlCssMode && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `h-10 shrink-0 flex items-end gap-1 px-3 pt-2 border-b ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-gray-50 border-gray-200"}`, children: [
-      { id: "html", label: "index.html" },
-      { id: "css", label: "styles.css" }
-    ].map((file) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      "button",
-      {
-        type: "button",
-        onClick: () => setActiveHtmlCssFile(file.id),
-        disabled: readOnly,
-        className: `h-8 px-3 text-xs font-mono border border-b-0 rounded-t-md transition-colors ${activeHtmlCssFile === file.id ? themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-white" : "bg-white border-gray-200 text-gray-900" : themeMode === "dark" ? "bg-transparent border-transparent text-gray-400 hover:text-gray-200" : "bg-transparent border-transparent text-gray-500 hover:text-gray-800"}`,
-        children: file.label
-      },
-      file.id
-    )) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex-1 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      import_react2.default,
-      {
-        height: "100%",
-        path: modelPath,
-        language,
-        theme: themeMode === "dark" ? "vs-dark" : "light",
-        value: editorValue,
-        onChange: handleChange,
-        onMount: handleEditorDidMount,
-        loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
-        options: {
-          readOnly,
-          minimap: { enabled: false },
-          fontSize: 14,
-          wordWrap: "on",
-          automaticLayout: true,
-          padding: { top: 16, bottom: 16 },
-          scrollBeyondLastLine: false,
-          fontFamily: EDITOR_FONT_FAMILY,
-          fontLigatures: false,
-          fixedOverflowWidgets: true,
-          renderValidationDecorations: "on",
-          lineHeight: 24,
-          letterSpacing: 0
-        }
-      },
-      modelPath
-    ) })
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    import_react2.default,
+    {
+      height: "100%",
+      path: modelPath,
+      language,
+      theme: themeMode === "dark" ? "vs-dark" : "light",
+      value: code,
+      onChange,
+      onMount: handleEditorDidMount,
+      loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
+      options: {
+        readOnly,
+        minimap: { enabled: false },
+        fontSize: 14,
+        wordWrap: "on",
+        automaticLayout: true,
+        padding: { top: 16, bottom: 16 },
+        scrollBeyondLastLine: false,
+        fontFamily: EDITOR_FONT_FAMILY,
+        fontLigatures: false,
+        fixedOverflowWidgets: true,
+        renderValidationDecorations: "on",
+        lineHeight: 24,
+        letterSpacing: 0
+      }
+    },
+    modelPath
+  ) });
 };
 
 // components/OutputFrame.tsx
-var import_react3 = require("react");
+var import_react4 = require("react");
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -419,6 +379,7 @@ var KERNEL_SCRIPTS = `
     window.onerror = (msg, src, line) => sendPayload('RUNTIME_ERROR', \`Error: \${msg} (Line \${line})\`);
 
     window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
         const { type, code, mode, payload } = event.data;
         if (type === 'INIT_PORT' && event.ports[0]) {
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
@@ -560,10 +521,18 @@ var EXPRESS_MOCK_SETUP = `
                     return new Promise(resolve => {
                         const res = new MockResponse(resolve);
                         try {
-                            handler(req, res);
+                            const out = handler(req, res);
+                            if (out && typeof out.catch === 'function') {
+                                out.catch(e => {
+                                    const message = e && e.message ? e.message : String(e);
+                                    console.warn(message);
+                                    resolve({ status: 500, data: { error: message } });
+                                });
+                            }
                         } catch (e) {
-                            console.error(e);
-                            resolve({ status: 500, data: { error: e.message } });
+                            const message = e && e.message ? e.message : String(e);
+                            console.warn(message);
+                            resolve({ status: 500, data: { error: message } });
                         }
                     });
                 }
@@ -581,19 +550,27 @@ var EXPRESS_MOCK_SETUP = `
     const requestHandler = async (event) => {
         if (event.data && event.data.type === 'SIMULATE_REQUEST') {
             const { method, url } = event.data.payload;
-            const response = await appInstance._handleRequest(method, url);
-            const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
-            
-            if (window.messagePort) {
-                window.messagePort.postMessage(completeMsg);
-            } else {
-                window.parent.postMessage(completeMsg, '*');
+            try {
+                const response = await appInstance._handleRequest(method, url);
+                const completeMsg = { type: 'REQUEST_COMPLETE', payload: response };
+                
+                if (window.messagePort) {
+                    window.messagePort.postMessage(completeMsg);
+                } else {
+                    window.parent.postMessage(completeMsg, '*');
+                }
+            } catch (err) {
+                console.error("[Express Mock] Simulation error:", err);
+                sendPayload('RUNTIME_ERROR', err.message);
             }
         }
     };
 
     // Listen on the main window for initial requests (fallback)
-    window.addEventListener('message', requestHandler);
+    window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        requestHandler(event);
+    });
     
     // Also attach to the message port once it arrives for high-performance communication
     const checkPortInterval = setInterval(() => {
@@ -690,8 +667,11 @@ var HONO_MOCK_SETUP = `
         }
     };
 
-    window.addEventListener('message', requestHandler);
-    
+    window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        requestHandler(event);
+    });
+
     // Attach to messagePort if available
     const checkPortInterval = setInterval(() => {
         if (window.messagePort) {
@@ -704,109 +684,159 @@ var HONO_MOCK_SETUP = `
 
 // runtime/runner.ts
 var SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
-var BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+var BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>';
 var REACT_CDNS = [
-  '<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>',
-  '<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>',
+  '<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>',
+  '<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>',
   BABEL_CDN
 ];
 var P5_CDN = '<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>';
+var P5PLAY_CDNS = [
+  P5_CDN,
+  '<script src="https://cdn.jsdelivr.net/gh/rmccrear/p5.play@v2.0.0-codex.1/lib/p5.play.js"></script>'
+];
+var P5_RUNTIME_STYLES = `
+  #root {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  canvas.p5Canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important;
+    border: 2px solid rgba(37, 99, 235, 0.85);
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  body.dark canvas.p5Canvas {
+    border-color: rgba(96, 165, 250, 0.95);
+  }
+`;
 var HONO_CDN = '<script type="module">import { Hono } from "https://esm.sh/hono@4.1.0"; window.Hono = Hono;</script>';
+var HTML_RUNTIME_STYLES = `
+  #root {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .cs-script-banner,
+  .cs-hint-banner {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .cs-script-banner {
+    background: #fef3c7;
+    color: #92400e;
+    border-bottom: 1px solid #fcd34d;
+  }
+
+  .cs-hint-banner {
+    background: #dbeafe;
+    color: #1e40af;
+    border-bottom: 1px solid #93c5fd;
+  }
+
+  .cs-html-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    display: block;
+    background: #fff;
+  }
+`;
 var ENV_RECIPES = {
+  html: {
+    name: "HTML (single file)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        // The buffer renders verbatim as the srcdoc of a nested iframe with
+        // sandbox="" \u2014 script execution is blocked by the browser sandbox
+        // itself (nested sandbox flags intersect, so the outer frame's
+        // allow-scripts does not leak in). The DOMParser pass below only
+        // DETECTS script tags to show the learner a banner; it must not be
+        // "upgraded" to stripping, and sandbox="" must stay empty.
+        const probe = new DOMParser().parseFromString(code, 'text/html');
+        if (probe.querySelector('script')) {
+          const banner = document.createElement('div');
+          banner.className = 'cs-script-banner';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          root.appendChild(banner);
+        }
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', '');
+        frame.className = 'cs-html-frame';
+        frame.srcdoc = code;
+        root.appendChild(frame);
+      };
+    `
+  },
+  "html-css": {
+    name: "HTML & CSS (style.css)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.innerHTML = '';
+        // Inline copy of parseFileBundle from runtime/fileBundle.ts \u2014 the
+        // iframe kernel cannot import modules. Keep the two in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? { html: String(parsed.files['index.html'] ?? ''), css: String(parsed.files['style.css'] ?? '') }
+            : { html: code, css: '' };
+        } catch (e) { files = { html: code, css: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+
+        if (doc.querySelector('script')) {
+          const banner = document.createElement('div');
+          banner.className = 'cs-script-banner';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          root.appendChild(banner);
+        }
+
+        // Strict link semantics: only a literal style.css href resolves to
+        // the css tab. Scripts are still blocked by the inner sandbox=""
+        // attribute below, not by stripping \u2014 do not change either rule.
+        const links = doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]');
+        links.forEach((link) => {
+          const style = doc.createElement('style');
+          style.textContent = files.css;
+          link.replaceWith(style);
+        });
+        if (links.length === 0 && files.css.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+          root.appendChild(hint);
+        }
+
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', '');
+        frame.className = 'cs-html-frame';
+        frame.srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+        root.appendChild(frame);
+      };
+    `
+  },
   dom: {
     name: "DOM",
     logic: `
       window.__RUN_MODE__ = (code, root) => {
         root.innerHTML = '';
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
-      };
-    `
-  },
-  "html-css": {
-    name: "HTML + CSS",
-    styles: `
-      #root {
-        display: block;
-        align-items: initial;
-      }
-    `,
-    logic: `
-      const HTML_CSS_CODE_VERSION = "${HTML_CSS_CODE_VERSION}";
-
-      const parseHtmlCssFiles = (code) => {
-        try {
-          const parsed = JSON.parse(code);
-          if (
-            parsed &&
-            parsed.version === HTML_CSS_CODE_VERSION &&
-            typeof parsed.html === 'string' &&
-            typeof parsed.css === 'string'
-          ) {
-            return { html: parsed.html, css: parsed.css };
-          }
-        } catch (e) {}
-
-        const styleMatch = code.match(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/i);
-        if (!styleMatch) return { html: code, css: '' };
-
-        return {
-          html: code.replace(styleMatch[0], '').trim(),
-          css: styleMatch[1].trim()
-        };
-      };
-
-      const sanitizeElement = (element) => {
-        Array.from(element.attributes || []).forEach(attr => {
-          const name = attr.name.toLowerCase();
-          const value = attr.value.trim().toLowerCase();
-          if (name.startsWith('on') || name === 'srcdoc' || value.startsWith('javascript:')) {
-            element.removeAttribute(attr.name);
-          }
-        });
-      };
-
-      const sanitizeTree = (node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          sanitizeElement(node);
-          node.querySelectorAll('*').forEach(sanitizeElement);
-        }
-      };
-
-      window.__RUN_MODE__ = (code, root) => {
-        root.innerHTML = '';
-        try {
-          const files = parseHtmlCssFiles(code);
-          const parsed = new DOMParser().parseFromString(files.html, 'text/html');
-          const scriptCount = parsed.querySelectorAll('script').length;
-          const fragment = document.createDocumentFragment();
-
-          parsed.querySelectorAll('script').forEach(script => script.remove());
-
-          if (files.css.trim()) {
-            const cssStyle = document.createElement('style');
-            cssStyle.textContent = files.css;
-            fragment.appendChild(cssStyle);
-          }
-
-          parsed.querySelectorAll('style').forEach(style => {
-            const safeStyle = document.createElement('style');
-            safeStyle.textContent = style.textContent || '';
-            fragment.appendChild(safeStyle);
-            style.remove();
-          });
-
-          Array.from(parsed.body.childNodes).forEach(node => {
-            const safeNode = document.importNode(node, true);
-            sanitizeTree(safeNode);
-            fragment.appendChild(safeNode);
-          });
-
-          root.appendChild(fragment);
-
-          if (scriptCount > 0) {
-            console.warn('Script tags are ignored in html-css mode.');
-          }
-        } catch (e) { console.error(e); }
       };
     `
   },
@@ -824,9 +854,10 @@ var ENV_RECIPES = {
       };
     `
   },
-  p5: {
-    name: "p5.js",
-    cdns: [P5_CDN],
+  p5play: {
+    name: "p5.js + p5.play",
+    cdns: P5PLAY_CDNS,
+    styles: P5_RUNTIME_STYLES,
     logic: `
       let instance = null;
       window.__RUN_MODE__ = (code, root) => {
@@ -839,7 +870,36 @@ var ENV_RECIPES = {
           }));
         });
         observer.observe(document.body, { childList: true });
-        try { eval(code); instance = new p5(); } catch (e) { console.error(e); }
+        try {
+          // Game Lab semantics: the canvas and p5 globals exist BEFORE student
+          // code runs, so top-level statements like createSprite() work.
+          // p5's redraw() looks up window.draw each frame, so a draw() defined
+          // by the eval below is picked up even though the instance already exists.
+          instance = new p5();
+          window.createCanvas(400, 400);
+          window.eval(code);
+          if (typeof window.setup === 'function') window.setup();
+        } catch (e) { console.error(e); }
+      };
+    `
+  },
+  p5: {
+    name: "p5.js",
+    cdns: [P5_CDN],
+    styles: P5_RUNTIME_STYLES,
+    logic: `
+      let instance = null;
+      window.__RUN_MODE__ = (code, root) => {
+        if (instance) instance.remove();
+        root.innerHTML = '';
+        window.setup = window.draw = null;
+        const observer = new MutationObserver(m => {
+          m.forEach(mutation => mutation.addedNodes.forEach(node => {
+            if (node.tagName === 'CANVAS' && node.classList.contains('p5Canvas')) root.appendChild(node);
+          }));
+        });
+        observer.observe(document.body, { childList: true });
+        try { window.eval(code); instance = new p5(); } catch (e) { console.error(e); }
       };
     `
   },
@@ -847,6 +907,7 @@ var ENV_RECIPES = {
     name: "p5.js TS",
     cdns: [P5_CDN, BABEL_CDN],
     babelPresets: ["typescript", "env"],
+    styles: P5_RUNTIME_STYLES,
     logic: `
       let instance = null;
       window.__RUN_MODE__ = (code, root) => {
@@ -864,7 +925,7 @@ var ENV_RECIPES = {
             presets: ['env', 'typescript'], 
             filename: 'sketch.ts' 
           }).code;
-          eval(transpiled); 
+          window.eval(transpiled); 
           instance = new p5(); 
         } catch (e) { console.error(e); }
       };
@@ -938,8 +999,14 @@ var ENV_RECIPES = {
         root.innerHTML = '';
         if (window.appInstance) window.appInstance.routes = { GET: {} };
         try {
-          const transpiled = Babel.transform(code, { presets: ['env', 'typescript'], filename: 'server.ts' }).code;
-          eval(transpiled);
+          var exports = {};
+          var module = { exports: exports };
+          const transpiled = Babel.transform(code, {
+            presets: [['env', { modules: 'commonjs' }], 'typescript'],
+            filename: 'server.ts',
+            sourceType: 'module'
+          }).code;
+          new Function('module', 'exports', transpiled)(module, exports);
         } catch (e) { console.error(e); }
       };
     `
@@ -970,9 +1037,10 @@ var ENV_RECIPES = {
             var module = { exports: exports };
             
             // Transpile to handle 'export default'
-            const transpiled = Babel.transform(code, { 
-                presets: ['env'], 
-                filename: 'index.js' 
+            const transpiled = Babel.transform(code, {
+                presets: [['env', { modules: 'commonjs' }]],
+                filename: 'index.js',
+                sourceType: 'module'
             }).code;
 
             // Execute code
@@ -1017,7 +1085,11 @@ var ENV_RECIPES = {
             var exports = {};
             var module = { exports: exports };
 
-            const transpiled = Babel.transform(code, { presets: ['env', 'typescript'], filename: 'server.ts' }).code;
+            const transpiled = Babel.transform(code, {
+              presets: [['env', { modules: 'commonjs' }], 'typescript'],
+              filename: 'server.ts',
+              sourceType: 'module'
+            }).code;
             
             new Function('module', 'exports', transpiled)(module, exports);
 
@@ -1091,6 +1163,7 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
+var import_react3 = __toESM(require("react"), 1);
 var import_lucide_react = require("lucide-react");
 
 // components/Button.tsx
@@ -1123,12 +1196,12 @@ var Button = ({
 
 // components/Console.tsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
-var Console = ({
+var Console = import_react3.default.memo(function Console2({
   logs,
   onClear,
   themeMode,
   className = ""
-}) => {
+}) {
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
@@ -1159,11 +1232,13 @@ var Console = ({
       }
     )
   ] });
-};
+});
 
 // components/OutputFrame.tsx
 var import_lucide_react2 = require("lucide-react");
 var import_jsx_runtime5 = require("react/jsx-runtime");
+var MAX_CONSOLE_LOGS = 500;
+var appendLog = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS ? [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry] : [...prev, entry];
 var OutputFrame = ({
   runTrigger,
   code,
@@ -1173,46 +1248,47 @@ var OutputFrame = ({
   isPredictionMode = false,
   debugMode = false
 }) => {
-  const iframeRef = (0, import_react3.useRef)(null);
-  const containerRef = (0, import_react3.useRef)(null);
-  const channelRef = (0, import_react3.useRef)(null);
-  const [logs, setLogs] = (0, import_react3.useState)([]);
-  const [consoleHeight, setConsoleHeight] = (0, import_react3.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react3.useState)(false);
+  const iframeRef = (0, import_react4.useRef)(null);
+  const containerRef = (0, import_react4.useRef)(null);
+  const channelRef = (0, import_react4.useRef)(null);
+  const [logs, setLogs] = (0, import_react4.useState)([]);
+  const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
-  const showConsole = environmentMode !== "html-css";
-  const addSystemLog = (0, import_react3.useCallback)((msg, type = "log") => {
-    setLogs((prev) => [...prev, {
+  const isHtmlMode = environmentMode === "html" || environmentMode === "html-css";
+  const addSystemLog = (0, import_react4.useCallback)((msg, type = "log") => {
+    setLogs((prev) => appendLog(prev, {
       type,
       content: `[System] ${msg}`,
       timestamp: Date.now()
-    }]);
+    }));
   }, []);
-  const sandboxHtml = (0, import_react3.useMemo)(() => {
-    if (debugMode) addSystemLog(`Generating Sandbox HTML for mode: ${environmentMode}`);
-    return getSandboxHtml(environmentMode, isPredictionMode);
-  }, [environmentMode, isPredictionMode, debugMode, addSystemLog]);
-  (0, import_react3.useEffect)(() => {
-    channelRef.current = new MessageChannel();
-    channelRef.current.port1.onmessage = (event) => {
-      const { type, payload } = event.data;
-      if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
-        setLogs((prev) => [...prev, {
-          type: type === "RUNTIME_ERROR" ? "error" : type === "CONSOLE_WARN" ? "warn" : "log",
-          content: payload,
-          timestamp: Date.now()
-        }]);
-      } else if (type === "READY_SIGNAL" && debugMode) {
-        addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
-      }
-    };
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.port1.close();
-      }
-    };
+  const sandboxHtml = (0, import_react4.useMemo)(
+    () => getSandboxHtml(environmentMode, isPredictionMode),
+    [environmentMode, isPredictionMode]
+  );
+  const handleKernelMessage = (0, import_react4.useCallback)((data) => {
+    if (!data || typeof data !== "object") return;
+    const { type, payload } = data;
+    if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
+      setLogs((prev) => appendLog(prev, {
+        type: type === "RUNTIME_ERROR" ? "error" : type === "CONSOLE_WARN" ? "warn" : "log",
+        content: payload,
+        timestamp: Date.now()
+      }));
+    } else if (type === "READY_SIGNAL" && debugMode) {
+      addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
+    }
   }, [debugMode, addSystemLog]);
-  (0, import_react3.useEffect)(() => {
+  const kernelMessageRef = (0, import_react4.useRef)(handleKernelMessage);
+  (0, import_react4.useEffect)(() => {
+    kernelMessageRef.current = handleKernelMessage;
+  }, [handleKernelMessage]);
+  (0, import_react4.useEffect)(() => () => {
+    channelRef.current?.port1.close();
+    channelRef.current = null;
+  }, []);
+  (0, import_react4.useEffect)(() => {
     if (runTrigger > 0) {
       setLogs([]);
       if (debugMode) addSystemLog("Attempting to execute code...");
@@ -1224,32 +1300,45 @@ var OutputFrame = ({
       }
     }
   }, [runTrigger, code, debugMode, addSystemLog]);
-  (0, import_react3.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
+  (0, import_react4.useEffect)(() => {
+    if (!isHtmlMode) return;
+    const timer = setTimeout(() => {
+      if (iframeRef.current?.contentWindow) {
+        executeCodeInSandbox(iframeRef.current.contentWindow, code);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [code, isHtmlMode]);
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog('Iframe "onLoad" event fired.');
-    if (iframeRef.current?.contentWindow && channelRef.current) {
-      iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channelRef.current.port2]);
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-      if (debugMode) addSystemLog("Channel Ports initialized.");
-    }
+    if (!iframeRef.current?.contentWindow) return;
+    channelRef.current?.port1.close();
+    const channel = new MessageChannel();
+    channelRef.current = channel;
+    channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
+    iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
+    iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    if (isHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    if (debugMode) addSystemLog("Channel Ports initialized.");
   };
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react3.useCallback)((e) => {
+  const handleMouseMove = (0, import_react4.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
     const newHeight = containerRect.height - relativeY;
     setConsoleHeight(Math.max(30, Math.min(containerRect.height * 0.8, newHeight)));
   }, [isDragging]);
-  const handleMouseUp = (0, import_react3.useCallback)(() => setIsDragging(false), []);
-  (0, import_react3.useEffect)(() => {
+  const handleMouseUp = (0, import_react4.useCallback)(() => setIsDragging(false), []);
+  (0, import_react4.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1268,7 +1357,7 @@ var OutputFrame = ({
     PreviewContainer,
     {
       themeMode,
-      isReady: runTrigger > 0,
+      isReady: isHtmlMode || runTrigger > 0,
       overlayMessage: isBlurred ? "Make your Prediction" : void 0,
       children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
         !isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -1283,7 +1372,7 @@ var OutputFrame = ({
           },
           `${environmentMode}-${isPredictionMode}`
         ) }),
-        !isHeadless && showConsole && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        !isHeadless && !isHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "div",
           {
             onMouseDown: handleMouseDown,
@@ -1291,7 +1380,7 @@ var OutputFrame = ({
             children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react2.GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        showConsole && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        !isHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
         isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "iframe",
           {
@@ -1310,9 +1399,11 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-var import_react4 = require("react");
+var import_react5 = require("react");
 var import_lucide_react3 = require("lucide-react");
 var import_jsx_runtime6 = require("react/jsx-runtime");
+var MAX_CONSOLE_LOGS2 = 500;
+var appendLog2 = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS2 ? [...prev.slice(-(MAX_CONSOLE_LOGS2 - 1)), entry] : [...prev, entry];
 var ServerOutput = ({
   runTrigger,
   code,
@@ -1322,24 +1413,26 @@ var ServerOutput = ({
   debugMode = false,
   onTriggerRun
 }) => {
-  const iframeRef = (0, import_react4.useRef)(null);
-  const containerRef = (0, import_react4.useRef)(null);
-  const channelRef = (0, import_react4.useRef)(null);
-  const [logs, setLogs] = (0, import_react4.useState)([]);
-  const [route, setRoute] = (0, import_react4.useState)("/");
-  const [method, setMethod] = (0, import_react4.useState)("GET");
-  const [response, setResponse] = (0, import_react4.useState)(null);
-  const [pendingRequest, setPendingRequest] = (0, import_react4.useState)(null);
-  const [isLoading, setIsLoading] = (0, import_react4.useState)(false);
-  const [serverReady, setServerReady] = (0, import_react4.useState)(false);
-  const [runtimeError, setRuntimeError] = (0, import_react4.useState)(null);
-  const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
-  const addSystemLog = (0, import_react4.useCallback)((msg) => {
-    setLogs((prev) => [...prev, { type: "log", content: `[System] ${msg}`, timestamp: Date.now() }]);
+  const iframeRef = (0, import_react5.useRef)(null);
+  const containerRef = (0, import_react5.useRef)(null);
+  const channelRef = (0, import_react5.useRef)(null);
+  const [logs, setLogs] = (0, import_react5.useState)([]);
+  const [route, setRoute] = (0, import_react5.useState)("/");
+  const [method] = (0, import_react5.useState)("GET");
+  const [response, setResponse] = (0, import_react5.useState)(null);
+  const [pendingRequest, setPendingRequest] = (0, import_react5.useState)(null);
+  const [isLoading, setIsLoading] = (0, import_react5.useState)(false);
+  const [serverReady, setServerReady] = (0, import_react5.useState)(false);
+  const [runtimeError, setRuntimeError] = (0, import_react5.useState)(null);
+  const startupTimeoutRef = (0, import_react5.useRef)(null);
+  const requestTimeoutRef = (0, import_react5.useRef)(null);
+  const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
+  const addSystemLog = (0, import_react5.useCallback)((msg) => {
+    setLogs((prev) => appendLog2(prev, { type: "log", content: `[System] ${msg}`, timestamp: Date.now() }));
   }, []);
-  const clearConsole = (0, import_react4.useCallback)(() => setLogs([]), []);
-  const sendSimulatedRequest = (0, import_react4.useCallback)((reqMethod, reqUrl) => {
+  const clearConsole = (0, import_react5.useCallback)(() => setLogs([]), []);
+  const sendSimulatedRequest = (0, import_react5.useCallback)((reqMethod, reqUrl) => {
     if (!channelRef.current) return;
     const requestPayload = {
       type: "SIMULATE_REQUEST",
@@ -1348,7 +1441,7 @@ var ServerOutput = ({
     if (debugMode) addSystemLog(`Sending Request: ${reqMethod} ${reqUrl}`);
     channelRef.current.port1.postMessage(requestPayload);
   }, [debugMode, addSystemLog]);
-  const handleSandboxMessage = (0, import_react4.useCallback)((data) => {
+  const handleSandboxMessage = (0, import_react5.useCallback)((data) => {
     if (!data || typeof data !== "object") return;
     const { type, payload } = data;
     switch (type) {
@@ -1373,16 +1466,16 @@ var ServerOutput = ({
         setRuntimeError(payload);
         setIsLoading(false);
         setPendingRequest(null);
-        setLogs((prev) => [...prev, { type: "error", content: payload, timestamp: Date.now() }]);
+        setLogs((prev) => appendLog2(prev, { type: "error", content: payload, timestamp: Date.now() }));
         setServerReady(false);
         break;
       case "CONSOLE_LOG":
       case "CONSOLE_WARN":
-        setLogs((prev) => [...prev, {
+        setLogs((prev) => appendLog2(prev, {
           type: type === "CONSOLE_WARN" ? "warn" : "log",
           content: payload,
           timestamp: Date.now()
-        }]);
+        }));
         break;
       case "CONSOLE_CLEAR":
         clearConsole();
@@ -1392,30 +1485,28 @@ var ServerOutput = ({
         break;
     }
   }, [debugMode, addSystemLog, clearConsole, sendSimulatedRequest]);
-  (0, import_react4.useEffect)(() => {
-    const channel = new MessageChannel();
-    channelRef.current = channel;
-    channel.port1.onmessage = (event) => {
-      handleSandboxMessage(event.data);
-    };
-    return () => {
-      channel.port1.close();
-      channelRef.current = null;
-    };
+  const sandboxMessageRef = (0, import_react5.useRef)(handleSandboxMessage);
+  (0, import_react5.useEffect)(() => {
+    sandboxMessageRef.current = handleSandboxMessage;
   }, [handleSandboxMessage]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => () => {
+    channelRef.current?.port1.close();
+    channelRef.current = null;
+  }, []);
+  (0, import_react5.useEffect)(() => {
     const globalListener = (event) => {
+      if (event.source !== iframeRef.current?.contentWindow) return;
       if (event.data && typeof event.data === "object" && event.data.type) {
-        handleSandboxMessage(event.data);
+        sandboxMessageRef.current(event.data);
       }
     };
     window.addEventListener("message", globalListener);
     return () => window.removeEventListener("message", globalListener);
-  }, [handleSandboxMessage]);
-  const sandboxHtml = (0, import_react4.useMemo)(() => {
+  }, []);
+  const sandboxHtml = (0, import_react5.useMemo)(() => {
     return getSandboxHtml(environmentMode);
   }, [environmentMode]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (runTrigger > 0 && iframeRef.current?.contentWindow) {
       setServerReady(false);
       setResponse(null);
@@ -1432,17 +1523,20 @@ var ServerOutput = ({
       executeCodeInSandbox(iframeRef.current.contentWindow, code);
     }
   }, [runTrigger, code, debugMode, addSystemLog, method, route]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog("Server Iframe loaded.");
-    if (iframeRef.current?.contentWindow && channelRef.current) {
-      iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channelRef.current.port2]);
-      iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    }
+    if (!iframeRef.current?.contentWindow) return;
+    channelRef.current?.port1.close();
+    const channel = new MessageChannel();
+    channelRef.current = channel;
+    channel.port1.onmessage = (event) => sandboxMessageRef.current(event.data);
+    iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
+    iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
   };
   const handleSendClick = () => {
     setIsLoading(true);
@@ -1455,19 +1549,61 @@ var ServerOutput = ({
       console.warn("ServerOutput: onTriggerRun prop missing");
     }
   };
+  (0, import_react5.useEffect)(() => {
+    if (!isLoading || !pendingRequest || serverReady || runtimeError) {
+      if (startupTimeoutRef.current) {
+        window.clearTimeout(startupTimeoutRef.current);
+        startupTimeoutRef.current = null;
+      }
+      return;
+    }
+    startupTimeoutRef.current = window.setTimeout(() => {
+      setIsLoading(false);
+      setPendingRequest(null);
+      setServerReady(false);
+      setRuntimeError("Server startup timed out. For Express, ensure your code calls app.listen(...). For Hono, export default app (or call app.fire/app.listen).");
+      addSystemLog("Server startup timed out while waiting for SERVER_READY.");
+    }, 5e3);
+    return () => {
+      if (startupTimeoutRef.current) {
+        window.clearTimeout(startupTimeoutRef.current);
+        startupTimeoutRef.current = null;
+      }
+    };
+  }, [isLoading, pendingRequest, serverReady, runtimeError, addSystemLog]);
+  (0, import_react5.useEffect)(() => {
+    if (!isLoading || pendingRequest || runtimeError) {
+      if (requestTimeoutRef.current) {
+        window.clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+      return;
+    }
+    requestTimeoutRef.current = window.setTimeout(() => {
+      setIsLoading(false);
+      setRuntimeError("Request timed out. Check that your route handler sends a response: res.send()/res.json() for Express, or return a Response for Hono.");
+      addSystemLog("Request timed out while waiting for REQUEST_COMPLETE.");
+    }, 1e4);
+    return () => {
+      if (requestTimeoutRef.current) {
+        window.clearTimeout(requestTimeoutRef.current);
+        requestTimeoutRef.current = null;
+      }
+    };
+  }, [isLoading, pendingRequest, runtimeError, addSystemLog]);
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react4.useCallback)((e) => {
+  const handleMouseMove = (0, import_react5.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
     const newHeight = containerRect.height - relativeY;
     setConsoleHeight(Math.max(30, Math.min(containerRect.height * 0.8, newHeight)));
   }, [isDragging]);
-  const handleMouseUp = (0, import_react4.useCallback)(() => setIsDragging(false), []);
-  (0, import_react4.useEffect)(() => {
+  const handleMouseUp = (0, import_react5.useCallback)(() => setIsDragging(false), []);
+  (0, import_react5.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -1546,54 +1682,26 @@ var ServerOutput = ({
   ] });
 };
 
-// docs.ts
-var P5_DOCS = [
-  {
-    title: "Structure",
-    items: [
-      { name: "setup()", desc: "Called once when the program starts. Use it to define initial environment properties." },
-      { name: "draw()", desc: "Called directly after setup(), the draw() function continuously executes the lines of code contained inside its block." }
-    ]
-  },
-  {
-    title: "Canvas & Color",
-    items: [
-      { name: "createCanvas(w, h)", desc: "Creates the canvas element in the document.", example: "createCanvas(400, 400);" },
-      { name: "background(color)", desc: "Sets the color used for the background of the canvas.", example: "background(220);" },
-      { name: "fill(color)", desc: "Sets the color used to fill shapes.", example: "fill(255, 0, 0);" },
-      { name: "noFill()", desc: "Disables filling geometry." },
-      { name: "stroke(color)", desc: "Sets the color used to draw lines and borders around shapes." },
-      { name: "noStroke()", desc: "Disables drawing the stroke (outline)." }
-    ]
-  },
-  {
-    title: "Shapes",
-    items: [
-      { name: "rect(x, y, w, h)", desc: "Draws a rectangle to the screen.", example: "rect(30, 20, 55, 55);" },
-      { name: "ellipse(x, y, w, h)", desc: "Draws an ellipse (oval) to the screen.", example: "ellipse(56, 46, 55, 55);" },
-      { name: "circle(x, y, d)", desc: "Draws a circle to the screen." },
-      { name: "line(x1, y1, x2, y2)", desc: "Draws a line (a direct path between two points) to the screen." },
-      { name: "point(x, y)", desc: "Draws a point, a single coordinate in space." },
-      { name: "triangle(x1, y1, x2, y2, x3, y3)", desc: "A triangle is a plane created by connecting three points." }
-    ]
-  },
-  {
-    title: "Input",
-    items: [
-      { name: "mouseX", desc: "System variable containing the current horizontal position of the mouse." },
-      { name: "mouseY", desc: "System variable containing the current vertical position of the mouse." },
-      { name: "mouseIsPressed", desc: "Boolean variable that is true if the mouse is being pressed." },
-      { name: "keyIsPressed", desc: "Boolean variable that is true if any key is pressed." }
-    ]
+// runtime/fileBundle.ts
+var serializeFileBundle = (files) => JSON.stringify({ __csFiles__: 1, files });
+var parseFileBundle = (code) => {
+  try {
+    const parsed = JSON.parse(code);
+    if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
+      return {
+        "index.html": String(parsed.files["index.html"] ?? ""),
+        "style.css": String(parsed.files["style.css"] ?? "")
+      };
+    }
+  } catch {
   }
-];
-var getDocsForMode = (mode) => {
-  if (mode === "p5") return P5_DOCS;
-  return null;
+  return { "index.html": code, "style.css": "" };
 };
 
 // components/CodingEnvironment.tsx
 var import_jsx_runtime7 = require("react/jsx-runtime");
+var TAB_FILES = ["index.html", "style.css"];
+var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
 var CodingEnvironment = ({
   code,
   onChange,
@@ -1606,16 +1714,28 @@ var CodingEnvironment = ({
   predictionPrompt,
   debugMode = false
 }) => {
-  const [isHelpOpen, setIsHelpOpen] = (0, import_react5.useState)(false);
-  const [predictionAnswer, setPredictionAnswer] = (0, import_react5.useState)("");
-  const [isPredictionLocked, setIsPredictionLocked] = (0, import_react5.useState)(false);
-  const [layout, setLayout] = (0, import_react5.useState)("horizontal");
-  const [editorRatio, setEditorRatio] = (0, import_react5.useState)(0.5);
-  const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
-  const containerRef = (0, import_react5.useRef)(null);
-  const hasDocs = !!getDocsForMode(environmentMode);
+  const [predictionAnswer, setPredictionAnswer] = (0, import_react6.useState)("");
+  const [isPredictionLocked, setIsPredictionLocked] = (0, import_react6.useState)(false);
+  const [layout, setLayout] = (0, import_react6.useState)("horizontal");
+  const [editorRatio, setEditorRatio] = (0, import_react6.useState)(0.5);
+  const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
+  const containerRef = (0, import_react6.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
-  const editorLabel = environmentMode === "html-css" ? "HTML + CSS" : `${environmentMode}.script`;
+  const isTabbedMode = environmentMode === "html-css";
+  const [activeFile, setActiveFile] = (0, import_react6.useState)("index.html");
+  const files = (0, import_react6.useMemo)(
+    () => isTabbedMode ? parseFileBundle(code) : null,
+    [isTabbedMode, code]
+  );
+  const editorCode = isTabbedMode && files ? files[activeFile] : code;
+  const handleEditorChange = (value) => {
+    const next = value || "";
+    if (isTabbedMode && files) {
+      onChange(serializeFileBundle({ ...files, [activeFile]: next }));
+    } else {
+      onChange(next);
+    }
+  };
   const handleRunClick = () => {
     if (predictionPrompt) setIsPredictionLocked(true);
     onRun();
@@ -1624,22 +1744,26 @@ var CodingEnvironment = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react5.useCallback)((e) => {
+  const handleMouseMove = (0, import_react6.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const newRatio = layout === "horizontal" ? (e.clientX - rect.left) / rect.width : (e.clientY - rect.top) / rect.height;
     setEditorRatio(Math.max(0.2, Math.min(0.8, newRatio)));
   }, [isDragging, layout]);
-  (0, import_react5.useEffect)(() => {
+  const handleMouseUp = (0, import_react6.useCallback)(() => setIsDragging(false), []);
+  (0, import_react6.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", () => setIsDragging(false));
+      window.addEventListener("mouseup", handleMouseUp);
+    } else {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     }
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", () => setIsDragging(false));
+      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
   const isServerMode = environmentMode.startsWith("express") || environmentMode.startsWith("hono");
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
     predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex-1", children: [
@@ -1659,7 +1783,15 @@ var CodingEnvironment = ({
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.FileCode, { className: "w-4 h-4 text-blue-500" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: editorLabel })
+        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex items-center gap-1", children: TAB_FILES.map((file) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+          "button",
+          {
+            onClick: () => setActiveFile(file),
+            className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${activeFile === file ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
+            children: file
+          },
+          file
+        )) }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-4", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
@@ -1705,11 +1837,12 @@ var CodingEnvironment = ({
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
         CodeEditor,
         {
-          code,
-          onChange: (val) => onChange(val || ""),
+          code: editorCode,
+          onChange: handleEditorChange,
           themeMode,
           environmentMode,
           sessionId,
+          activeFile: isTabbedMode ? activeFile : void 0,
           readOnly: !!predictionPrompt && isPredictionLocked
         }
       ) }),
@@ -1749,9 +1882,9 @@ var CodeShoebox = ({
   prediction_prompt,
   debugMode = false
 }) => {
-  const [runTrigger, setRunTrigger] = (0, import_react6.useState)(0);
-  const [isRunning, setIsRunning] = (0, import_react6.useState)(false);
-  (0, import_react6.useEffect)(() => {
+  const [runTrigger, setRunTrigger] = (0, import_react7.useState)(0);
+  const [isRunning, setIsRunning] = (0, import_react7.useState)(false);
+  (0, import_react7.useEffect)(() => {
     setRunTrigger(0);
     setIsRunning(false);
   }, [sessionId]);
@@ -1762,7 +1895,7 @@ var CodeShoebox = ({
       setIsRunning(false);
     }, 500);
   };
-  const themeStyles = (0, import_react6.useMemo)(() => {
+  const themeStyles = (0, import_react7.useMemo)(() => {
     const colors = themeMode === "dark" ? theme.dark : theme.light;
     const defaultBg = themeMode === "dark" ? "220 13% 18%" : "0 0% 98%";
     const defaultFg = themeMode === "dark" ? "0 0% 95%" : "220 13% 18%";
@@ -1803,7 +1936,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-var import_react7 = require("react");
+var import_react8 = require("react");
 
 // theme.ts
 var baseTheme = {
@@ -1886,6 +2019,59 @@ var modernLabTheme = {
 var themes = [baseTheme, borisTheme, modernLabTheme];
 
 // constants.ts
+var HTML_STARTER_CODE = `<!DOCTYPE html>
+<html>
+<head>
+  <title>My First Page</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+    }
+    h1 { color: #6366f1; }
+    .highlight {
+      background: #fef08a;
+      padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello, HTML!</h1>
+  <p>This is a <span class="highlight">real
+     web page</span>. Edit it and press Run.</p>
+  <a href="https://developer.mozilla.org">
+    Learn more at MDN</a>
+</body>
+</html>
+`;
+var HTML_CSS_STARTER_CODE = serializeFileBundle({
+  "index.html": `<!DOCTYPE html>
+<html>
+<head>
+  <title>Two Files</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Hello, style.css!</h1>
+  <p>The styles for this page live in the <strong>style.css</strong> tab.</p>
+</body>
+</html>
+`,
+  "style.css": `body {
+  font-family: sans-serif;
+  margin: 2rem;
+}
+
+h1 {
+  color: #6366f1;
+}
+
+strong {
+  background: #fef08a;
+  padding: 0 4px;
+}
+`
+});
 var STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.
 // 'root' is a reference to the main container div.
@@ -1912,44 +2098,6 @@ root.appendChild(button);
 // Example 3: Console logging
 console.log('Code loaded successfully.');
 `;
-var HTML_CSS_STARTER_CODE = serializeHtmlCssFiles({
-  html: `<main class="gallery-card">
-  <figure>
-    <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80" alt="A laptop on a desk">
-    <figcaption>Workspace photo</figcaption>
-  </figure>
-</main>`,
-  css: `body {
-  background: #f6f7fb;
-}
-
-.gallery-card {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-figure {
-  margin: 0;
-  border: 1px solid #d8dee9;
-  border-radius: 8px;
-  overflow: hidden;
-  background: white;
-  box-shadow: 0 12px 28px rgba(31, 41, 55, 0.16);
-}
-
-img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  display: block;
-}
-
-figcaption {
-  padding: 12px 16px;
-  font: 600 15px system-ui, sans-serif;
-  color: #253044;
-}`
-});
 var TYPESCRIPT_STARTER_CODE = [
   "// Welcome to TypeScript!",
   "// The browser will transpile this code before running it.",
@@ -2312,8 +2460,26 @@ myTodos.showTasks();
 `;
 
 // hooks/useSandboxState.ts
+var VALID_MODES = [
+  "html",
+  "html-css",
+  "dom",
+  "typescript",
+  "p5",
+  "p5-ts",
+  "react",
+  "react-ts",
+  "express",
+  "express-ts",
+  "hono",
+  "hono-ts",
+  "node-js",
+  "node-ts"
+];
 var getStarterCode = (mode) => {
   switch (mode) {
+    case "html":
+      return HTML_STARTER_CODE;
     case "html-css":
       return HTML_CSS_STARTER_CODE;
     case "p5":
@@ -2344,17 +2510,19 @@ var getStarterCode = (mode) => {
 };
 var useSandboxState = (persistenceKey, initialCodeOverride, defaultMode = "dom") => {
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : "";
-  const getStorageKey = (0, import_react7.useCallback)((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
-  const loadState = (keySuffix, fallback) => {
+  const getStorageKey = (0, import_react8.useCallback)((key) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
+  const loadState = (keySuffix, fallback, validValues) => {
     if (!persistenceKey || typeof window === "undefined") return fallback;
     try {
       const saved = localStorage.getItem(getStorageKey(keySuffix));
-      return saved || fallback;
+      if (!saved) return fallback;
+      if (validValues && !validValues.includes(saved)) return fallback;
+      return saved;
     } catch {
       return fallback;
     }
   };
-  const loadCode = (0, import_react7.useCallback)((mode) => {
+  const loadCode = (0, import_react8.useCallback)((mode) => {
     const fallback = initialCodeOverride ?? getStarterCode(mode);
     if (!persistenceKey || typeof window === "undefined") return fallback;
     try {
@@ -2364,25 +2532,25 @@ var useSandboxState = (persistenceKey, initialCodeOverride, defaultMode = "dom")
       return fallback;
     }
   }, [persistenceKey, getStorageKey, initialCodeOverride]);
-  const [environmentMode, setEnvironmentMode] = (0, import_react7.useState)(() => loadState("env_mode", defaultMode));
-  const [themeMode, setThemeMode] = (0, import_react7.useState)(() => loadState("theme_mode", "dark"));
-  const [activeThemeName, setActiveThemeName] = (0, import_react7.useState)(() => loadState("theme_name", themes[0].name));
-  const [code, setCode] = (0, import_react7.useState)(() => loadCode(environmentMode));
-  const [sessionId, setSessionId] = (0, import_react7.useState)(() => Math.floor(Math.random() * 1e6));
-  (0, import_react7.useEffect)(() => {
+  const [environmentMode, setEnvironmentMode] = (0, import_react8.useState)(() => loadState("env_mode", defaultMode, VALID_MODES));
+  const [themeMode, setThemeMode] = (0, import_react8.useState)(() => loadState("theme_mode", "dark", ["light", "dark"]));
+  const [activeThemeName, setActiveThemeName] = (0, import_react8.useState)(() => loadState("theme_name", themes[0].name, themes.map((t) => t.name)));
+  const [code, setCode] = (0, import_react8.useState)(() => loadCode(environmentMode));
+  const [sessionId, setSessionId] = (0, import_react8.useState)(() => Math.floor(Math.random() * 1e6));
+  (0, import_react8.useEffect)(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);
     localStorage.setItem(getStorageKey("theme_mode"), themeMode);
     localStorage.setItem(getStorageKey("theme_name"), activeThemeName);
     localStorage.setItem(getStorageKey(`code_${environmentMode}`), code);
   }, [environmentMode, themeMode, activeThemeName, code, persistenceKey, getStorageKey]);
-  const switchMode = (0, import_react7.useCallback)((newMode) => {
+  const switchMode = (0, import_react8.useCallback)((newMode) => {
     if (newMode === environmentMode) return;
     setEnvironmentMode(newMode);
     setCode(loadCode(newMode));
     setSessionId((prev) => prev + 1);
   }, [environmentMode, loadCode]);
-  const resetCode = (0, import_react7.useCallback)(() => {
+  const resetCode = (0, import_react8.useCallback)(() => {
     const starter = initialCodeOverride ?? getStarterCode(environmentMode);
     setCode(starter);
     setSessionId((prev) => prev + 1);
@@ -2402,9 +2570,9 @@ var useSandboxState = (persistenceKey, initialCodeOverride, defaultMode = "dom")
 };
 
 // hooks/useAutoKey.ts
-var import_react8 = require("react");
+var import_react9 = require("react");
 var useAutoKey = (identifier, initialCode = "", prefix = "auto") => {
-  const key = (0, import_react8.useMemo)(() => {
+  const key = (0, import_react9.useMemo)(() => {
     if (typeof window === "undefined") {
       return `${prefix}_server`;
     }
@@ -2428,8 +2596,6 @@ var useAutoKey = (identifier, initialCode = "", prefix = "auto") => {
   baseTheme,
   borisTheme,
   modernLabTheme,
-  parseHtmlCssFiles,
-  serializeHtmlCssFiles,
   themes,
   useAutoKey,
   useSandboxState

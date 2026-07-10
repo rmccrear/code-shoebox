@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "module",
   "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
   "main": "export.cjs",
@@ -30,7 +30,15 @@
     "playground",
     "p5.js"
   ],
-  "author": "",
+  "author": "Robert McCreary Mannino",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rmccrear/code-shoebox.git"
+  },
+  "homepage": "https://github.com/rmccrear/code-shoebox#readme",
   "license": "MIT",
+  "overrides": {
+    "dompurify": "^3.4.0"
+  },
   "style": "styles.css"
 }
