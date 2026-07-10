@@ -7,8 +7,14 @@
   Tailwind's preflight (reset) can sometimes interfere with Monaco's internal alignment.
 */
 .monaco-editor-container .monaco-editor,
-.monaco-editor-container .monaco-editor .inputarea {
+.monaco-editor-container .monaco-editor .inputarea,
+.monaco-editor-container .monaco-editor .view-line,
+.monaco-editor-container .monaco-editor .view-line span,
+.monaco-editor-container .monaco-editor textarea {
   text-align: left !important;
+  letter-spacing: 0 !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "liga" 0, "calt" 0 !important;
 }
 
 /* Ensure z-index context is correct for widgets/hovers */

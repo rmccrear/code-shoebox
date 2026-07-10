@@ -3,6 +3,8 @@ import React, { useMemo } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
 
+const EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+
 interface CodeEditorProps {
   code: string;
   onChange: (value: string | undefined) => void;
@@ -59,6 +61,18 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();
+
+    const refreshEditorMetrics = () => {
+      monaco.editor.remeasureFonts();
+      editor.layout();
+    };
+
+    refreshEditorMetrics();
+    window.requestAnimationFrame(refreshEditorMetrics);
+    window.setTimeout(refreshEditorMetrics, 250);
+    document.fonts?.ready
+      .then(refreshEditorMetrics)
+      .catch(() => undefined);
     
     // Configure compiler options for TS
     if (language === 'typescript') {
@@ -253,10 +267,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           automaticLayout: true,
           padding: { top: 16, bottom: 16 },
           scrollBeyondLastLine: false,
-          fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
+          fontFamily: EDITOR_FONT_FAMILY,
+          fontLigatures: false,
           fixedOverflowWidgets: true,
           renderValidationDecorations: 'on',
           lineHeight: 24,
+          letterSpacing: 0,
         }}
       />
     </div>
