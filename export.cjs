@@ -63,7 +63,7 @@ var CodeEditor = ({
 }) => {
   const modelPath = (0, import_react.useMemo)(() => {
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
-    if (environmentMode === "html-css") return `${basePath}-${activeFile || "index.html"}`;
+    if (activeFile) return `${basePath}-${activeFile}`;
     switch (environmentMode) {
       case "typescript":
       case "express-ts":
@@ -84,8 +84,10 @@ var CodeEditor = ({
     }
   }, [sessionId, environmentMode, activeFile]);
   const language = (0, import_react.useMemo)(() => {
+    if (activeFile?.endsWith(".html")) return "html";
+    if (activeFile?.endsWith(".css")) return "css";
+    if (activeFile?.endsWith(".js")) return "javascript";
     if (environmentMode === "html") return "html";
-    if (environmentMode === "html-css") return activeFile === "style.css" ? "css" : "html";
     const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
     if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";
@@ -359,24 +361,43 @@ var KERNEL_SCRIPTS = `
         else window.parent.postMessage(message, '*');
     }
 
+    function formatRuntimeValue(value) {
+        if (
+            value !== null
+            && typeof value === 'object'
+            && typeof value.name === 'string'
+            && typeof value.message === 'string'
+        ) {
+            return value.name + ': ' + value.message;
+        }
+        if (typeof value === 'object' && value !== null) {
+            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
+        }
+        return String(value);
+    }
+
     // Intercept standard logs
     ['log', 'error', 'warn', 'info'].forEach(method => {
         const original = console[method];
         console[method] = function(...args) {
             original.apply(console, args);
-            const content = args.map(arg => {
-                if (typeof arg === 'object') {
-                    try { return JSON.stringify(arg, null, 2); } catch(e) { return String(arg); }
-                }
-                return String(arg);
-            }).join(' ');
+            const content = args.map(formatRuntimeValue).join(' ');
             sendPayload(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), content);
         };
     });
 
     console.log("[Kernel] Sandbox started. Initializing environment...");
 
-    window.onerror = (msg, src, line) => sendPayload('RUNTIME_ERROR', \`Error: \${msg} (Line \${line})\`);
+    window.onerror = (msg, src, line, column, error) => {
+        const content = error
+            ? formatRuntimeValue(error)
+            : 'Error: ' + String(msg) + ' (Line ' + line + ', Column ' + column + ')';
+        sendPayload('RUNTIME_ERROR', content);
+    };
+
+    window.addEventListener('unhandledrejection', (event) => {
+        sendPayload('RUNTIME_ERROR', formatRuntimeValue(event.reason));
+    });
 
     window.addEventListener('message', (event) => {
         if (event.source !== window.parent) return;
@@ -396,7 +417,7 @@ var KERNEL_SCRIPTS = `
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
             if (placeholder) placeholder.style.display = 'none';
-            window.__RUN_MODE__(code, root);
+            window.__RUN_MODE__(code, root, payload || {});
         }
     });
 `;
@@ -834,8 +855,26 @@ var ENV_RECIPES = {
   dom: {
     name: "DOM",
     logic: `
-      window.__RUN_MODE__ = (code, root) => {
-        root.innerHTML = '';
+      window.__RUN_MODE__ = (code, root, options = {}) => {
+        root.replaceChildren();
+        document.querySelectorAll('style[data-code-shoebox-fixture]').forEach((style) => style.remove());
+
+        if (options.fixtureCss !== undefined) {
+          const fixtureStyle = document.createElement('style');
+          fixtureStyle.setAttribute('data-code-shoebox-fixture', '');
+          fixtureStyle.textContent = options.fixtureCss;
+          document.head.appendChild(fixtureStyle);
+        }
+
+        if (options.fixtureHtml !== undefined) {
+          const fixtureDocument = new DOMParser().parseFromString(options.fixtureHtml, 'text/html');
+          const fixtureFragment = document.createDocumentFragment();
+          fixtureDocument.body.childNodes.forEach((node) => {
+            fixtureFragment.appendChild(document.importNode(node, true));
+          });
+          root.appendChild(fixtureFragment);
+        }
+
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
       };
     `
@@ -1144,8 +1183,9 @@ var getSandboxHtml = (mode = "dom", isPredictionMode = false) => {
     showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder
   });
 };
-var executeCodeInSandbox = (iframeContentWindow, code) => {
-  iframeContentWindow.postMessage({ type: "EXECUTE", code }, "*");
+var executeCodeInSandbox = (iframeContentWindow, code, options) => {
+  const message = options === void 0 ? { type: "EXECUTE", code } : { type: "EXECUTE", code, payload: options };
+  iframeContentWindow.postMessage(message, "*");
 };
 
 // components/PreviewContainer.tsx
@@ -1244,6 +1284,8 @@ var OutputFrame = ({
   code,
   themeMode,
   environmentMode,
+  fixtureHtml,
+  fixtureCss,
   isBlurred = false,
   isPredictionMode = false,
   debugMode = false
@@ -1251,6 +1293,7 @@ var OutputFrame = ({
   const iframeRef = (0, import_react4.useRef)(null);
   const containerRef = (0, import_react4.useRef)(null);
   const channelRef = (0, import_react4.useRef)(null);
+  const executionRef = (0, import_react4.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, debugMode });
   const [logs, setLogs] = (0, import_react4.useState)([]);
   const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
@@ -1267,6 +1310,9 @@ var OutputFrame = ({
     () => getSandboxHtml(environmentMode, isPredictionMode),
     [environmentMode, isPredictionMode]
   );
+  (0, import_react4.useEffect)(() => {
+    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, debugMode };
+  }, [code, environmentMode, fixtureHtml, fixtureCss, debugMode]);
   const handleKernelMessage = (0, import_react4.useCallback)((data) => {
     if (!data || typeof data !== "object") return;
     const { type, payload } = data;
@@ -1290,16 +1336,25 @@ var OutputFrame = ({
   }, []);
   (0, import_react4.useEffect)(() => {
     if (runTrigger > 0) {
+      const execution = executionRef.current;
       setLogs([]);
-      if (debugMode) addSystemLog("Attempting to execute code...");
+      if (execution.debugMode) addSystemLog("Attempting to execute code...");
       if (iframeRef.current?.contentWindow) {
-        executeCodeInSandbox(iframeRef.current.contentWindow, code);
-        if (debugMode) addSystemLog("EXECUTE message dispatched.");
-      } else if (debugMode) {
+        const hasDomFixture = execution.environmentMode === "dom" && (execution.fixtureHtml !== void 0 || execution.fixtureCss !== void 0);
+        if (hasDomFixture) {
+          executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+            fixtureHtml: execution.fixtureHtml,
+            fixtureCss: execution.fixtureCss
+          });
+        } else {
+          executeCodeInSandbox(iframeRef.current.contentWindow, execution.code);
+        }
+        if (execution.debugMode) addSystemLog("EXECUTE message dispatched.");
+      } else if (execution.debugMode) {
         addSystemLog("FAILED: iframe.contentWindow is null.", "error");
       }
     }
-  }, [runTrigger, code, debugMode, addSystemLog]);
+  }, [runTrigger, addSystemLog]);
   (0, import_react4.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
@@ -1700,7 +1755,7 @@ var parseFileBundle = (code) => {
 
 // components/CodingEnvironment.tsx
 var import_jsx_runtime7 = require("react/jsx-runtime");
-var TAB_FILES = ["index.html", "style.css"];
+var HTML_CSS_FILES = ["index.html", "style.css"];
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
 var CodingEnvironment = ({
   code,
@@ -1710,6 +1765,8 @@ var CodingEnvironment = ({
   runTrigger,
   themeMode,
   environmentMode,
+  fixtureHtml,
+  fixtureCss,
   sessionId,
   predictionPrompt,
   debugMode = false
@@ -1721,18 +1778,35 @@ var CodingEnvironment = ({
   const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
   const containerRef = (0, import_react6.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
-  const isTabbedMode = environmentMode === "html-css";
-  const [activeFile, setActiveFile] = (0, import_react6.useState)("index.html");
-  const files = (0, import_react6.useMemo)(
-    () => isTabbedMode ? parseFileBundle(code) : null,
-    [isTabbedMode, code]
+  const isHtmlCssMode = environmentMode === "html-css";
+  const hasDomFixtures = environmentMode === "dom" && (fixtureHtml !== void 0 || fixtureCss !== void 0);
+  const visibleFiles = (0, import_react6.useMemo)(() => {
+    if (isHtmlCssMode) return HTML_CSS_FILES;
+    if (!hasDomFixtures) return ["script.js"];
+    return [
+      "script.js",
+      ...fixtureHtml !== void 0 ? ["index.html"] : [],
+      ...fixtureCss !== void 0 ? ["style.css"] : []
+    ];
+  }, [isHtmlCssMode, hasDomFixtures, fixtureHtml, fixtureCss]);
+  const isTabbedMode = visibleFiles.length > 1;
+  const [activeFile, setActiveFile] = (0, import_react6.useState)(
+    environmentMode === "html-css" ? "index.html" : "script.js"
   );
-  const editorCode = isTabbedMode && files ? files[activeFile] : code;
+  const selectedFile = visibleFiles.includes(activeFile) ? activeFile : visibleFiles[0];
+  const files = (0, import_react6.useMemo)(
+    () => isHtmlCssMode ? parseFileBundle(code) : null,
+    [isHtmlCssMode, code]
+  );
+  (0, import_react6.useEffect)(() => {
+    if (!visibleFiles.includes(activeFile)) setActiveFile(visibleFiles[0]);
+  }, [activeFile, visibleFiles]);
+  const editorCode = isHtmlCssMode && files ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
   const handleEditorChange = (value) => {
     const next = value || "";
-    if (isTabbedMode && files) {
-      onChange(serializeFileBundle({ ...files, [activeFile]: next }));
-    } else {
+    if (isHtmlCssMode && files) {
+      onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
+    } else if (!hasDomFixtures || selectedFile === "script.js") {
       onChange(next);
     }
   };
@@ -1783,15 +1857,22 @@ var CodingEnvironment = ({
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.FileCode, { className: "w-4 h-4 text-blue-500" }),
-        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex items-center gap-1", children: TAB_FILES.map((file) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-          "button",
-          {
-            onClick: () => setActiveFile(file),
-            className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${activeFile === file ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
-            children: file
-          },
-          file
-        )) }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
+        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex items-center gap-1", children: visibleFiles.map((file) => {
+          const isFixtureFile = hasDomFixtures && file !== "script.js";
+          return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+            "button",
+            {
+              onClick: () => setActiveFile(file),
+              title: isFixtureFile ? "Fixed fixture" : void 0,
+              className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${selectedFile === file ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
+              children: [
+                file,
+                isFixtureFile && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
+              ]
+            },
+            file
+          );
+        }) }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-4", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
@@ -1842,8 +1923,8 @@ var CodingEnvironment = ({
           themeMode,
           environmentMode,
           sessionId,
-          activeFile: isTabbedMode ? activeFile : void 0,
-          readOnly: !!predictionPrompt && isPredictionLocked
+          activeFile: isTabbedMode ? selectedFile : void 0,
+          readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
         }
       ) }),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
@@ -1865,7 +1946,20 @@ var CodingEnvironment = ({
           debugMode,
           onTriggerRun: handleRunClick
         }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(OutputFrame, { runTrigger, code, themeMode, environmentMode, isBlurred: !isPredictionFulfilled, isPredictionMode: !!predictionPrompt, debugMode }) }) })
+      ) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        OutputFrame,
+        {
+          runTrigger,
+          code,
+          themeMode,
+          environmentMode,
+          fixtureHtml: environmentMode === "dom" ? fixtureHtml : void 0,
+          fixtureCss: environmentMode === "dom" ? fixtureCss : void 0,
+          isBlurred: !isPredictionFulfilled,
+          isPredictionMode: !!predictionPrompt,
+          debugMode
+        }
+      ) }) })
     ] })
   ] });
 };
@@ -1876,6 +1970,8 @@ var CodeShoebox = ({
   code,
   onCodeChange,
   environmentMode,
+  fixtureHtml,
+  fixtureCss,
   theme,
   themeMode,
   sessionId = 0,
@@ -1926,6 +2022,8 @@ var CodeShoebox = ({
           runTrigger,
           themeMode,
           environmentMode,
+          fixtureHtml,
+          fixtureCss,
           predictionPrompt: prediction_prompt,
           debugMode
         },

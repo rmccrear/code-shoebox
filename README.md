@@ -27,12 +27,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.19**:
+To install version **v1.0.21**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.19
+npm install github:rmccrear/code-shoebox#v1.0.21
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.19
+yarn add github:rmccrear/code-shoebox#v1.0.21
 ```
 
 ## Maintenance & Releases
@@ -144,6 +144,29 @@ When `debugMode` is set to `true`, the internal console will output high-visibil
 />
 ```
 
+## DOM Fixtures
+
+In `dom` mode, a lesson can provide trusted host-authored HTML and CSS for learner JavaScript to manipulate. The editor starts on editable `script.js`; supplied `index.html` and `style.css` tabs are visible but read-only. The sandbox restores both fixtures before every Run, so each execution starts from the same markup and styles.
+
+```tsx
+const [code, setCode] = React.useState(`
+  const status = document.getElementById('status-line');
+  status.textContent = 'Systems: all green';
+`);
+
+<CodeShoebox
+  code={code}
+  onCodeChange={setCode}
+  environmentMode="dom"
+  fixtureHtml={`<p id="status-line">Systems: waiting</p>`}
+  fixtureCss={`#status-line { color: seagreen; font-weight: 700; }`}
+  theme={activeTheme}
+  themeMode="dark"
+/>
+```
+
+Fixtures are trusted host input delivered as message data to the sandboxed iframe. They do not add module imports, arbitrary libraries, or same-origin privileges, and they are ignored outside `dom` mode.
+
 ## Prediction Templates (Pedagogy)
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
@@ -217,6 +240,8 @@ const ExerciseComponent = () => {
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
 | `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts' \| 'hono' \| 'hono-ts'` | Yes | Determines the runtime environment. |
+| `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
+| `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |
