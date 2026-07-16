@@ -7,6 +7,8 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   code,
   onCodeChange,
   environmentMode,
+  fixtureHtml,
+  fixtureCss,
   theme,
   themeMode,
   sessionId = 0,
@@ -62,6 +64,8 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
         runTrigger={runTrigger}
         themeMode={themeMode}
         environmentMode={environmentMode}
+        fixtureHtml={fixtureHtml}
+        fixtureCss={fixtureCss}
         predictionPrompt={prediction_prompt}
         debugMode={debugMode}
       />

@@ -17,6 +17,8 @@ interface OutputFrameProps {
   code: string;
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
+  fixtureHtml?: string;
+  fixtureCss?: string;
   isBlurred?: boolean;
   isPredictionMode?: boolean;
   debugMode?: boolean;
@@ -27,6 +29,8 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   code, 
   themeMode, 
   environmentMode,
+  fixtureHtml,
+  fixtureCss,
   isBlurred = false,
   isPredictionMode = false,
   debugMode = false
@@ -34,6 +38,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<MessageChannel | null>(null);
+  const executionRef = useRef({ code, environmentMode, fixtureHtml, fixtureCss, debugMode });
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
   const [consoleHeight, setConsoleHeight] = useState(150); 
@@ -57,6 +62,10 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     () => getSandboxHtml(environmentMode, isPredictionMode),
     [environmentMode, isPredictionMode]
   );
+
+  useEffect(() => {
+    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, debugMode };
+  }, [code, environmentMode, fixtureHtml, fixtureCss, debugMode]);
 
   const handleKernelMessage = useCallback((data: any) => {
     if (!data || typeof data !== 'object') return;
@@ -85,16 +94,26 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
 
   useEffect(() => {
     if (runTrigger > 0) {
+        const execution = executionRef.current;
         setLogs([]);
-        if (debugMode) addSystemLog('Attempting to execute code...');
+        if (execution.debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
-             executeCodeInSandbox(iframeRef.current.contentWindow, code);
-             if (debugMode) addSystemLog('EXECUTE message dispatched.');
-        } else if (debugMode) {
+             const hasDomFixture = execution.environmentMode === 'dom'
+               && (execution.fixtureHtml !== undefined || execution.fixtureCss !== undefined);
+             if (hasDomFixture) {
+               executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+                 fixtureHtml: execution.fixtureHtml,
+                 fixtureCss: execution.fixtureCss,
+               });
+             } else {
+               executeCodeInSandbox(iframeRef.current.contentWindow, execution.code);
+             }
+             if (execution.debugMode) addSystemLog('EXECUTE message dispatched.');
+        } else if (execution.debugMode) {
              addSystemLog('FAILED: iframe.contentWindow is null.', 'error');
         }
     }
-  }, [runTrigger, code, debugMode, addSystemLog]);
+  }, [runTrigger, addSystemLog]);
 
   useEffect(() => {
     if (iframeRef.current?.contentWindow) {

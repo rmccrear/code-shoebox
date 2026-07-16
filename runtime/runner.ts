@@ -171,8 +171,26 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
   dom: {
     name: "DOM",
     logic: `
-      window.__RUN_MODE__ = (code, root) => {
-        root.innerHTML = '';
+      window.__RUN_MODE__ = (code, root, options = {}) => {
+        root.replaceChildren();
+        document.querySelectorAll('style[data-code-shoebox-fixture]').forEach((style) => style.remove());
+
+        if (options.fixtureCss !== undefined) {
+          const fixtureStyle = document.createElement('style');
+          fixtureStyle.setAttribute('data-code-shoebox-fixture', '');
+          fixtureStyle.textContent = options.fixtureCss;
+          document.head.appendChild(fixtureStyle);
+        }
+
+        if (options.fixtureHtml !== undefined) {
+          const fixtureDocument = new DOMParser().parseFromString(options.fixtureHtml, 'text/html');
+          const fixtureFragment = document.createDocumentFragment();
+          fixtureDocument.body.childNodes.forEach((node) => {
+            fixtureFragment.appendChild(document.importNode(node, true));
+          });
+          root.appendChild(fixtureFragment);
+        }
+
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
       };
     `
@@ -483,6 +501,18 @@ export const getSandboxHtml = (mode: EnvironmentMode = 'dom', isPredictionMode: 
   });
 };
 
-export const executeCodeInSandbox = (iframeContentWindow: Window, code: string) => {
-  iframeContentWindow.postMessage({ type: 'EXECUTE', code }, '*');
+export interface SandboxExecutionOptions {
+  fixtureHtml?: string;
+  fixtureCss?: string;
+}
+
+export const executeCodeInSandbox = (
+  iframeContentWindow: Window,
+  code: string,
+  options?: SandboxExecutionOptions
+) => {
+  const message = options === undefined
+    ? { type: 'EXECUTE', code }
+    : { type: 'EXECUTE', code, payload: options };
+  iframeContentWindow.postMessage(message, '*');
 };

@@ -11,7 +11,7 @@ interface CodeEditorProps {
   themeMode: ThemeMode;
   environmentMode: EnvironmentMode;
   sessionId: number;
-  /** Active filename for multi-file modes (html-css); selects the Monaco model and language. */
+  /** Active filename for multi-file modes; selects the Monaco model and language. */
   activeFile?: string;
   readOnly?: boolean;
 }
@@ -30,7 +30,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     // Multi-file modes get one Monaco model per file, preserving per-file
     // undo history across tab switches.
-    if (environmentMode === 'html-css') return `${basePath}-${activeFile || 'index.html'}`;
+    if (activeFile) return `${basePath}-${activeFile}`;
     switch (environmentMode) {
       case 'typescript': 
       case 'express-ts':
@@ -52,8 +52,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [sessionId, environmentMode, activeFile]);
 
   const language = useMemo(() => {
+    if (activeFile?.endsWith('.html')) return 'html';
+    if (activeFile?.endsWith('.css')) return 'css';
+    if (activeFile?.endsWith('.js')) return 'javascript';
     if (environmentMode === 'html') return 'html';
-    if (environmentMode === 'html-css') return activeFile === 'style.css' ? 'css' : 'html';
     const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'];
     if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';
