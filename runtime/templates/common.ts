@@ -66,24 +66,43 @@ export const KERNEL_SCRIPTS = `
         else window.parent.postMessage(message, '*');
     }
 
+    function formatRuntimeValue(value) {
+        if (
+            value !== null
+            && typeof value === 'object'
+            && typeof value.name === 'string'
+            && typeof value.message === 'string'
+        ) {
+            return value.name + ': ' + value.message;
+        }
+        if (typeof value === 'object' && value !== null) {
+            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
+        }
+        return String(value);
+    }
+
     // Intercept standard logs
     ['log', 'error', 'warn', 'info'].forEach(method => {
         const original = console[method];
         console[method] = function(...args) {
             original.apply(console, args);
-            const content = args.map(arg => {
-                if (typeof arg === 'object') {
-                    try { return JSON.stringify(arg, null, 2); } catch(e) { return String(arg); }
-                }
-                return String(arg);
-            }).join(' ');
+            const content = args.map(formatRuntimeValue).join(' ');
             sendPayload(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), content);
         };
     });
 
     console.log("[Kernel] Sandbox started. Initializing environment...");
 
-    window.onerror = (msg, src, line) => sendPayload('RUNTIME_ERROR', \`Error: \${msg} (Line \${line})\`);
+    window.onerror = (msg, src, line, column, error) => {
+        const content = error
+            ? formatRuntimeValue(error)
+            : 'Error: ' + String(msg) + ' (Line ' + line + ', Column ' + column + ')';
+        sendPayload('RUNTIME_ERROR', content);
+    };
+
+    window.addEventListener('unhandledrejection', (event) => {
+        sendPayload('RUNTIME_ERROR', formatRuntimeValue(event.reason));
+    });
 
     window.addEventListener('message', (event) => {
         if (event.source !== window.parent) return;
@@ -103,7 +122,7 @@ export const KERNEL_SCRIPTS = `
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
             if (placeholder) placeholder.style.display = 'none';
-            window.__RUN_MODE__(code, root);
+            window.__RUN_MODE__(code, root, payload || {});
         }
     });
 `;

@@ -103,6 +103,95 @@ describe('OutputFrame', () => {
     expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(expect.anything(), "console.log('run')");
   });
 
+  it('executes DOM code with the exact fixture payload', () => {
+    const { rerender } = renderOutputFrame({
+      fixtureHtml: '<p id="status">Waiting</p>',
+      fixtureCss: '#status { color: green; }',
+    });
+
+    rerender(
+      <OutputFrame
+        runTrigger={1}
+        code="document.getElementById('status').textContent = 'Ready';"
+        themeMode="dark"
+        environmentMode="dom"
+        fixtureHtml={'<p id="status">Waiting</p>'}
+        fixtureCss="#status { color: green; }"
+      />
+    );
+
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(
+      expect.anything(),
+      "document.getElementById('status').textContent = 'Ready';",
+      {
+        fixtureHtml: '<p id="status">Waiting</p>',
+        fixtureCss: '#status { color: green; }',
+      }
+    );
+  });
+
+  it('does not forward fixture execution data outside DOM mode', () => {
+    const { rerender } = renderOutputFrame({
+      environmentMode: 'typescript',
+      fixtureHtml: '<p>ignored</p>',
+      fixtureCss: 'p { color: red; }',
+    });
+
+    rerender(
+      <OutputFrame
+        runTrigger={1}
+        code="console.log('typed')"
+        themeMode="dark"
+        environmentMode="typescript"
+        fixtureHtml="<p>ignored</p>"
+        fixtureCss="p { color: red; }"
+      />
+    );
+
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(expect.anything(), "console.log('typed')");
+  });
+
+  it('keeps the iframe channel and waits for the next run after fixture props change', () => {
+    const { container, rerender } = renderOutputFrame({
+      fixtureHtml: '<p>First</p>',
+      fixtureCss: 'p { color: red; }',
+    });
+    const { iframe, channel } = loadFrame(container);
+
+    rerender(
+      <OutputFrame
+        runTrigger={0}
+        code="console.log('latest')"
+        themeMode="dark"
+        environmentMode="dom"
+        fixtureHtml="<p>Latest</p>"
+        fixtureCss="p { color: blue; }"
+      />
+    );
+
+    expect(container.querySelector('iframe')).toBe(iframe);
+    expect(channels).toHaveLength(1);
+    expect(channel.port1.closed).toBe(false);
+    expect(mockedExecuteCodeInSandbox).not.toHaveBeenCalled();
+
+    rerender(
+      <OutputFrame
+        runTrigger={1}
+        code="console.log('latest')"
+        themeMode="dark"
+        environmentMode="dom"
+        fixtureHtml="<p>Latest</p>"
+        fixtureCss="p { color: blue; }"
+      />
+    );
+
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(
+      expect.anything(),
+      "console.log('latest')",
+      { fixtureHtml: '<p>Latest</p>', fixtureCss: 'p { color: blue; }' }
+    );
+  });
+
   it('hides the iframe and keeps the console for headless modes', () => {
     renderOutputFrame({ environmentMode: 'node-js' });
 

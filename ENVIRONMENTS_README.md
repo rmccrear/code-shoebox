@@ -55,10 +55,13 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   Full access to the `document` and `window`.
     *   A global `root` variable is provided as the entry point `div`.
     *   CSS manipulation via JavaScript.
+    *   Optional trusted host fixtures: `fixtureHtml` and `fixtureCss` are restored inside the real sandbox DOM before every Run, then learner JavaScript executes.
+    *   When fixtures are supplied, the editor shows at most three fixed files: editable `script.js`, read-only `index.html`, and read-only `style.css`. Without fixtures, the mode remains a single JavaScript editor.
 *   **Limitations:**
     *   No TypeScript support.
     *   No Babel transpilation (syntax is limited to what the user's browser supports natively).
     *   `import` / `export` syntax is not supported.
+    *   Fixture props are ignored outside `dom` mode. They are trusted host input inside the existing sandbox, not editable project files or a dependency-loading mechanism.
 
 ### `typescript` (TypeScript)
 *   **Engine:** Babel Standalone (in-browser transpilation).

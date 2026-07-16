@@ -21,6 +21,10 @@ export interface CodeShoeboxProps {
   code: string;
   onCodeChange: (code: string) => void;
   environmentMode: EnvironmentMode;
+  /** Trusted host-authored markup restored before each run in dom mode. */
+  fixtureHtml?: string;
+  /** Trusted host-authored styles restored with fixtureHtml in dom mode. */
+  fixtureCss?: string;
   themeMode: ThemeMode;
   theme: Theme;
   sessionId?: number;

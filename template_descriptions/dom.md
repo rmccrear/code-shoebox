@@ -9,15 +9,18 @@ Standard browser-based JavaScript execution environment with direct access to th
 - **Globals:** Full access to `window` and `document`.
 - **Entry Point:** A global variable `root` (HTMLElement) is provided as the main container.
 - **CSS:** Styles can be injected via JS.
+- **Host Fixtures:** Lessons may supply trusted `fixtureHtml` and `fixtureCss`. They are restored before every run so learner code starts from a pristine real DOM.
 
 ## Output UI
 - **Visual:** Renders HTML content directly into the sandboxed iframe's `#root` element.
 - **Console:** Captures `console.log`, `error`, `warn`.
+- **Files:** `script.js` is editable. Supplied `index.html` and `style.css` fixtures appear as read-only tabs, with no more than these three files.
 
 ## Limitations
 - **Modules:** No `import`/`export` support.
 - **Transpilation:** No Babel; syntax limited to browser support (modern browsers usually support ES6+).
 - **Node APIs:** No `fs`, `process`, or native Node modules.
+- **Fixture scope:** Host fixtures are DOM-only and do not add imports, arbitrary libraries, or editable project files.
 
 ## LLM Usage Hints
 - Use for teaching DOM manipulation (e.g., `document.createElement`).

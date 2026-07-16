@@ -42,7 +42,7 @@ The execution pipeline spans three layers. Understanding the message flow is ess
 - `cdns` — script tags injected into the iframe `<head>` (Babel, React UMD, p5, Hono via esm.sh).
 - `babelPresets` — informational; the actual presets are hardcoded inside each recipe's `logic` string.
 - `mocks` — a setup script (e.g. `EXPRESS_MOCK_SETUP`, `HONO_MOCK_SETUP`) injected before `logic`.
-- `logic` — a **string of JavaScript** that defines `window.__RUN_MODE__ = (code, root) => {...}`. This is the per-mode executor. It's a string because it's serialized into the iframe's `srcDoc`.
+- `logic` — a **string of JavaScript** that defines `window.__RUN_MODE__ = (code, root, payload) => {...}`. This is the per-mode executor. It's a string because it's serialized into the iframe's `srcDoc`. DOM fixtures travel in the structured `EXECUTE.payload`; never interpolate fixture strings into `srcDoc`.
 - `showPlaceholder`, `headless` — UI flags.
 
 `getSandboxHtml(mode)` looks up the recipe and feeds it to `BASE_HTML_WRAPPER`.
@@ -50,9 +50,9 @@ The execution pipeline spans three layers. Understanding the message flow is ess
 ### 2. The iframe kernel (`runtime/templates/common.ts`)
 
 `BASE_HTML_WRAPPER` assembles the full `srcDoc`: `BASE_STYLES` + CDNs + `KERNEL_SCRIPTS` + mocks + recipe logic. The kernel (`KERNEL_SCRIPTS`) is the same for every mode and provides:
-- A `console.*` override that forwards logs to the parent as `CONSOLE_LOG` / `RUNTIME_ERROR` / `CONSOLE_WARN` messages.
+- A `console.*` override and shared runtime-value formatter that forward readable logs/errors to the parent as `CONSOLE_LOG` / `RUNTIME_ERROR` / `CONSOLE_WARN` messages, including unhandled promise rejections.
 - A `window.require` shim (resolves `react`, `react-dom`, and anything registered in `window.__MODULE_REGISTRY__`).
-- A `message` listener handling `INIT_PORT` (establishes the MessageChannel), `THEME`, and `EXECUTE` (calls `window.__RUN_MODE__`).
+- A `message` listener handling `INIT_PORT` (establishes the MessageChannel), `THEME`, and `EXECUTE` (calls `window.__RUN_MODE__(code, root, payload)`).
 
 ### 3. The host components (`components/`)
 
@@ -65,6 +65,7 @@ Two components own an iframe and talk to the kernel. They are selected in `Codin
 ### Mode-specific gotchas
 
 - **p5** runs in global mode and uses a `MutationObserver` to relocate the auto-created `<canvas>` into `#root`.
+- **DOM fixtures** are trusted host-owned `fixtureHtml`/`fixtureCss` values sent in `EXECUTE.payload`. The DOM recipe removes the prior fixture, installs fresh styles/markup, and only then runs learner JavaScript. Fixture tabs are read-only and bounded to `script.js`, `index.html`, and `style.css`.
 - **React** patches `ReactDOM.createRoot` to capture and unmount the root between runs (prevents leaks / "container not found").
 - **Express** is a hand-written mock object (`templates/express.ts`), *not* the real library — no middleware, no `app.use`.
 - **Hono** is the *real* library loaded from `esm.sh`. User code **must** `export default app`. `.fire()`/`.listen()` are patched to start the bridge. TS/`export default` is handled by transpiling to CommonJS via Babel and reading `module.exports.default`.

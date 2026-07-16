@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
+import { describe, it, expect, vi } from 'vitest';
+import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
@@ -136,5 +136,62 @@ describe('getSandboxHtml', () => {
       const occurrences = html.split(GUARD).length - 1;
       expect(occurrences, `mode=${mode} expected >=2 source guards, got ${occurrences}`).toBeGreaterThanOrEqual(2);
     }
+  });
+
+  it('installs DOM fixtures after reset and before learner execution', () => {
+    const html = getSandboxHtml('dom');
+    const resetAt = html.indexOf('root.replaceChildren()');
+    const styleAt = html.indexOf("fixtureStyle.setAttribute('data-code-shoebox-fixture', '')");
+    const fixtureAt = html.indexOf("new DOMParser().parseFromString(options.fixtureHtml, 'text/html')");
+    const executeAt = html.indexOf("new Function('root', code)(root)");
+
+    expect(resetAt).toBeGreaterThan(-1);
+    expect(styleAt).toBeGreaterThan(resetAt);
+    expect(fixtureAt).toBeGreaterThan(styleAt);
+    expect(executeAt).toBeGreaterThan(fixtureAt);
+  });
+
+  it('passes EXECUTE payloads to recipes and includes readable error formatting', () => {
+    const html = getSandboxHtml('dom');
+
+    expect(html).toContain('window.__RUN_MODE__(code, root, payload || {})');
+    expect(html).toContain('function formatRuntimeValue(value)');
+    expect(html).toContain("value.name + ': ' + value.message");
+    expect(html).toContain("window.addEventListener('unhandledrejection'");
+    expect(html).toContain("formatRuntimeValue(event.reason)");
+    expect(html).toContain('original.apply(console, args)');
+  });
+});
+
+describe('executeCodeInSandbox', () => {
+  it('preserves the old two-argument EXECUTE message shape', () => {
+    const postMessage = vi.fn();
+
+    executeCodeInSandbox({ postMessage } as unknown as Window, 'console.log("old")');
+
+    expect(postMessage).toHaveBeenCalledWith(
+      { type: 'EXECUTE', code: 'console.log("old")' },
+      '*'
+    );
+  });
+
+  it('sends exact fixture strings as structured message data, never sandbox HTML', () => {
+    const postMessage = vi.fn();
+    const fixtureHtml = '<div data-value="` ${danger}"></div><\/script>';
+    const fixtureCss = 'div::after { content: "quotes ` ${css}"; }';
+
+    executeCodeInSandbox(
+      { postMessage } as unknown as Window,
+      'console.log("fixture")',
+      { fixtureHtml, fixtureCss }
+    );
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'EXECUTE',
+      code: 'console.log("fixture")',
+      payload: { fixtureHtml, fixtureCss },
+    }, '*');
+    expect(getSandboxHtml('dom')).not.toContain(fixtureHtml);
+    expect(getSandboxHtml('dom')).not.toContain(fixtureCss);
   });
 });
