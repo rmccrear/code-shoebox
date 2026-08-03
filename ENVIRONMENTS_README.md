@@ -171,6 +171,17 @@ Environments optimized for teaching pure logic without DOM distractions.
 *   **Architecture:**
     *   The runner shadows `window`, `document`, and `root` with `null` inside the execution scope.
     *   This forces students to rely on data structures and `console.log`.
+    *   The Monaco language service is configured to match: `lib: ["es2020"]`
+        instead of the default set, plus an ambient `console` shim. Without
+        this the editor loads `lib.dom.d.ts` and advertises the very globals
+        the runner nulls out — and `let name = "Ada"` merges with the
+        deprecated `window.name`, striking through the learner's own variable.
+        `express` and `hono` get the same treatment; `dom`, `p5`, `p5play`,
+        and `react` keep the DOM lib, where flagging `name` is correct.
+    *   Monaco's language defaults are global to the runtime, so a page with
+        both a `node-js` and a `dom` sandbox can hold only one lib set at a
+        time. The config is re-applied on editor focus, so the editor the
+        learner is typing in is always the correctly configured one.
 *   **Capabilities:** Pure JavaScript (ES6+).
 
 ### `node-ts` (TypeScript Console)

@@ -5,6 +5,68 @@ import { ThemeMode, EnvironmentMode } from '../types';
 
 const EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
+/**
+ * JavaScript environments whose runner shadows `window`, `document`, and `root`
+ * with `null`. Monaco's default JS lib set includes `lib.dom.d.ts`, so without
+ * this distinction the editor advertises a DOM the runtime has deliberately
+ * removed — and `let name = "Ada"` merges with the deprecated `window.name`,
+ * striking through the learner's own variable.
+ */
+const CONSOLE_ONLY_JS_MODES: EnvironmentMode[] = ['node-js', 'express', 'hono'];
+
+/**
+ * `console` lives in `lib.dom.d.ts`, not in `lib.es2020`. Dropping the DOM lib
+ * without this shim would take `console.log` autocomplete down with it
+ * (measured: 22 completions → 2).
+ */
+const CONSOLE_SHIM = `
+declare var console: {
+  log(...data: any[]): void;
+  error(...data: any[]): void;
+  warn(...data: any[]): void;
+  info(...data: any[]): void;
+  debug(...data: any[]): void;
+  table(data: any, columns?: string[]): void;
+  dir(item?: any): void;
+  group(...data: any[]): void;
+  groupEnd(): void;
+  time(label?: string): void;
+  timeEnd(label?: string): void;
+  count(label?: string): void;
+  assert(condition?: boolean, ...data: any[]): void;
+  trace(...data: any[]): void;
+  clear(): void;
+};
+`;
+
+/**
+ * Points the shared JavaScript language service at the lib set that matches
+ * this editor's environment.
+ *
+ * Monaco's language defaults are global to the runtime, not per-model, so a
+ * host page holding both a `node-js` and a `dom` sandbox can only have one
+ * configuration live at a time. We therefore re-apply on focus as well as on
+ * mount: whichever editor the learner is actually typing in is the one
+ * configured correctly.
+ */
+const applyJavaScriptLibs = (monaco: any, environmentMode: EnvironmentMode) => {
+  const consoleOnly = CONSOLE_ONLY_JS_MODES.includes(environmentMode);
+  const ts = monaco.languages.typescript;
+
+  ts.javascriptDefaults.setCompilerOptions({
+    target: ts.ScriptTarget.ES2020,
+    allowNonTsExtensions: true,
+    allowJs: true,
+    lib: consoleOnly ? ['es2020'] : ['es2020', 'dom'],
+  });
+
+  // Replaces any previously registered shim under the same path.
+  ts.javascriptDefaults.addExtraLib(
+    consoleOnly ? CONSOLE_SHIM : '',
+    'ts:code-shoebox-console.d.ts'
+  );
+};
+
 interface CodeEditorProps {
   code: string;
   onChange: (value: string | undefined) => void;
@@ -75,7 +137,15 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     document.fonts?.ready
       .then(refreshEditorMetrics)
       .catch(() => undefined);
-    
+
+    // Match the JS lib set to this environment, and re-assert it whenever this
+    // editor regains focus — the language defaults are shared across every
+    // editor on the page, so the last one touched has to win.
+    if (language === 'javascript') {
+      applyJavaScriptLibs(monaco, environmentMode);
+      editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
+    }
+
     // Configure compiler options for TS
     if (language === 'typescript') {
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
