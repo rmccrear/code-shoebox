@@ -19,6 +19,40 @@ import { useMemo } from "react";
 import Editor from "@monaco-editor/react";
 import { jsx } from "react/jsx-runtime";
 var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+var CONSOLE_ONLY_JS_MODES = ["node-js", "express", "hono"];
+var CONSOLE_SHIM = `
+declare var console: {
+  log(...data: any[]): void;
+  error(...data: any[]): void;
+  warn(...data: any[]): void;
+  info(...data: any[]): void;
+  debug(...data: any[]): void;
+  table(data: any, columns?: string[]): void;
+  dir(item?: any): void;
+  group(...data: any[]): void;
+  groupEnd(): void;
+  time(label?: string): void;
+  timeEnd(label?: string): void;
+  count(label?: string): void;
+  assert(condition?: boolean, ...data: any[]): void;
+  trace(...data: any[]): void;
+  clear(): void;
+};
+`;
+var applyJavaScriptLibs = (monaco, environmentMode) => {
+  const consoleOnly = CONSOLE_ONLY_JS_MODES.includes(environmentMode);
+  const ts = monaco.languages.typescript;
+  ts.javascriptDefaults.setCompilerOptions({
+    target: ts.ScriptTarget.ES2020,
+    allowNonTsExtensions: true,
+    allowJs: true,
+    lib: consoleOnly ? ["es2020"] : ["es2020", "dom"]
+  });
+  ts.javascriptDefaults.addExtraLib(
+    consoleOnly ? CONSOLE_SHIM : "",
+    "ts:code-shoebox-console.d.ts"
+  );
+};
 var CodeEditor = ({
   code,
   onChange,
@@ -69,6 +103,10 @@ var CodeEditor = ({
     window.requestAnimationFrame(refreshEditorMetrics);
     window.setTimeout(refreshEditorMetrics, 250);
     document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
+    if (language === "javascript") {
+      applyJavaScriptLibs(monaco, environmentMode);
+      editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
+    }
     if (language === "typescript") {
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
         jsx: monaco.languages.typescript.JsxEmit.React,
