@@ -115,6 +115,7 @@ const App: React.FC = () => {
                   <optgroup label="Web & UI" className="text-black">
                     <option value="html">HTML (single file)</option>
                     <option value="html-css">HTML & CSS (style.css)</option>
+                    <option value="html-js">HTML & JavaScript (script.js)</option>
                     <option value="dom">DOM / JS</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>

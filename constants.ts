@@ -58,6 +58,30 @@ strong {
 `
 });
 
+export const HTML_JS_STARTER_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Two Files</title>
+</head>
+<body>
+  <h1>HTML meets JavaScript</h1>
+  <p id="message">Press the button to run an interaction.</p>
+  <button id="change-message">Change message</button>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  'script.js': `const button = document.getElementById('change-message');
+const message = document.getElementById('message');
+
+button.addEventListener('click', () => {
+  message.textContent = 'JavaScript changed the page!';
+  console.log('Message updated');
+});
+`
+});
+
 export const STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.
 // 'root' is a reference to the main container div.

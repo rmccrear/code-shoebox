@@ -9,6 +9,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 - **Multiple Environments**:
   - `html`: Static HTML pages with live preview (no JavaScript execution).
   - `html-css`: Two-tab HTML & CSS editing (`index.html` + `style.css`) with live preview.
+  - `html-js`: Two-tab HTML & JavaScript editing (`index.html` + `script.js`) with manual execution and console output.
   - `dom`: Standard JavaScript manipulation.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
@@ -167,6 +168,23 @@ const [code, setCode] = React.useState(`
 
 Fixtures are trusted host input delivered as message data to the sandboxed iframe. They do not add module imports, arbitrary libraries, or same-origin privileges, and they are ignored outside `dom` mode.
 
+## HTML + JavaScript Mode
+
+Use `html-js` when learners should edit both the page structure and its behavior. The editor exposes editable `index.html` and `script.js` tabs. JavaScript runs only after pressing Run and only when the HTML contains `<script src="script.js"></script>`; the existing console captures logs and runtime errors.
+
+```tsx
+const state = useSandboxState('interactive-page', undefined, 'html-js');
+
+<CodeShoebox
+  code={state.code}
+  onCodeChange={state.setCode}
+  environmentMode={state.environmentMode}
+  theme={activeTheme}
+  themeMode="dark"
+  sessionId={state.sessionId}
+/>
+```
+
 ## Prediction Templates (Pedagogy)
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
@@ -239,7 +257,7 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'dom' \| 'p5' \| 'react' \| 'typescript' \| 'react-ts' \| 'express' \| 'express-ts' \| 'node-js' \| 'node-ts' \| 'hono' \| 'hono-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'dom' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |

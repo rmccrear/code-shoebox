@@ -168,6 +168,46 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
       };
     `
   },
+  'html-js': {
+    name: "HTML & JavaScript (script.js)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.replaceChildren();
+        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+        // The iframe kernel cannot import modules; keep both copies in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
+            : { html: code, js: '' };
+        } catch (e) { files = { html: code, js: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+        const linkedScript = doc.querySelector('script[src="script.js"]');
+
+        // Learner HTML never creates a second execution path. The bundled
+        // script.js file is the only JavaScript this mode executes.
+        doc.querySelectorAll('script').forEach((script) => script.remove());
+
+        if (!linkedScript && files.js.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+          root.appendChild(hint);
+        }
+
+        doc.body.childNodes.forEach((node) => {
+          root.appendChild(document.importNode(node, true));
+        });
+
+        if (!linkedScript) return;
+        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
   dom: {
     name: "DOM",
     logic: `

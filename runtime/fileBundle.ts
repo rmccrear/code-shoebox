@@ -1,35 +1,51 @@
 /**
- * Serialization for multi-file environment modes (currently only
- * 'html-css': index.html + style.css).
+ * Serialization for bounded multi-file environment modes:
+ * 'html-css' (index.html + style.css) and
+ * 'html-js' (index.html + script.js).
  *
  * The public CodeShoebox contract is ONE code string everywhere (props,
  * localStorage, presets, the EXECUTE message). Multi-file modes pack their
  * files into that string as a small JSON envelope. Any string that is not
- * an envelope parses as a bare index.html with an empty style.css, so
- * hand-authored content and stale persisted code degrade gracefully.
+ * an envelope parses as a bare index.html with the mode's companion file
+ * empty, so hand-authored content and stale persisted code degrade gracefully.
  *
- * NOTE: the 'html-css' recipe in runner.ts contains an inline plain-JS
- * copy of parseFileBundle (the iframe kernel cannot import modules). Keep
- * the two in sync — runner.test.ts and fileBundle.test.ts guard both.
+ * NOTE: the 'html-css' and 'html-js' recipes in runner.ts contain inline
+ * plain-JS copies of parseFileBundle (the iframe kernel cannot import
+ * modules). Keep them in sync — runner.test.ts and fileBundle.test.ts guard
+ * both.
  */
 
-export interface WebFileBundle {
-  'index.html': string;
-  'style.css': string;
-}
+export const HTML_CSS_FILE_NAMES = ['index.html', 'style.css'] as const;
+export const HTML_JS_FILE_NAMES = ['index.html', 'script.js'] as const;
 
-export const serializeFileBundle = (files: WebFileBundle): string =>
+export type WebFileName = typeof HTML_CSS_FILE_NAMES[number] | typeof HTML_JS_FILE_NAMES[number];
+export type FileBundleFor<T extends readonly WebFileName[]> = { [K in T[number]]: string };
+export type WebFileBundle = FileBundleFor<typeof HTML_CSS_FILE_NAMES>;
+export type HtmlJsFileBundle = FileBundleFor<typeof HTML_JS_FILE_NAMES>;
+
+export const serializeFileBundle = (
+  files: Readonly<WebFileBundle> | Readonly<HtmlJsFileBundle>
+): string =>
   JSON.stringify({ __csFiles__: 1, files });
 
-export const parseFileBundle = (code: string): WebFileBundle => {
+export function parseFileBundle(code: string): WebFileBundle;
+export function parseFileBundle<const T extends readonly WebFileName[]>(
+  code: string,
+  fileNames: T
+): FileBundleFor<T>;
+export function parseFileBundle(
+  code: string,
+  fileNames: readonly WebFileName[] = HTML_CSS_FILE_NAMES
+): Record<string, string> {
   try {
     const parsed = JSON.parse(code);
     if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
-      return {
-        'index.html': String(parsed.files['index.html'] ?? ''),
-        'style.css': String(parsed.files['style.css'] ?? '')
-      };
+      return Object.fromEntries(
+        fileNames.map((fileName) => [fileName, String(parsed.files[fileName] ?? '')])
+      );
     }
   } catch { /* not an envelope — fall through */ }
-  return { 'index.html': code, 'style.css': '' };
-};
+  return Object.fromEntries(
+    fileNames.map((fileName) => [fileName, fileName === 'index.html' ? code : ''])
+  );
+}
