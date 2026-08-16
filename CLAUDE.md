@@ -65,6 +65,8 @@ Two components own an iframe and talk to the kernel. They are selected in `Codin
 ### Mode-specific gotchas
 
 - **p5** runs in global mode and uses a `MutationObserver` to relocate the auto-created `<canvas>` into `#root`.
+- **Bounded file bundles** use one version-1 JSON envelope for the fixed `html-css` (`index.html` + `style.css`) and `html-js` (`index.html` + `script.js`) schemas. The runtime recipes contain small inline parsers because iframe logic cannot import modules.
+- **HTML + JavaScript** uses editable bundle tabs with DOM-style execution. It is manual-run, executes only the bundled JS when HTML contains a literal `src="script.js"` marker, removes every parsed HTML script node, and never interpolates learner bundle content into iframe `srcDoc`.
 - **DOM fixtures** are trusted host-owned `fixtureHtml`/`fixtureCss` values sent in `EXECUTE.payload`. The DOM recipe removes the prior fixture, installs fresh styles/markup, and only then runs learner JavaScript. Fixture tabs are read-only and bounded to `script.js`, `index.html`, and `style.css`.
 - **React** patches `ReactDOM.createRoot` to capture and unmount the root between runs (prevents leaks / "container not found").
 - **Express** is a hand-written mock object (`templates/express.ts`), *not* the real library — no middleware, no `app.use`.

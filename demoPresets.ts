@@ -83,6 +83,28 @@ h1 { color: #0ea5e9; }
     })
   },
   {
+    id: 'html-js-tabs-demo',
+    mode: 'html-js',
+    code: serializeFileBundle({
+      'index.html': `<!DOCTYPE html>
+<html>
+<head><title>Interactive Greeting</title></head>
+<body>
+  <h1 id="greeting">Ready to say hello?</h1>
+  <button id="greet" type="button">Greet me</button>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      'script.js': `const greeting = document.getElementById('greeting');
+const button = document.getElementById('greet');
+
+button.addEventListener('click', () => {
+  greeting.textContent = 'Hello from script.js!';
+  console.log('Greeting updated');
+});`
+    })
+  },
+  {
     id: 'ts-express-rest-demo',
     mode: 'express-ts',
     aliases: ['express-rest-demo'],

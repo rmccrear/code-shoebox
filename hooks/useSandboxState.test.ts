@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSandboxState } from './useSandboxState';
-import { HTML_STARTER_CODE, HTML_CSS_STARTER_CODE } from '../constants';
-import { parseFileBundle } from '../runtime/fileBundle';
+import { HTML_STARTER_CODE, HTML_CSS_STARTER_CODE, HTML_JS_STARTER_CODE } from '../constants';
+import { HTML_JS_FILE_NAMES, parseFileBundle } from '../runtime/fileBundle';
 
 describe('useSandboxState', () => {
   it('defaults to dom mode with the dom starter code', () => {
@@ -51,6 +51,17 @@ describe('useSandboxState', () => {
     expect(files['index.html']).toContain('<link rel="stylesheet" href="style.css">');
     expect(files['style.css'].trim().length).toBeGreaterThan(0);
     expect(localStorage.getItem('cs_lesson-1_code_html-css')).toBe(HTML_CSS_STARTER_CODE);
+  });
+
+  it('switching to html-js loads and persists a linked two-file starter', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('html-js'));
+
+    expect(result.current.code).toBe(HTML_JS_STARTER_CODE);
+    const files = parseFileBundle(result.current.code, HTML_JS_FILE_NAMES);
+    expect(files['index.html']).toContain('<script src="script.js"></script>');
+    expect(files['script.js'].trim().length).toBeGreaterThan(0);
+    expect(localStorage.getItem('cs_lesson-1_code_html-js')).toBe(HTML_JS_STARTER_CODE);
   });
 
   it('restores previously saved code when switching back to a mode', () => {

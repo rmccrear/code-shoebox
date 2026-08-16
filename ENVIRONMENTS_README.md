@@ -48,6 +48,20 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   No additional files, renames, or a JS tab.
     *   The rendered document is parsed and re-serialized to splice the styles in (the single-file `html` mode remains byte-verbatim).
 
+### `html-js` (HTML & JavaScript, two tabs: index.html + script.js)
+*   **Engine:** Native browser JavaScript in the existing sandbox DOM. The editor shows two editable tabs and packs them into the same version-1 file envelope used by `html-css`.
+*   **Code format:** `{"__csFiles__":1,"files":{"index.html":"…","script.js":"…"}}`. A plain string becomes `index.html` with an empty `script.js`.
+*   **Capabilities:**
+    *   **Strict script semantics:** `script.js` runs only when the HTML contains a literal `<script src="script.js"></script>`. If code exists without that link, a blue hint shows the exact tag to add.
+    *   Both files are editable and retain separate Monaco models and undo histories.
+    *   Pressing Run restores the current HTML body under the sandbox's `#root`, then executes `script.js` once with access to `root`, `document`, and `window`.
+    *   The console captures logs, warnings, synchronous errors, and unhandled promise rejections.
+*   **Limitations:**
+    *   This is manual-run; editing either tab never executes JavaScript automatically.
+    *   All script elements are removed from parsed learner HTML. Inline, remote, data-URL, and differently named scripts do not execute; only the bundled `script.js` does.
+    *   The learner body is restored below `#root`; `<head>` metadata, `<title>`, body attributes, parser timing, `async`, and `defer` behavior are not reproduced.
+    *   Native browser JavaScript only: no TypeScript, Babel, modules, `import`/`export`, packages, or additional files.
+
 ### `dom` (DOM / JS)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).
 *   **Pre-loaded Libraries:** None.

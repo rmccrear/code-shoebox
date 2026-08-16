@@ -48,7 +48,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   // HTML modes (single-file and tabbed): full-height output with no console
   // panel, rendered on mount and live-updated as the user types (safe: these
   // modes cannot run JS).
-  const isHtmlMode = environmentMode === 'html' || environmentMode === 'html-css';
+  const isStaticHtmlMode = environmentMode === 'html' || environmentMode === 'html-css';
 
   const addSystemLog = useCallback((msg: string, type: 'log' | 'error' | 'warn' = 'log') => {
     setLogs(prev => appendLog(prev, {
@@ -125,14 +125,14 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   // The Run button still works via the runTrigger effect above as a manual
   // re-render if the debounce misbehaves.
   useEffect(() => {
-    if (!isHtmlMode) return;
+    if (!isStaticHtmlMode) return;
     const timer = setTimeout(() => {
       if (iframeRef.current?.contentWindow) {
         executeCodeInSandbox(iframeRef.current.contentWindow, code);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [code, isHtmlMode]);
+  }, [code, isStaticHtmlMode]);
 
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog('Iframe "onLoad" event fired.');
@@ -143,7 +143,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
     iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
     iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
-    if (isHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    if (isStaticHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
     if (debugMode) addSystemLog('Channel Ports initialized.');
   };
 
@@ -182,7 +182,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   return (
     <PreviewContainer 
       themeMode={themeMode} 
-      isReady={isHtmlMode || runTrigger > 0}
+      isReady={isStaticHtmlMode || runTrigger > 0}
       overlayMessage={isBlurred ? "Make your Prediction" : undefined}
     >
       <div ref={containerRef} className="w-full h-full flex flex-col relative">
@@ -200,7 +200,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
           </div>
         )}
 
-        {!isHeadless && !isHtmlMode && (
+        {!isHeadless && !isStaticHtmlMode && (
           <div
               onMouseDown={handleMouseDown}
               className={`h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors ${themeMode === 'dark' ? 'bg-[#252526] text-gray-600 border-t border-b border-black/20' : 'bg-gray-100 text-gray-400 border-t border-b border-gray-200'}`}
@@ -209,7 +209,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
           </div>
         )}
 
-        {!isHtmlMode && (
+        {!isStaticHtmlMode && (
           <div style={{ height: isHeadless ? '100%' : consoleHeight }} className="shrink-0 min-h-0">
                <Console logs={logs} onClear={() => setLogs([])} themeMode={themeMode} />
           </div>

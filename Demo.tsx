@@ -94,6 +94,50 @@ h1 {
 ol li { margin-bottom: 0.5rem; }`
 });
 
+const HTML_JS_DEMO_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Signal Console</title>
+</head>
+<body>
+  <style>
+    .signal-card {
+      width: min(390px, calc(100% - 2rem));
+      margin: 1.5rem auto;
+      padding: 1.5rem;
+      border: 1px solid #a5b4fc;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #eef2ff, #ffffff);
+      box-shadow: 0 18px 45px rgba(49, 46, 129, 0.18);
+      color: #1e1b4b;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .signal-card small { color: #6366f1; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .signal-card h1 { margin: 0.4rem 0; }
+    .signal-card p { min-height: 1.5rem; color: #4338ca; }
+    .signal-card button { border: 0; border-radius: 999px; padding: 0.75rem 1rem; background: #4f46e5; color: white; font-weight: 750; cursor: pointer; }
+  </style>
+  <article class="signal-card">
+    <small>HTML + JavaScript</small>
+    <h1>Signal console</h1>
+    <p id="signal-status">No signal sent yet.</p>
+    <button id="send-signal" type="button">Send signal</button>
+  </article>
+  <script src="script.js"></script>
+</body>
+</html>`,
+  'script.js': `const button = document.getElementById('send-signal');
+const status = document.getElementById('signal-status');
+let signalCount = 0;
+
+button.addEventListener('click', () => {
+  signalCount += 1;
+  status.textContent = \`Signal #\${signalCount} received.\`;
+  console.log('Signal received', { signalCount });
+});`
+});
+
 const DOM_FIXTURE_DEMO_CODE = `const statusLine = document.getElementById('status-line');
 const diagnosticButton = document.getElementById('run-diagnostic');
 
@@ -321,6 +365,7 @@ export const Demo: React.FC = () => {
     // using '_v2' effectively resets the "legacy" data that was causing issues.
     const htmlState = useSandboxState('demo_html_v1', HTML_DEMO_CODE, 'html');
     const htmlCssState = useSandboxState('demo_html_css_v1', HTML_CSS_DEMO_CODE, 'html-css');
+    const htmlJsState = useSandboxState('demo_html_js_v1', HTML_JS_DEMO_CODE, 'html-js');
     const domFixtureState = useSandboxState('demo_dom_fixture_v1', DOM_FIXTURE_DEMO_CODE, 'dom');
     const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5');
     const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
@@ -335,6 +380,7 @@ export const Demo: React.FC = () => {
         if (window.confirm("Reset all demos to their original state? This will erase your changes.")) {
             htmlState.resetCode();
             htmlCssState.resetCode();
+            htmlJsState.resetCode();
             domFixtureState.resetCode();
             p5State.resetCode();
             p5TsState.resetCode();
@@ -371,6 +417,13 @@ export const Demo: React.FC = () => {
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-sky-500" /> Two Files (index.html + style.css)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
                         <CodeShoebox code={htmlCssState.code} onCodeChange={htmlCssState.setCode} environmentMode={htmlCssState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlCssState.sessionId} />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-indigo-500" /> Two Files (index.html + script.js)</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox code={htmlJsState.code} onCodeChange={htmlJsState.setCode} environmentMode={htmlJsState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlJsState.sessionId} />
                     </div>
                 </section>
 

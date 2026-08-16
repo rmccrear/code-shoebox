@@ -14,11 +14,14 @@ import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
 import { ThemeMode, EnvironmentMode } from '../types';
-import { parseFileBundle, serializeFileBundle, WebFileBundle } from '../runtime/fileBundle';
+import {
+  HTML_CSS_FILE_NAMES,
+  HTML_JS_FILE_NAMES,
+  parseFileBundle,
+  serializeFileBundle,
+} from '../runtime/fileBundle';
 
 type EditorFileName = 'script.js' | 'index.html' | 'style.css';
-
-const HTML_CSS_FILES: EditorFileName[] = ['index.html', 'style.css'];
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
   mode === 'html' ? 'index.html' : `${mode}.script`;
@@ -61,34 +64,39 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
 
-  const isHtmlCssMode = environmentMode === 'html-css';
+  const editableBundleFileNames = environmentMode === 'html-css'
+    ? HTML_CSS_FILE_NAMES
+    : environmentMode === 'html-js'
+      ? HTML_JS_FILE_NAMES
+      : null;
+  const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === 'dom'
     && (fixtureHtml !== undefined || fixtureCss !== undefined);
   const visibleFiles = useMemo<EditorFileName[]>(() => {
-    if (isHtmlCssMode) return HTML_CSS_FILES;
+    if (editableBundleFileNames) return [...editableBundleFileNames];
     if (!hasDomFixtures) return ['script.js'];
     return [
       'script.js',
       ...(fixtureHtml !== undefined ? ['index.html' as const] : []),
       ...(fixtureCss !== undefined ? ['style.css' as const] : []),
     ];
-  }, [isHtmlCssMode, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleFiles.length > 1;
   const [activeFile, setActiveFile] = useState<EditorFileName>(
-    environmentMode === 'html-css' ? 'index.html' : 'script.js'
+    isEditableBundleMode ? 'index.html' : 'script.js'
   );
   const selectedFile = visibleFiles.includes(activeFile) ? activeFile : visibleFiles[0];
   const files = useMemo(
-    () => (isHtmlCssMode ? parseFileBundle(code) : null),
-    [isHtmlCssMode, code]
+    () => (editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null),
+    [editableBundleFileNames, code]
   );
 
   useEffect(() => {
     if (!visibleFiles.includes(activeFile)) setActiveFile(visibleFiles[0]);
   }, [activeFile, visibleFiles]);
 
-  const editorCode = isHtmlCssMode && files
-    ? files[selectedFile as keyof WebFileBundle]
+  const editorCode = isEditableBundleMode && files
+    ? files[selectedFile]
     : hasDomFixtures && selectedFile === 'index.html'
       ? fixtureHtml ?? ''
       : hasDomFixtures && selectedFile === 'style.css'
@@ -96,7 +104,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         : code;
   const handleEditorChange = (value: string | undefined) => {
     const next = value || '';
-    if (isHtmlCssMode && files) {
+    if (isEditableBundleMode && files) {
       onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
     } else if (!hasDomFixtures || selectedFile === 'script.js') {
       onChange(next);

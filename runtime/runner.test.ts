@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -94,6 +94,31 @@ describe('getSandboxHtml', () => {
     expect(html).toContain('cs-hint-banner');
     expect(html).toContain('cs-script-banner');
     expect(html).not.toContain('id="placeholder"');
+    expect(html).not.toContain('unpkg.com');
+    expect(html).not.toContain('esm.sh');
+    expect(html).not.toContain('cdnjs');
+  });
+
+  it('builds html-js as a manual DOM runner with strict local-script semantics', () => {
+    const html = getSandboxHtml('html-js');
+    const parseAt = html.indexOf('__csFiles__');
+    const linkAt = html.indexOf('script[src="script.js"]');
+    const removeAt = html.indexOf("querySelectorAll('script').forEach");
+    const importAt = html.indexOf('root.appendChild(document.importNode(node, true))');
+    const executeAt = html.indexOf("new Function('root', files.js)(root)");
+
+    expect(parseAt).toBeGreaterThan(-1);
+    expect(linkAt).toBeGreaterThan(parseAt);
+    expect(removeAt).toBeGreaterThan(linkAt);
+    expect(importAt).toBeGreaterThan(removeAt);
+    expect(executeAt).toBeGreaterThan(importAt);
+    expect(html).toContain('script.js is not linked');
+    expect(html).toContain('<script src="script.js"><\\/script>');
+    expect(html).not.toContain('<script src="script.js"></script> before </body>');
+    expect(html).toContain('cs-hint-banner');
+    expect(html).toContain('event.source !== window.parent');
+    expect(html).not.toContain('allow-same-origin');
+    expect(html).not.toContain("setAttribute('sandbox', '')");
     expect(html).not.toContain('unpkg.com');
     expect(html).not.toContain('esm.sh');
     expect(html).not.toContain('cdnjs');

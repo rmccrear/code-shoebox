@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { serializeFileBundle, parseFileBundle } from './fileBundle';
+import { HTML_JS_FILE_NAMES, serializeFileBundle, parseFileBundle } from './fileBundle';
 
 describe('fileBundle', () => {
   it('round-trips a two-file bundle', () => {
@@ -39,6 +39,30 @@ describe('fileBundle', () => {
     expect(parseFileBundle(raw)).toEqual({
       'index.html': '<p>only html</p>',
       'style.css': ''
+    });
+  });
+
+  it('round-trips an HTML and JavaScript bundle without interpreting learner text', () => {
+    const files = {
+      'index.html': '<button id="go">{ Go }</button><script src="script.js"></script>',
+      'script.js': 'const template = `quotes " \\ ${value}`;\nconst closing = "</script>";'
+    };
+
+    expect(parseFileBundle(serializeFileBundle(files), HTML_JS_FILE_NAMES)).toEqual(files);
+  });
+
+  it('uses the requested HTML and JavaScript shape for plain-text fallback', () => {
+    expect(parseFileBundle('<h1>bare</h1>', HTML_JS_FILE_NAMES)).toEqual({
+      'index.html': '<h1>bare</h1>',
+      'script.js': ''
+    });
+  });
+
+  it('defaults a missing script.js file to an empty string', () => {
+    const raw = JSON.stringify({ __csFiles__: 1, files: { 'index.html': '<p>only html</p>' } });
+    expect(parseFileBundle(raw, HTML_JS_FILE_NAMES)).toEqual({
+      'index.html': '<p>only html</p>',
+      'script.js': ''
     });
   });
 });

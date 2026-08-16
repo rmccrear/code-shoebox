@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingEnvironment } from './CodingEnvironment';
 import type { EnvironmentMode } from '../types';
-import { parseFileBundle, serializeFileBundle } from '../runtime/fileBundle';
+import { HTML_JS_FILE_NAMES, parseFileBundle, serializeFileBundle } from '../runtime/fileBundle';
 
 vi.mock('../runtime/runner', () => ({
   getSandboxHtml: vi.fn(() => '<!doctype html><html><body></body></html>'),
@@ -186,5 +186,35 @@ describe('CodingEnvironment routing', () => {
       'index.html': '<h1>Page</h1>',
       'style.css': 'h1 { color: green; }',
     });
+  });
+
+  it('preserves two editable html-js files with filename-specific languages', () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'index.html': '<button id="go">Go</button><script src="script.js"></script>',
+      'script.js': 'document.getElementById("go").focus();',
+    });
+    renderCodingEnvironment('html-js', { code, onChange });
+    let editor = screen.getByLabelText('Code editor');
+
+    expect(getFileTabNames()).toEqual(['index.html', 'script.js']);
+    expect(editor).toHaveValue('<button id="go">Go</button><script src="script.js"></script>');
+    expect(editor).not.toHaveAttribute('readonly');
+    expect(editor).toHaveAttribute('data-language', 'html');
+
+    fireEvent.change(editor, { target: { value: '<button id="go">Launch</button><script src="script.js"></script>' } });
+    const htmlEdit = parseFileBundle(onChange.mock.calls[0][0], HTML_JS_FILE_NAMES);
+    expect(htmlEdit['script.js']).toBe('document.getElementById("go").focus();');
+
+    fireEvent.click(screen.getByRole('button', { name: 'script.js' }));
+    editor = screen.getByLabelText('Code editor');
+    expect(editor).toHaveValue('document.getElementById("go").focus();');
+    expect(editor).not.toHaveAttribute('readonly');
+    expect(editor).toHaveAttribute('data-language', 'javascript');
+
+    fireEvent.change(editor, { target: { value: 'console.log("launched")' } });
+    const jsEdit = parseFileBundle(onChange.mock.calls[1][0], HTML_JS_FILE_NAMES);
+    expect(jsEdit['index.html']).toContain('<button id="go">');
+    expect(jsEdit['script.js']).toBe('console.log("launched")');
   });
 });
