@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   EDITOR_DEMO_PRESETS,
   resolvePresetFromHash,
-  getPresetHashForMode
+  getPresetHashForMode,
+  getPresetMediaAssetsForMode,
 } from './demoPresets';
 import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from './runtime/fileBundle';
 
@@ -61,6 +62,23 @@ describe('demoPresets', () => {
     expect(files['index.html']).toContain('<script src="script.js"></script>');
     expect(files['style.css'].length).toBeGreaterThan(0);
     expect(files['script.js'].length).toBeGreaterThan(0);
+  });
+
+  it('resolves the media preset with three host assets outside its code envelope', () => {
+    const preset = resolvePresetFromHash('html-js-css-media-tabs-demo');
+    expect(preset?.mode).toBe('html-js-css-media');
+    expect(getPresetHashForMode('html-js-css-media')).toBe('html-js-css-media-tabs-demo');
+    expect(getPresetMediaAssetsForMode('html-js-css-media')).toEqual(preset?.mediaAssets);
+    expect(preset?.mediaAssets?.map((asset) => asset.kind)).toEqual(['image', 'audio', 'video']);
+    expect(preset?.mediaAssets?.[0]).toMatchObject({ alt: expect.any(String) });
+
+    const files = parseFileBundle(preset!.code, HTML_CSS_JS_FILE_NAMES);
+    expect(files['index.html']).toContain('<link rel="stylesheet" href="style.css">');
+    expect(files['index.html']).toContain('<script src="script.js"></script>');
+    expect(files['style.css'].length).toBeGreaterThan(0);
+    expect(files['script.js'].length).toBeGreaterThan(0);
+    expect(preset!.code).not.toContain('mediaAssets');
+    expect(getPresetMediaAssetsForMode('html-css-js')).toBeUndefined();
   });
 
   it('maps a mode to its preset hash and round-trips back', () => {

@@ -128,6 +128,55 @@ button.addEventListener('click', () => {
 `
 });
 
+export const HTML_JS_CSS_MEDIA_STARTER_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Media Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="media-card">
+    <p class="eyebrow">HTML + CSS + JavaScript + Media</p>
+    <h1>Build with media</h1>
+    <div id="media-gallery">
+      Open the Media tab and paste a snippet here.
+    </div>
+    <button id="check-media" type="button">Check my page</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  'style.css': `body {
+  margin: 0;
+  padding: 2rem;
+  background: #fff7ed;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #7c2d12;
+}
+
+.media-card {
+  max-width: 32rem;
+  padding: 1.5rem;
+  border: 1px solid #fdba74;
+  border-radius: 1rem;
+  background: white;
+}
+
+.eyebrow { color: #ea580c; font-weight: 700; }
+#media-gallery { margin: 1rem 0; padding: 1rem; border: 2px dashed #fdba74; border-radius: 0.75rem; }
+button { padding: 0.7rem 1rem; border: 0; border-radius: 999px; background: #ea580c; color: white; }
+`,
+  'script.js': `const button = document.getElementById('check-media');
+const gallery = document.getElementById('media-gallery');
+
+button.addEventListener('click', () => {
+  console.log(gallery.children.length > 0 ? 'Media added!' : 'Choose a snippet from the Media tab.');
+});
+`
+});
+
 export const STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.
 // 'root' is a reference to the main container div.

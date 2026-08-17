@@ -11,6 +11,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `html-css`: Two-tab HTML & CSS editing (`index.html` + `style.css`) with live preview.
   - `html-js`: Two-tab HTML & JavaScript editing (`index.html` + `script.js`) with manual execution and console output.
   - `html-css-js`: Three-tab HTML, CSS & JavaScript editing with explicit local-file links, manual execution, and console output.
+  - `html-js-css-media`: Three editable web files plus a read-only Media tab with up to three image, audio, or video assets and usage snippets.
   - `dom`: Standard JavaScript manipulation.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
@@ -203,6 +204,38 @@ const state = useSandboxState('complete-web-page', undefined, 'html-css-js');
 />
 ```
 
+## HTML + CSS + JavaScript + Media Mode
+
+Use `html-js-css-media` when a lesson should provide media beside the same three editable web files. The top-level tabs are `index.html`, `style.css`, `script.js`, and read-only `Media`. The Media tab accepts up to three host-authored assets, previews each one, and shows snippets learners can paste into HTML, CSS (images), or JavaScript (audio/video playback).
+
+```tsx
+import type { MediaAsset } from 'code-shoebox';
+
+const state = useSandboxState('media-page', undefined, 'html-js-css-media');
+const mediaAssets: readonly MediaAsset[] = [
+  {
+    kind: 'image',
+    name: 'Class poster',
+    src: 'https://example.edu/assets/poster.jpg',
+    alt: 'A poster for the class project',
+  },
+  { kind: 'audio', name: 'Theme music', src: 'https://example.edu/assets/theme.mp3' },
+  { kind: 'video', name: 'Introduction', src: 'https://example.edu/assets/intro.mp4' },
+];
+
+<CodeShoebox
+  code={state.code}
+  onCodeChange={state.setCode}
+  environmentMode={state.environmentMode}
+  mediaAssets={mediaAssets}
+  theme={activeTheme}
+  themeMode="dark"
+  sessionId={state.sessionId}
+/>
+```
+
+Media descriptors remain host state: they are not uploaded, added to the code envelope, persisted to localStorage, or sent in iframe execution messages. Learners paste a shown snippet into an editable file and press Run. Only the first three assets are shown; an empty list produces a read-only empty state. MP3/WAV and video playback depend on browser codec support. Absolute HTTPS or data URLs are the most portable; relative URLs resolve against the host page, external URLs make browser requests to their origin, and Canvas/Web Audio access may still be restricted by CORS.
+
 ## Prediction Templates (Pedagogy)
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
@@ -275,9 +308,10 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-css-js' \| 'dom' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
+| `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |

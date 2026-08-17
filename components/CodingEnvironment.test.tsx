@@ -259,4 +259,42 @@ describe('CodingEnvironment routing', () => {
     expect(jsEdit['style.css']).toBe('button { color: blue; }');
     expect(jsEdit['script.js']).toBe('console.log("launched")');
   });
+
+  it('adds a fourth read-only Media tab without changing the three-file envelope', () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'index.html': '<main>Media lesson</main><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
+      'style.css': 'main { color: navy; }',
+      'script.js': 'console.log("media lesson")',
+    });
+    renderCodingEnvironment('html-js-css-media', {
+      code,
+      onChange,
+      mediaAssets: [
+        { kind: 'image', name: 'Poster', src: '/poster.jpg', alt: 'Lesson poster' },
+        { kind: 'audio', name: 'Chime', src: '/chime.mp3' },
+      ],
+    });
+
+    const workspaceTabNames = screen.getAllByRole('button')
+      .map((button) => button.textContent?.trim())
+      .filter((name) => ['index.html', 'style.css', 'script.js', 'Media'].includes(name ?? ''));
+    expect(workspaceTabNames).toEqual(['index.html', 'style.css', 'script.js', 'Media']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Media' }));
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Poster/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Chime/ }));
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'style.css' }));
+    const editor = screen.getByLabelText('Code editor');
+    expect(editor).toHaveValue('main { color: navy; }');
+    fireEvent.change(editor, { target: { value: 'main { color: teal; }' } });
+    expect(parseFileBundle(onChange.mock.calls[0][0], HTML_CSS_JS_FILE_NAMES)).toEqual({
+      'index.html': '<main>Media lesson</main><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
+      'style.css': 'main { color: teal; }',
+      'script.js': 'console.log("media lesson")',
+    });
+  });
 });

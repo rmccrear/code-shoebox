@@ -1,10 +1,30 @@
-import { EnvironmentMode } from './types';
+import { EnvironmentMode, MediaAsset } from './types';
 import { serializeFileBundle } from './runtime/fileBundle';
+
+export const HTML_JS_CSS_MEDIA_DEMO_ASSETS = [
+  {
+    kind: 'image',
+    name: 'Grapefruit slice',
+    src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-images/grapefruit-slice-332-332.jpg',
+    alt: 'A grapefruit slice on a blue background',
+  },
+  {
+    kind: 'audio',
+    name: 'T-Rex roar',
+    src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3',
+  },
+  {
+    kind: 'video',
+    name: 'Flower video',
+    src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  },
+] as const satisfies readonly MediaAsset[];
 
 export interface EditorDemoPreset {
   id: string;
   mode: EnvironmentMode;
   code: string;
+  mediaAssets?: readonly MediaAsset[];
   aliases?: string[];
 }
 
@@ -153,6 +173,65 @@ button.addEventListener('click', () => {
     })
   },
   {
+    id: 'html-js-css-media-tabs-demo',
+    mode: 'html-js-css-media',
+    mediaAssets: HTML_JS_CSS_MEDIA_DEMO_ASSETS,
+    code: serializeFileBundle({
+      'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Media Field Guide</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="field-guide">
+    <p class="eyebrow">Four-tab field guide</p>
+    <h1>Grapefruit in bloom</h1>
+    <img class="feature-image" src="${HTML_JS_CSS_MEDIA_DEMO_ASSETS[0].src}" alt="${HTML_JS_CSS_MEDIA_DEMO_ASSETS[0].alt}">
+    <video id="media-video" controls src="${HTML_JS_CSS_MEDIA_DEMO_ASSETS[2].src}"></video>
+    <button id="play-sound" type="button">Play the roar</button>
+    <p id="media-status">Choose an asset in the Media tab to see its snippets.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      'style.css': `body {
+  margin: 0;
+  padding: 2rem;
+  background: #fff7ed;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #7c2d12;
+}
+
+.field-guide {
+  max-width: 34rem;
+  padding: 1.5rem;
+  border: 1px solid #fdba74;
+  border-radius: 1.25rem;
+  background: linear-gradient(rgba(255,255,255,.92), rgba(255,255,255,.92)), url("${HTML_JS_CSS_MEDIA_DEMO_ASSETS[0].src}") center / cover;
+  box-shadow: 0 18px 44px rgba(154, 52, 18, 0.16);
+}
+
+.eyebrow { color: #ea580c; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
+.feature-image, video { display: block; width: 100%; max-height: 15rem; margin: 1rem 0; border-radius: .8rem; object-fit: cover; }
+button { border: 0; border-radius: 999px; padding: .75rem 1rem; background: #ea580c; color: white; font-weight: 700; cursor: pointer; }`,
+      'script.js': `const playButton = document.getElementById('play-sound');
+const status = document.getElementById('media-status');
+const roar = new Audio(${JSON.stringify(HTML_JS_CSS_MEDIA_DEMO_ASSETS[1].src)});
+
+playButton.addEventListener('click', async () => {
+  try {
+    await roar.play();
+    status.textContent = 'Playing the audio asset from JavaScript.';
+    console.log('Media playback started');
+  } catch (error) {
+    status.textContent = 'Your browser blocked playback. Click again to retry.';
+    console.error(error);
+  }
+});`
+    })
+  },
+  {
     id: 'ts-express-rest-demo',
     mode: 'express-ts',
     aliases: ['express-rest-demo'],
@@ -241,4 +320,8 @@ export const resolvePresetFromHash = (rawHash: string): EditorDemoPreset | undef
 
 export const getPresetHashForMode = (mode: EnvironmentMode): string | undefined => {
   return PRESET_BY_MODE.get(mode)?.id;
+};
+
+export const getPresetMediaAssetsForMode = (mode: EnvironmentMode): readonly MediaAsset[] | undefined => {
+  return PRESET_BY_MODE.get(mode)?.mediaAssets;
 };

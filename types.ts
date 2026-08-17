@@ -9,7 +9,12 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+
+export type MediaAsset =
+  | { kind: 'image'; name: string; src: string; alt: string }
+  | { kind: 'audio'; name: string; src: string }
+  | { kind: 'video'; name: string; src: string };
 
 export interface EditorProps {
   initialCode: string;
@@ -25,6 +30,8 @@ export interface CodeShoeboxProps {
   fixtureHtml?: string;
   /** Trusted host-authored styles restored with fixtureHtml in dom mode. */
   fixtureCss?: string;
+  /** Host-authored media shown read-only in html-js-css-media mode. */
+  mediaAssets?: readonly MediaAsset[];
   themeMode: ThemeMode;
   theme: Theme;
   sessionId?: number;

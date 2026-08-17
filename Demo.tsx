@@ -5,6 +5,7 @@ import { Button } from './components/Button';
 import { themes } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
 import { serializeFileBundle } from './runtime/fileBundle';
+import { resolvePresetFromHash } from './demoPresets';
 
 const HTML_DEMO_CODE = `<!DOCTYPE html>
 <html>
@@ -405,6 +406,11 @@ const PERSISTENCE_DEMO_CODE = `// Persistence Demo
 const message = "Change me and reload the page!";
 console.log("Persistence Status:", message);`;
 
+const HTML_JS_CSS_MEDIA_DEMO_PRESET = resolvePresetFromHash('html-js-css-media-tabs-demo');
+if (!HTML_JS_CSS_MEDIA_DEMO_PRESET) {
+    throw new Error('Missing html-js-css-media demo preset');
+}
+
 export const Demo: React.FC = () => {
     // Giving each demo a unique key prevents state collision in localStorage
     // using '_v2' effectively resets the "legacy" data that was causing issues.
@@ -412,6 +418,11 @@ export const Demo: React.FC = () => {
     const htmlCssState = useSandboxState('demo_html_css_v1', HTML_CSS_DEMO_CODE, 'html-css');
     const htmlJsState = useSandboxState('demo_html_js_v1', HTML_JS_DEMO_CODE, 'html-js');
     const htmlCssJsState = useSandboxState('demo_html_css_js_v1', HTML_CSS_JS_DEMO_CODE, 'html-css-js');
+    const htmlJsCssMediaState = useSandboxState(
+        'demo_html_js_css_media_v1',
+        HTML_JS_CSS_MEDIA_DEMO_PRESET.code,
+        'html-js-css-media'
+    );
     const domFixtureState = useSandboxState('demo_dom_fixture_v1', DOM_FIXTURE_DEMO_CODE, 'dom');
     const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5');
     const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
@@ -428,6 +439,7 @@ export const Demo: React.FC = () => {
             htmlCssState.resetCode();
             htmlJsState.resetCode();
             htmlCssJsState.resetCode();
+            htmlJsCssMediaState.resetCode();
             domFixtureState.resetCode();
             p5State.resetCode();
             p5TsState.resetCode();
@@ -478,6 +490,21 @@ export const Demo: React.FC = () => {
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-cyan-500" /> Three Files (index.html + style.css + script.js)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
                         <CodeShoebox code={htmlCssJsState.code} onCodeChange={htmlCssJsState.setCode} environmentMode={htmlCssJsState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlCssJsState.sessionId} />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-orange-500" /> Four Tabs (HTML + CSS + JavaScript + Media)</h2></div>
+                    <div className="h-[560px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox
+                            code={htmlJsCssMediaState.code}
+                            onCodeChange={htmlJsCssMediaState.setCode}
+                            environmentMode={htmlJsCssMediaState.environmentMode}
+                            mediaAssets={HTML_JS_CSS_MEDIA_DEMO_PRESET.mediaAssets}
+                            theme={themes[0]}
+                            themeMode="dark"
+                            sessionId={htmlJsCssMediaState.sessionId}
+                        />
                     </div>
                 </section>
 

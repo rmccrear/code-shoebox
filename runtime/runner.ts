@@ -590,6 +590,11 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
   }
 };
 
+ENV_RECIPES['html-js-css-media'] = {
+  ...ENV_RECIPES['html-css-js'],
+  name: "HTML, CSS, JavaScript & Media (4 tabs)",
+};
+
 export const getSandboxHtml = (mode: EnvironmentMode = 'dom', isPredictionMode: boolean = false): string => {
   const recipe = ENV_RECIPES[mode] || ENV_RECIPES.dom;
   return BASE_HTML_WRAPPER({
