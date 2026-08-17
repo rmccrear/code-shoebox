@@ -890,6 +890,106 @@ var ENV_RECIPES = {
       };
     `
   },
+  "html-js": {
+    name: "HTML & JavaScript (script.js)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.replaceChildren();
+        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+        // The iframe kernel cannot import modules; keep both copies in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
+            : { html: code, js: '' };
+        } catch (e) { files = { html: code, js: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+        const linkedScript = doc.querySelector('script[src="script.js"]');
+
+        // Learner HTML never creates a second execution path. The bundled
+        // script.js file is the only JavaScript this mode executes.
+        doc.querySelectorAll('script').forEach((script) => script.remove());
+
+        if (!linkedScript && files.js.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+          root.appendChild(hint);
+        }
+
+        doc.body.childNodes.forEach((node) => {
+          root.appendChild(document.importNode(node, true));
+        });
+
+        if (!linkedScript) return;
+        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
+  "html-css-js": {
+    name: "HTML, CSS & JavaScript (3 files)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.replaceChildren();
+        document.querySelectorAll('style[data-code-shoebox-html-css-js]').forEach((style) => style.remove());
+
+        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+        // The iframe kernel cannot import modules; keep both copies in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? {
+                html: String(parsed.files['index.html'] ?? ''),
+                css: String(parsed.files['style.css'] ?? ''),
+                js: String(parsed.files['script.js'] ?? '')
+              }
+            : { html: code, css: '', js: '' };
+        } catch (e) { files = { html: code, css: '', js: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+        const linkedStyles = doc.querySelector('link[rel="stylesheet"][href="style.css"]');
+        const linkedScript = doc.querySelector('script[src="script.js"]');
+
+        // The bundled files are the only CSS/JS resource paths in this mode.
+        // Detect their markers first, then remove every parsed resource node.
+        doc.querySelectorAll('script').forEach((script) => script.remove());
+        doc.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => link.remove());
+
+        if (linkedStyles) {
+          const style = document.createElement('style');
+          style.setAttribute('data-code-shoebox-html-css-js', '');
+          style.textContent = files.css;
+          document.head.appendChild(style);
+        } else if (files.css.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+          root.appendChild(hint);
+        }
+
+        if (!linkedScript && files.js.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+          root.appendChild(hint);
+        }
+
+        doc.body.childNodes.forEach((node) => {
+          root.appendChild(document.importNode(node, true));
+        });
+
+        if (!linkedScript) return;
+        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
   dom: {
     name: "DOM",
     logic: `
@@ -1336,7 +1436,7 @@ var OutputFrame = ({
   const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
-  const isHtmlMode = environmentMode === "html" || environmentMode === "html-css";
+  const isStaticHtmlMode = environmentMode === "html" || environmentMode === "html-css";
   const addSystemLog = (0, import_react4.useCallback)((msg, type = "log") => {
     setLogs((prev) => appendLog(prev, {
       type,
@@ -1399,14 +1499,14 @@ var OutputFrame = ({
     }
   }, [themeMode]);
   (0, import_react4.useEffect)(() => {
-    if (!isHtmlMode) return;
+    if (!isStaticHtmlMode) return;
     const timer = setTimeout(() => {
       if (iframeRef.current?.contentWindow) {
         executeCodeInSandbox(iframeRef.current.contentWindow, code);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [code, isHtmlMode]);
+  }, [code, isStaticHtmlMode]);
   const handleIframeLoad = () => {
     if (debugMode) addSystemLog('Iframe "onLoad" event fired.');
     if (!iframeRef.current?.contentWindow) return;
@@ -1416,7 +1516,7 @@ var OutputFrame = ({
     channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
     iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
     iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
-    if (isHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
+    if (isStaticHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
     if (debugMode) addSystemLog("Channel Ports initialized.");
   };
   const handleMouseDown = (e) => {
@@ -1450,7 +1550,7 @@ var OutputFrame = ({
     PreviewContainer,
     {
       themeMode,
-      isReady: isHtmlMode || runTrigger > 0,
+      isReady: isStaticHtmlMode || runTrigger > 0,
       overlayMessage: isBlurred ? "Make your Prediction" : void 0,
       children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
         !isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -1465,7 +1565,7 @@ var OutputFrame = ({
           },
           `${environmentMode}-${isPredictionMode}`
         ) }),
-        !isHeadless && !isHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "div",
           {
             onMouseDown: handleMouseDown,
@@ -1473,7 +1573,7 @@ var OutputFrame = ({
             children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react2.GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        !isHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
         isHeadless && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "iframe",
           {
@@ -1776,24 +1876,32 @@ var ServerOutput = ({
 };
 
 // runtime/fileBundle.ts
+var HTML_CSS_FILE_NAMES = ["index.html", "style.css"];
+var HTML_JS_FILE_NAMES = ["index.html", "script.js"];
+var HTML_CSS_JS_FILE_NAMES = ["index.html", "style.css", "script.js"];
 var serializeFileBundle = (files) => JSON.stringify({ __csFiles__: 1, files });
-var parseFileBundle = (code) => {
+function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
   try {
     const parsed = JSON.parse(code);
     if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
-      return {
-        "index.html": String(parsed.files["index.html"] ?? ""),
-        "style.css": String(parsed.files["style.css"] ?? "")
-      };
+      return Object.fromEntries(
+        fileNames.map((fileName) => [fileName, String(parsed.files[fileName] ?? "")])
+      );
     }
   } catch {
   }
-  return { "index.html": code, "style.css": "" };
-};
+  return Object.fromEntries(
+    fileNames.map((fileName) => [fileName, fileName === "index.html" ? code : ""])
+  );
+}
 
 // components/CodingEnvironment.tsx
 var import_jsx_runtime7 = require("react/jsx-runtime");
-var HTML_CSS_FILES = ["index.html", "style.css"];
+var EDITABLE_BUNDLE_FILES = {
+  "html-css": HTML_CSS_FILE_NAMES,
+  "html-js": HTML_JS_FILE_NAMES,
+  "html-css-js": HTML_CSS_JS_FILE_NAMES
+};
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
 var CodingEnvironment = ({
   code,
@@ -1816,33 +1924,34 @@ var CodingEnvironment = ({
   const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
   const containerRef = (0, import_react6.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
-  const isHtmlCssMode = environmentMode === "html-css";
+  const editableBundleFileNames = environmentMode in EDITABLE_BUNDLE_FILES ? EDITABLE_BUNDLE_FILES[environmentMode] : null;
+  const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === "dom" && (fixtureHtml !== void 0 || fixtureCss !== void 0);
   const visibleFiles = (0, import_react6.useMemo)(() => {
-    if (isHtmlCssMode) return HTML_CSS_FILES;
+    if (editableBundleFileNames) return [...editableBundleFileNames];
     if (!hasDomFixtures) return ["script.js"];
     return [
       "script.js",
       ...fixtureHtml !== void 0 ? ["index.html"] : [],
       ...fixtureCss !== void 0 ? ["style.css"] : []
     ];
-  }, [isHtmlCssMode, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleFiles.length > 1;
   const [activeFile, setActiveFile] = (0, import_react6.useState)(
-    environmentMode === "html-css" ? "index.html" : "script.js"
+    isEditableBundleMode ? "index.html" : "script.js"
   );
   const selectedFile = visibleFiles.includes(activeFile) ? activeFile : visibleFiles[0];
   const files = (0, import_react6.useMemo)(
-    () => isHtmlCssMode ? parseFileBundle(code) : null,
-    [isHtmlCssMode, code]
+    () => editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null,
+    [editableBundleFileNames, code]
   );
   (0, import_react6.useEffect)(() => {
     if (!visibleFiles.includes(activeFile)) setActiveFile(visibleFiles[0]);
   }, [activeFile, visibleFiles]);
-  const editorCode = isHtmlCssMode && files ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
+  const editorCode = isEditableBundleMode && files ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
   const handleEditorChange = (value) => {
     const next = value || "";
-    if (isHtmlCssMode && files) {
+    if (isEditableBundleMode && files) {
       onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
     } else if (!hasDomFixtures || selectedFile === "script.js") {
       onChange(next);
@@ -2206,6 +2315,74 @@ strong {
   background: #fef08a;
   padding: 0 4px;
 }
+`
+});
+var HTML_JS_STARTER_CODE = serializeFileBundle({
+  "index.html": `<!DOCTYPE html>
+<html>
+<head>
+  <title>Two Files</title>
+</head>
+<body>
+  <h1>HTML meets JavaScript</h1>
+  <p id="message">Press the button to run an interaction.</p>
+  <button id="change-message">Change message</button>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  "script.js": `const button = document.getElementById('change-message');
+const message = document.getElementById('message');
+
+button.addEventListener('click', () => {
+  message.textContent = 'JavaScript changed the page!';
+  console.log('Message updated');
+});
+`
+});
+var HTML_CSS_JS_STARTER_CODE = serializeFileBundle({
+  "index.html": `<!DOCTYPE html>
+<html>
+<head>
+  <title>Three Files</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="message-card">
+    <p class="eyebrow">HTML + CSS + JavaScript</p>
+    <h1 id="message">Ready for all three layers.</h1>
+    <button id="change-message" type="button">Change message</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  "style.css": `body {
+  margin: 0;
+  padding: 2rem;
+  background: #eef2ff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.message-card {
+  max-width: 28rem;
+  padding: 1.5rem;
+  border: 1px solid #a5b4fc;
+  border-radius: 1rem;
+  background: white;
+  color: #1e1b4b;
+}
+
+.eyebrow { color: #4f46e5; font-weight: 700; }
+button { padding: 0.7rem 1rem; border: 0; border-radius: 999px; background: #4f46e5; color: white; }
+`,
+  "script.js": `const button = document.getElementById('change-message');
+const message = document.getElementById('message');
+
+button.addEventListener('click', () => {
+  message.textContent = 'HTML, CSS, and JavaScript are connected!';
+  console.log('Three-file interaction complete');
+});
 `
 });
 var STARTER_CODE = `// Welcome to your coding sandbox!
@@ -2599,6 +2776,8 @@ myTodos.showTasks();
 var VALID_MODES = [
   "html",
   "html-css",
+  "html-js",
+  "html-css-js",
   "dom",
   "typescript",
   "p5",
@@ -2618,6 +2797,10 @@ var getStarterCode = (mode) => {
       return HTML_STARTER_CODE;
     case "html-css":
       return HTML_CSS_STARTER_CODE;
+    case "html-js":
+      return HTML_JS_STARTER_CODE;
+    case "html-css-js":
+      return HTML_CSS_JS_STARTER_CODE;
     case "p5":
       return P5_STARTER_CODE;
     case "p5-ts":

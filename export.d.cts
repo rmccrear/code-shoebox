@@ -27,7 +27,7 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'html' | 'html-css' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 interface EditorProps {
     initialCode: string;
     onChange: (code: string) => void;
