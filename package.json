@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "type": "module",
   "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
   "main": "export.cjs",

@@ -1,13 +1,13 @@
 // components/CodeShoebox.tsx
-import { useState as useState4, useMemo as useMemo5, useEffect as useEffect4 } from "react";
+import { useState as useState5, useMemo as useMemo5, useEffect as useEffect4 } from "react";
 
 // components/CodingEnvironment.tsx
-import { useState as useState3, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3, useMemo as useMemo4 } from "react";
+import { useState as useState4, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3, useMemo as useMemo4 } from "react";
 import {
   Play,
   CheckCircle2,
   FileCode,
-  Lock,
+  Lock as Lock2,
   Columns,
   Rows,
   GripVertical,
@@ -301,8 +301,98 @@ var CodeEditor = ({
   ) });
 };
 
+// components/MediaPanel.tsx
+import { useId, useState } from "react";
+import { Lock } from "lucide-react";
+import { jsx as jsx2, jsxs } from "react/jsx-runtime";
+var escapeHtmlAttribute = (value) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
+var escapeCssString = (value) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r\n|\r|\n/g, "\\a ");
+var getSnippets = (asset) => {
+  switch (asset.kind) {
+    case "image":
+      return [
+        { language: "HTML", code: `<img src="${escapeHtmlAttribute(asset.src)}" alt="${escapeHtmlAttribute(asset.alt)}">` },
+        { language: "CSS", code: `.media-image { background-image: url("${escapeCssString(asset.src)}"); }` }
+      ];
+    case "audio":
+      return [
+        { language: "HTML", code: `<audio controls src="${escapeHtmlAttribute(asset.src)}"></audio>` },
+        { language: "JavaScript", code: `const audio = new Audio(${JSON.stringify(asset.src)});
+void audio.play();` }
+      ];
+    case "video":
+      return [
+        { language: "HTML", code: `<video id="media-video" controls src="${escapeHtmlAttribute(asset.src)}"></video>` },
+        { language: "JavaScript", code: "const video = document.querySelector('#media-video');\nvoid video?.play();" }
+      ];
+  }
+};
+var SnippetBlock = ({ language, code }) => /* @__PURE__ */ jsxs("div", { children: [
+  /* @__PURE__ */ jsx2("h3", { className: "mb-1 text-xs font-bold uppercase tracking-wide", children: language }),
+  /* @__PURE__ */ jsx2("pre", { className: "overflow-x-auto rounded bg-black/20 p-3 text-xs", children: /* @__PURE__ */ jsx2("code", { children: code }) })
+] });
+var getAssetKey = (asset, index) => `${index}:${asset.kind}:${asset.name}:${asset.src}`;
+var MediaPanel = ({ mediaAssets, themeMode }) => {
+  const panelId = useId();
+  const visibleAssets = mediaAssets.slice(0, 3);
+  const [selectedAssetKey, setSelectedAssetKey] = useState(null);
+  const [failedAssetKey, setFailedAssetKey] = useState(null);
+  const selectedIndex = visibleAssets.findIndex((item, index) => getAssetKey(item, index) === selectedAssetKey);
+  const effectiveSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const asset = visibleAssets[effectiveSelectedIndex];
+  if (!asset) {
+    return /* @__PURE__ */ jsx2("section", { className: `flex h-full items-center justify-center p-6 ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-300" : "bg-white text-gray-600"}`, children: /* @__PURE__ */ jsx2("p", { className: "rounded-lg border border-dashed border-current/25 px-5 py-4 text-center text-sm", children: "No media assets supplied." }) });
+  }
+  const snippets = getSnippets(asset);
+  const activeAssetKey = getAssetKey(asset, effectiveSelectedIndex);
+  return /* @__PURE__ */ jsxs("section", { className: `h-full overflow-auto p-4 ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-100" : "bg-white text-gray-900"}`, children: [
+    /* @__PURE__ */ jsx2("div", { role: "tablist", "aria-label": "Media assets", className: "mb-4 flex gap-1 overflow-x-auto", children: visibleAssets.map((item, index) => /* @__PURE__ */ jsxs(
+      "button",
+      {
+        id: `${panelId}-tab-${index}`,
+        type: "button",
+        role: "tab",
+        "aria-selected": index === effectiveSelectedIndex,
+        "aria-controls": `${panelId}-panel`,
+        onClick: () => {
+          setSelectedAssetKey(getAssetKey(item, index));
+          setFailedAssetKey(null);
+        },
+        className: `shrink-0 rounded px-3 py-1.5 text-sm font-medium transition-colors ${index === effectiveSelectedIndex ? themeMode === "dark" ? "bg-white/10 text-blue-300" : "bg-blue-50 text-blue-700" : "opacity-60 hover:opacity-90"}`,
+        children: [
+          item.name,
+          /* @__PURE__ */ jsx2(Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
+        ]
+      },
+      `${index}-${item.name}`
+    )) }),
+    mediaAssets.length > visibleAssets.length && /* @__PURE__ */ jsx2("p", { className: "mb-4 text-xs opacity-70", children: "Only the first 3 assets are shown." }),
+    /* @__PURE__ */ jsxs(
+      "div",
+      {
+        id: `${panelId}-panel`,
+        role: "tabpanel",
+        "aria-labelledby": `${panelId}-tab-${effectiveSelectedIndex}`,
+        children: [
+          /* @__PURE__ */ jsxs("div", { className: `flex min-h-40 items-center justify-center rounded-lg border p-3 ${themeMode === "dark" ? "border-white/10 bg-black/20" : "border-gray-200 bg-gray-50"}`, children: [
+            asset.kind === "image" && /* @__PURE__ */ jsx2("img", { src: asset.src, alt: asset.alt, onError: () => setFailedAssetKey(activeAssetKey), className: "max-h-64 max-w-full rounded object-contain" }),
+            asset.kind === "audio" && /* @__PURE__ */ jsx2("audio", { src: asset.src, controls: true, preload: "metadata", "aria-label": `Audio preview: ${asset.name}`, onError: () => setFailedAssetKey(activeAssetKey), className: "w-full" }),
+            asset.kind === "video" && /* @__PURE__ */ jsx2("video", { src: asset.src, controls: true, preload: "metadata", "aria-label": `Video preview: ${asset.name}`, onError: () => setFailedAssetKey(activeAssetKey), className: "max-h-64 max-w-full rounded" })
+          ] }),
+          failedAssetKey === activeAssetKey && /* @__PURE__ */ jsxs("p", { role: "alert", className: "mt-3 text-sm text-red-500", children: [
+            "Could not load ",
+            asset.name,
+            "."
+          ] }),
+          /* @__PURE__ */ jsx2("div", { className: "mt-5 space-y-4", children: snippets.map((snippet) => /* @__PURE__ */ jsx2(SnippetBlock, { ...snippet }, snippet.language)) })
+        ]
+      }
+    )
+  ] });
+};
+
 // components/OutputFrame.tsx
-import { useEffect, useRef, useState, useCallback, useMemo as useMemo2 } from "react";
+import { useEffect, useRef, useState as useState2, useCallback, useMemo as useMemo2 } from "react";
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -1278,6 +1368,10 @@ var ENV_RECIPES = {
     `
   }
 };
+ENV_RECIPES["html-js-css-media"] = {
+  ...ENV_RECIPES["html-css-js"],
+  name: "HTML, CSS, JavaScript & Media (4 tabs)"
+};
 var getSandboxHtml = (mode = "dom", isPredictionMode = false) => {
   const recipe = ENV_RECIPES[mode] || ENV_RECIPES.dom;
   return BASE_HTML_WRAPPER({
@@ -1294,25 +1388,25 @@ var executeCodeInSandbox = (iframeContentWindow, code, options) => {
 };
 
 // components/PreviewContainer.tsx
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var PreviewContainer = ({
   themeMode,
   isReady,
   children,
   overlayMessage
 }) => {
-  return /* @__PURE__ */ jsxs("div", { className: `w-full h-full rounded-md overflow-hidden shadow-inner relative border transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1a1a1a] border-gray-700" : "bg-white border-gray-200"}`, children: [
+  return /* @__PURE__ */ jsxs2("div", { className: `w-full h-full rounded-md overflow-hidden shadow-inner relative border transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1a1a1a] border-gray-700" : "bg-white border-gray-200"}`, children: [
     children,
-    !isReady && /* @__PURE__ */ jsx2("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5", children: /* @__PURE__ */ jsx2("p", { className: "text-gray-400 font-medium", children: overlayMessage || "Click 'Run Code' to execute" }) })
+    !isReady && /* @__PURE__ */ jsx3("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5", children: /* @__PURE__ */ jsx3("p", { className: "text-gray-400 font-medium", children: overlayMessage || "Click 'Run Code' to execute" }) })
   ] });
 };
 
 // components/Console.tsx
-import React2 from "react";
+import React3 from "react";
 import { Terminal, Ban } from "lucide-react";
 
 // components/Button.tsx
-import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var Button = ({
   children,
   variant = "primary",
@@ -1326,13 +1420,13 @@ var Button = ({
     secondary: "bg-gray-700 hover:bg-gray-600 text-white focus:ring-gray-500",
     ghost: "bg-transparent hover:bg-black/10 dark:hover:bg-white/10 text-inherit focus:ring-gray-500"
   };
-  return /* @__PURE__ */ jsxs2(
+  return /* @__PURE__ */ jsxs3(
     "button",
     {
       className: `${baseStyles} ${variants[variant]} ${className}`,
       ...props,
       children: [
-        icon && /* @__PURE__ */ jsx3("span", { className: "w-4 h-4", children: icon }),
+        icon && /* @__PURE__ */ jsx4("span", { className: "w-4 h-4", children: icon }),
         children
       ]
     }
@@ -1340,37 +1434,37 @@ var Button = ({
 };
 
 // components/Console.tsx
-import { jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
-var Console = React2.memo(function Console2({
+import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+var Console = React3.memo(function Console2({
   logs,
   onClear,
   themeMode,
   className = ""
 }) {
-  return /* @__PURE__ */ jsxs3("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
-    /* @__PURE__ */ jsxs3("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
-      /* @__PURE__ */ jsxs3("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
-        /* @__PURE__ */ jsx4(Terminal, { className: "w-3 h-3" }),
-        /* @__PURE__ */ jsxs3("span", { children: [
+  return /* @__PURE__ */ jsxs4("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
+    /* @__PURE__ */ jsxs4("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
+      /* @__PURE__ */ jsxs4("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
+        /* @__PURE__ */ jsx5(Terminal, { className: "w-3 h-3" }),
+        /* @__PURE__ */ jsxs4("span", { children: [
           "Console (",
           logs.length,
           ")"
         ] })
       ] }),
-      /* @__PURE__ */ jsx4(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ jsx4(Ban, { className: "w-3 h-3" }) })
+      /* @__PURE__ */ jsx5(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ jsx5(Ban, { className: "w-3 h-3" }) })
     ] }),
-    /* @__PURE__ */ jsxs3(
+    /* @__PURE__ */ jsxs4(
       "div",
       {
         className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`,
         children: [
-          logs.length === 0 && /* @__PURE__ */ jsx4("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ jsx4("span", { className: "italic", children: "No output" }) }),
-          logs.map((log, i) => /* @__PURE__ */ jsxs3("div", { className: `
+          logs.length === 0 && /* @__PURE__ */ jsx5("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ jsx5("span", { className: "italic", children: "No output" }) }),
+          logs.map((log, i) => /* @__PURE__ */ jsxs4("div", { className: `
             border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre
             ${log.type === "error" ? "text-red-500 bg-red-500/5" : ""}
             ${log.type === "warn" ? "text-yellow-500 bg-yellow-500/5" : ""}
           `, children: [
-            /* @__PURE__ */ jsx4("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
+            /* @__PURE__ */ jsx5("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
             log.content
           ] }, i))
         ]
@@ -1381,7 +1475,7 @@ var Console = React2.memo(function Console2({
 
 // components/OutputFrame.tsx
 import { GripHorizontal } from "lucide-react";
-import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var MAX_CONSOLE_LOGS = 500;
 var appendLog = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS ? [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry] : [...prev, entry];
 var OutputFrame = ({
@@ -1399,9 +1493,9 @@ var OutputFrame = ({
   const containerRef = useRef(null);
   const channelRef = useRef(null);
   const executionRef = useRef({ code, environmentMode, fixtureHtml, fixtureCss, debugMode });
-  const [logs, setLogs] = useState([]);
-  const [consoleHeight, setConsoleHeight] = useState(150);
-  const [isDragging, setIsDragging] = useState(false);
+  const [logs, setLogs] = useState2([]);
+  const [consoleHeight, setConsoleHeight] = useState2(150);
+  const [isDragging, setIsDragging] = useState2(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
   const isStaticHtmlMode = environmentMode === "html" || environmentMode === "html-css";
   const addSystemLog = useCallback((msg, type = "log") => {
@@ -1513,14 +1607,14 @@ var OutputFrame = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
-  return /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx6(
     PreviewContainer,
     {
       themeMode,
       isReady: isStaticHtmlMode || runTrigger > 0,
       overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-      children: /* @__PURE__ */ jsxs4("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
-        !isHeadless && /* @__PURE__ */ jsx5("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ jsx5(
+      children: /* @__PURE__ */ jsxs5("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
+        !isHeadless && /* @__PURE__ */ jsx6("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ jsx6(
           "iframe",
           {
             ref: iframeRef,
@@ -1532,16 +1626,16 @@ var OutputFrame = ({
           },
           `${environmentMode}-${isPredictionMode}`
         ) }),
-        !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ jsx5(
+        !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ jsx6(
           "div",
           {
             onMouseDown: handleMouseDown,
             className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`,
-            children: /* @__PURE__ */ jsx5(GripHorizontal, { className: "w-3 h-3" })
+            children: /* @__PURE__ */ jsx6(GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        !isStaticHtmlMode && /* @__PURE__ */ jsx5("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx5(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
-        isHeadless && /* @__PURE__ */ jsx5(
+        !isStaticHtmlMode && /* @__PURE__ */ jsx6("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx6(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        isHeadless && /* @__PURE__ */ jsx6(
           "iframe",
           {
             ref: iframeRef,
@@ -1559,9 +1653,9 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-import { useEffect as useEffect2, useRef as useRef2, useState as useState2, useCallback as useCallback2, useMemo as useMemo3 } from "react";
+import { useEffect as useEffect2, useRef as useRef2, useState as useState3, useCallback as useCallback2, useMemo as useMemo3 } from "react";
 import { Server, Clock, AlertCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
-import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
 var MAX_CONSOLE_LOGS2 = 500;
 var appendLog2 = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS2 ? [...prev.slice(-(MAX_CONSOLE_LOGS2 - 1)), entry] : [...prev, entry];
 var ServerOutput = ({
@@ -1576,18 +1670,18 @@ var ServerOutput = ({
   const iframeRef = useRef2(null);
   const containerRef = useRef2(null);
   const channelRef = useRef2(null);
-  const [logs, setLogs] = useState2([]);
-  const [route, setRoute] = useState2("/");
-  const [method] = useState2("GET");
-  const [response, setResponse] = useState2(null);
-  const [pendingRequest, setPendingRequest] = useState2(null);
-  const [isLoading, setIsLoading] = useState2(false);
-  const [serverReady, setServerReady] = useState2(false);
-  const [runtimeError, setRuntimeError] = useState2(null);
+  const [logs, setLogs] = useState3([]);
+  const [route, setRoute] = useState3("/");
+  const [method] = useState3("GET");
+  const [response, setResponse] = useState3(null);
+  const [pendingRequest, setPendingRequest] = useState3(null);
+  const [isLoading, setIsLoading] = useState3(false);
+  const [serverReady, setServerReady] = useState3(false);
+  const [runtimeError, setRuntimeError] = useState3(null);
   const startupTimeoutRef = useRef2(null);
   const requestTimeoutRef = useRef2(null);
-  const [consoleHeight, setConsoleHeight] = useState2(150);
-  const [isDragging, setIsDragging] = useState2(false);
+  const [consoleHeight, setConsoleHeight] = useState3(150);
+  const [isDragging, setIsDragging] = useState3(false);
   const addSystemLog = useCallback2((msg) => {
     setLogs((prev) => appendLog2(prev, { type: "log", content: `[System] ${msg}`, timestamp: Date.now() }));
   }, []);
@@ -1777,10 +1871,10 @@ var ServerOutput = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isReady = runTrigger > 0;
-  return /* @__PURE__ */ jsxs5("div", { className: "flex flex-col h-full w-full gap-2", children: [
-    /* @__PURE__ */ jsxs5("div", { className: `flex items-center gap-2 p-2 rounded-md border transition-colors ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}`, children: [
-      /* @__PURE__ */ jsx6("div", { className: `px-3 py-1.5 rounded text-xs font-bold tracking-wider ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}`, children: method }),
-      /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsxs6("div", { className: "flex flex-col h-full w-full gap-2", children: [
+    /* @__PURE__ */ jsxs6("div", { className: `flex items-center gap-2 p-2 rounded-md border transition-colors ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}`, children: [
+      /* @__PURE__ */ jsx7("div", { className: `px-3 py-1.5 rounded text-xs font-bold tracking-wider ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}`, children: method }),
+      /* @__PURE__ */ jsx7(
         "input",
         {
           type: "text",
@@ -1791,7 +1885,7 @@ var ServerOutput = ({
           onKeyDown: (e) => e.key === "Enter" && handleSendClick()
         }
       ),
-      /* @__PURE__ */ jsx6(
+      /* @__PURE__ */ jsx7(
         Button,
         {
           onClick: handleSendClick,
@@ -1802,31 +1896,31 @@ var ServerOutput = ({
         }
       )
     ] }),
-    /* @__PURE__ */ jsx6(PreviewContainer, { themeMode, isReady, overlayMessage: isBlurred ? "Make your Prediction" : void 0, children: /* @__PURE__ */ jsxs5("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
-      isLoading && /* @__PURE__ */ jsxs5("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs shadow-lg backdrop-blur-md", children: [
-        /* @__PURE__ */ jsx6(Clock, { className: "w-3 h-3 animate-pulse" }),
-        /* @__PURE__ */ jsx6("span", { children: pendingRequest ? "Starting Server..." : "Processing..." })
+    /* @__PURE__ */ jsx7(PreviewContainer, { themeMode, isReady, overlayMessage: isBlurred ? "Make your Prediction" : void 0, children: /* @__PURE__ */ jsxs6("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
+      isLoading && /* @__PURE__ */ jsxs6("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs shadow-lg backdrop-blur-md", children: [
+        /* @__PURE__ */ jsx7(Clock, { className: "w-3 h-3 animate-pulse" }),
+        /* @__PURE__ */ jsx7("span", { children: pendingRequest ? "Starting Server..." : "Processing..." })
       ] }),
-      /* @__PURE__ */ jsx6("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs5("div", { className: "p-4 border border-red-500/20 rounded bg-red-500/5 text-red-400", children: [
-        /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
-          /* @__PURE__ */ jsx6(AlertCircle, { className: "w-4 h-4" }),
-          /* @__PURE__ */ jsx6("span", { children: "Runtime Error" })
+      /* @__PURE__ */ jsx7("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ jsxs6("div", { className: "p-4 border border-red-500/20 rounded bg-red-500/5 text-red-400", children: [
+        /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
+          /* @__PURE__ */ jsx7(AlertCircle, { className: "w-4 h-4" }),
+          /* @__PURE__ */ jsx7("span", { children: "Runtime Error" })
         ] }),
-        /* @__PURE__ */ jsx6("pre", { className: "whitespace-pre-wrap break-all", children: runtimeError })
-      ] }) : response ? /* @__PURE__ */ jsxs5("div", { className: "animate-in fade-in slide-in-from-top-2 duration-300", children: [
-        /* @__PURE__ */ jsx6("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: /* @__PURE__ */ jsxs5("span", { className: `font-bold ${response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
+        /* @__PURE__ */ jsx7("pre", { className: "whitespace-pre-wrap break-all", children: runtimeError })
+      ] }) : response ? /* @__PURE__ */ jsxs6("div", { className: "animate-in fade-in slide-in-from-top-2 duration-300", children: [
+        /* @__PURE__ */ jsx7("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: /* @__PURE__ */ jsxs6("span", { className: `font-bold ${response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
           response.status,
           " ",
           response.status === 200 ? "OK" : ""
         ] }) }),
-        /* @__PURE__ */ jsx6("pre", { className: `${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
-      ] }) : /* @__PURE__ */ jsxs5("div", { className: "h-full flex flex-col items-center justify-center opacity-20", children: [
-        /* @__PURE__ */ jsx6(Server, { className: "w-12 h-12 mb-2" }),
-        /* @__PURE__ */ jsx6("p", { children: "Server Standby" })
+        /* @__PURE__ */ jsx7("pre", { className: `${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
+      ] }) : /* @__PURE__ */ jsxs6("div", { className: "h-full flex flex-col items-center justify-center opacity-20", children: [
+        /* @__PURE__ */ jsx7(Server, { className: "w-12 h-12 mb-2" }),
+        /* @__PURE__ */ jsx7("p", { children: "Server Standby" })
       ] }) }),
-      /* @__PURE__ */ jsx6("div", { onMouseDown: handleMouseDown, className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`, children: /* @__PURE__ */ jsx6(GripHorizontal2, { className: "w-3 h-3" }) }),
-      /* @__PURE__ */ jsx6("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx6(Console, { logs, onClear: clearConsole, themeMode }) }),
-      /* @__PURE__ */ jsx6(
+      /* @__PURE__ */ jsx7("div", { onMouseDown: handleMouseDown, className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`, children: /* @__PURE__ */ jsx7(GripHorizontal2, { className: "w-3 h-3" }) }),
+      /* @__PURE__ */ jsx7("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ jsx7(Console, { logs, onClear: clearConsole, themeMode }) }),
+      /* @__PURE__ */ jsx7(
         "iframe",
         {
           ref: iframeRef,
@@ -1863,11 +1957,12 @@ function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
 }
 
 // components/CodingEnvironment.tsx
-import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
-var EDITABLE_BUNDLE_FILES = {
-  "html-css": HTML_CSS_FILE_NAMES,
-  "html-js": HTML_JS_FILE_NAMES,
-  "html-css-js": HTML_CSS_JS_FILE_NAMES
+import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
+var BUNDLE_MODE_CONFIG = {
+  "html-css": { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
+  "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
+  "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
+  "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
 var CodingEnvironment = ({
@@ -1880,45 +1975,53 @@ var CodingEnvironment = ({
   environmentMode,
   fixtureHtml,
   fixtureCss,
+  mediaAssets,
   sessionId,
   predictionPrompt,
   debugMode = false
 }) => {
-  const [predictionAnswer, setPredictionAnswer] = useState3("");
-  const [isPredictionLocked, setIsPredictionLocked] = useState3(false);
-  const [layout, setLayout] = useState3("horizontal");
-  const [editorRatio, setEditorRatio] = useState3(0.5);
-  const [isDragging, setIsDragging] = useState3(false);
+  const [predictionAnswer, setPredictionAnswer] = useState4("");
+  const [isPredictionLocked, setIsPredictionLocked] = useState4(false);
+  const [layout, setLayout] = useState4("horizontal");
+  const [editorRatio, setEditorRatio] = useState4(0.5);
+  const [isDragging, setIsDragging] = useState4(false);
   const containerRef = useRef3(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
-  const editableBundleFileNames = environmentMode in EDITABLE_BUNDLE_FILES ? EDITABLE_BUNDLE_FILES[environmentMode] : null;
+  const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
+  const editableBundleFileNames = bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === "dom" && (fixtureHtml !== void 0 || fixtureCss !== void 0);
-  const visibleFiles = useMemo4(() => {
-    if (editableBundleFileNames) return [...editableBundleFileNames];
+  const visibleTabs = useMemo4(() => {
+    if (editableBundleFileNames) {
+      return [
+        ...editableBundleFileNames,
+        ...bundleModeConfig?.hasMediaTab ? ["media"] : []
+      ];
+    }
     if (!hasDomFixtures) return ["script.js"];
     return [
       "script.js",
       ...fixtureHtml !== void 0 ? ["index.html"] : [],
       ...fixtureCss !== void 0 ? ["style.css"] : []
     ];
-  }, [editableBundleFileNames, hasDomFixtures, fixtureHtml, fixtureCss]);
-  const isTabbedMode = visibleFiles.length > 1;
-  const [activeFile, setActiveFile] = useState3(
+  }, [editableBundleFileNames, bundleModeConfig, hasDomFixtures, fixtureHtml, fixtureCss]);
+  const isTabbedMode = visibleTabs.length > 1;
+  const [activeTab, setActiveTab] = useState4(
     isEditableBundleMode ? "index.html" : "script.js"
   );
-  const selectedFile = visibleFiles.includes(activeFile) ? activeFile : visibleFiles[0];
+  const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
+  const selectedFile = selectedTab === "media" ? null : selectedTab;
   const files = useMemo4(
     () => editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null,
     [editableBundleFileNames, code]
   );
   useEffect3(() => {
-    if (!visibleFiles.includes(activeFile)) setActiveFile(visibleFiles[0]);
-  }, [activeFile, visibleFiles]);
-  const editorCode = isEditableBundleMode && files ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
+    if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
+  }, [activeTab, visibleTabs]);
+  const editorCode = isEditableBundleMode && files && selectedFile ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
   const handleEditorChange = (value) => {
     const next = value || "";
-    if (isEditableBundleMode && files) {
+    if (isEditableBundleMode && files && selectedFile) {
       onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
     } else if (!hasDomFixtures || selectedFile === "script.js") {
       onChange(next);
@@ -1953,11 +2056,11 @@ var CodingEnvironment = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isServerMode = environmentMode.startsWith("express") || environmentMode.startsWith("hono");
-  return /* @__PURE__ */ jsxs6("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
-    predictionPrompt && /* @__PURE__ */ jsx7("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ jsxs6("div", { className: "flex-1", children: [
-      /* @__PURE__ */ jsx7("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
-      /* @__PURE__ */ jsx7("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
-      /* @__PURE__ */ jsx7(
+  return /* @__PURE__ */ jsxs7("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
+    predictionPrompt && /* @__PURE__ */ jsx8("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ jsxs7("div", { className: "flex-1", children: [
+      /* @__PURE__ */ jsx8("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
+      /* @__PURE__ */ jsx8("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
+      /* @__PURE__ */ jsx8(
         "textarea",
         {
           value: predictionAnswer,
@@ -1968,68 +2071,78 @@ var CodingEnvironment = ({
         }
       )
     ] }) }),
-    /* @__PURE__ */ jsxs6("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
-      /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsx7(FileCode, { className: "w-4 h-4 text-blue-500" }),
-        isTabbedMode ? /* @__PURE__ */ jsx7("div", { className: "flex items-center gap-1", children: visibleFiles.map((file) => {
-          const isFixtureFile = hasDomFixtures && file !== "script.js";
-          return /* @__PURE__ */ jsxs6(
+    /* @__PURE__ */ jsxs7("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
+      /* @__PURE__ */ jsxs7("div", { className: "flex min-w-0 items-center gap-2 overflow-hidden", children: [
+        /* @__PURE__ */ jsx8(FileCode, { className: "h-4 w-4 shrink-0 text-blue-500" }),
+        isTabbedMode ? /* @__PURE__ */ jsx8("div", { className: "flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap", children: visibleTabs.map((tab) => {
+          const isMediaTab = tab === "media";
+          const isFixtureFile = hasDomFixtures && tab !== "script.js";
+          const isReadOnlyTab = isMediaTab || isFixtureFile;
+          return /* @__PURE__ */ jsxs7(
             "button",
             {
-              onClick: () => setActiveFile(file),
-              title: isFixtureFile ? "Fixed fixture" : void 0,
-              className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${selectedFile === file ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
+              type: "button",
+              onClick: () => setActiveTab(tab),
+              title: isMediaTab ? "Read-only media" : isFixtureFile ? "Fixed fixture" : void 0,
+              "aria-pressed": selectedTab === tab,
+              className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${selectedTab === tab ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
               children: [
-                file,
-                isFixtureFile && /* @__PURE__ */ jsx7(Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
+                isMediaTab ? "Media" : tab,
+                isReadOnlyTab && /* @__PURE__ */ jsx8(Lock2, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
               ]
             },
-            file
+            tab
           );
-        }) }) : /* @__PURE__ */ jsx7("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
+        }) }) : /* @__PURE__ */ jsx8("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
       ] }),
-      /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ jsxs6("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
-          /* @__PURE__ */ jsxs6(
+      /* @__PURE__ */ jsxs7("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ jsxs7("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
+          /* @__PURE__ */ jsxs7(
             "button",
             {
               onClick: () => setLayout("horizontal"),
               title: "Split View (Side by Side)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "horizontal" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ jsx7(Columns, { size: 12 }),
-                /* @__PURE__ */ jsx7("span", { className: "hidden md:inline", children: "Split" })
+                /* @__PURE__ */ jsx8(Columns, { size: 12 }),
+                /* @__PURE__ */ jsx8("span", { className: "hidden md:inline", children: "Split" })
               ]
             }
           ),
-          /* @__PURE__ */ jsxs6(
+          /* @__PURE__ */ jsxs7(
             "button",
             {
               onClick: () => setLayout("vertical"),
               title: "Vertical View (Stacked)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "vertical" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ jsx7(Rows, { size: 12 }),
-                /* @__PURE__ */ jsx7("span", { className: "hidden md:inline", children: "Stacked" })
+                /* @__PURE__ */ jsx8(Rows, { size: 12 }),
+                /* @__PURE__ */ jsx8("span", { className: "hidden md:inline", children: "Stacked" })
               ]
             }
           )
         ] }),
-        !isServerMode && /* @__PURE__ */ jsx7(
+        !isServerMode && /* @__PURE__ */ jsx8(
           Button,
           {
             onClick: handleRunClick,
             disabled: isRunning || !isPredictionFulfilled,
             variant: "primary",
             className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
-            icon: isRunning ? /* @__PURE__ */ jsx7(CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ jsx7(Play, { size: 14 }),
+            icon: isRunning ? /* @__PURE__ */ jsx8(CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ jsx8(Play, { size: 14 }),
             children: isRunning ? "RUNNING..." : "RUN CODE"
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxs6("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
-      /* @__PURE__ */ jsx7("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: /* @__PURE__ */ jsx7(
+    /* @__PURE__ */ jsxs7("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
+      /* @__PURE__ */ jsx8("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ jsx8(
+        MediaPanel,
+        {
+          mediaAssets: environmentMode === "html-js-css-media" ? mediaAssets ?? [] : [],
+          themeMode
+        }
+      ) : /* @__PURE__ */ jsx8(
         CodeEditor,
         {
           code: editorCode,
@@ -2037,19 +2150,19 @@ var CodingEnvironment = ({
           themeMode,
           environmentMode,
           sessionId,
-          activeFile: isTabbedMode ? selectedFile : void 0,
+          activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
           readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
         }
       ) }),
-      /* @__PURE__ */ jsx7(
+      /* @__PURE__ */ jsx8(
         "div",
         {
           onMouseDown: handleMouseDown,
           className: `flex items-center justify-center shrink-0 hover:bg-blue-500/50 transition-colors z-10 ${layout === "horizontal" ? "w-1.5 cursor-col-resize" : "h-1.5 cursor-row-resize"} ${themeMode === "dark" ? "bg-black/40" : "bg-gray-100"}`,
-          children: layout === "horizontal" ? /* @__PURE__ */ jsx7(GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ jsx7(GripHorizontal3, { size: 10, className: "opacity-20" })
+          children: layout === "horizontal" ? /* @__PURE__ */ jsx8(GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ jsx8(GripHorizontal3, { size: 10, className: "opacity-20" })
         }
       ),
-      /* @__PURE__ */ jsx7("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ jsx7("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx7(
+      /* @__PURE__ */ jsx8("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ jsx8("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ jsx8(
         ServerOutput,
         {
           runTrigger,
@@ -2060,7 +2173,7 @@ var CodingEnvironment = ({
           debugMode,
           onTriggerRun: handleRunClick
         }
-      ) : /* @__PURE__ */ jsx7(
+      ) : /* @__PURE__ */ jsx8(
         OutputFrame,
         {
           runTrigger,
@@ -2079,21 +2192,22 @@ var CodingEnvironment = ({
 };
 
 // components/CodeShoebox.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx9 } from "react/jsx-runtime";
 var CodeShoebox = ({
   code,
   onCodeChange,
   environmentMode,
   fixtureHtml,
   fixtureCss,
+  mediaAssets,
   theme,
   themeMode,
   sessionId = 0,
   prediction_prompt,
   debugMode = false
 }) => {
-  const [runTrigger, setRunTrigger] = useState4(0);
-  const [isRunning, setIsRunning] = useState4(false);
+  const [runTrigger, setRunTrigger] = useState5(0);
+  const [isRunning, setIsRunning] = useState5(false);
   useEffect4(() => {
     setRunTrigger(0);
     setIsRunning(false);
@@ -2120,12 +2234,12 @@ var CodeShoebox = ({
       "--foreground": colors.foreground || defaultFg
     };
   }, [themeMode, theme]);
-  return /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsx9(
     "div",
     {
       className: "flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
       style: themeStyles,
-      children: /* @__PURE__ */ jsx8(
+      children: /* @__PURE__ */ jsx9(
         CodingEnvironment,
         {
           sessionId,
@@ -2138,6 +2252,7 @@ var CodeShoebox = ({
           environmentMode,
           fixtureHtml,
           fixtureCss,
+          mediaAssets,
           predictionPrompt: prediction_prompt,
           debugMode
         },
@@ -2148,7 +2263,7 @@ var CodeShoebox = ({
 };
 
 // hooks/useSandboxState.ts
-import { useState as useState5, useEffect as useEffect5, useCallback as useCallback4 } from "react";
+import { useState as useState6, useEffect as useEffect5, useCallback as useCallback4 } from "react";
 
 // theme.ts
 var baseTheme = {
@@ -2349,6 +2464,54 @@ const message = document.getElementById('message');
 button.addEventListener('click', () => {
   message.textContent = 'HTML, CSS, and JavaScript are connected!';
   console.log('Three-file interaction complete');
+});
+`
+});
+var HTML_JS_CSS_MEDIA_STARTER_CODE = serializeFileBundle({
+  "index.html": `<!DOCTYPE html>
+<html>
+<head>
+  <title>Media Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="media-card">
+    <p class="eyebrow">HTML + CSS + JavaScript + Media</p>
+    <h1>Build with media</h1>
+    <div id="media-gallery">
+      Open the Media tab and paste a snippet here.
+    </div>
+    <button id="check-media" type="button">Check my page</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  "style.css": `body {
+  margin: 0;
+  padding: 2rem;
+  background: #fff7ed;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #7c2d12;
+}
+
+.media-card {
+  max-width: 32rem;
+  padding: 1.5rem;
+  border: 1px solid #fdba74;
+  border-radius: 1rem;
+  background: white;
+}
+
+.eyebrow { color: #ea580c; font-weight: 700; }
+#media-gallery { margin: 1rem 0; padding: 1rem; border: 2px dashed #fdba74; border-radius: 0.75rem; }
+button { padding: 0.7rem 1rem; border: 0; border-radius: 999px; background: #ea580c; color: white; }
+`,
+  "script.js": `const button = document.getElementById('check-media');
+const gallery = document.getElementById('media-gallery');
+
+button.addEventListener('click', () => {
+  console.log(gallery.children.length > 0 ? 'Media added!' : 'Choose a snippet from the Media tab.');
 });
 `
 });
@@ -2745,6 +2908,7 @@ var VALID_MODES = [
   "html-css",
   "html-js",
   "html-css-js",
+  "html-js-css-media",
   "dom",
   "typescript",
   "p5",
@@ -2768,6 +2932,8 @@ var getStarterCode = (mode) => {
       return HTML_JS_STARTER_CODE;
     case "html-css-js":
       return HTML_CSS_JS_STARTER_CODE;
+    case "html-js-css-media":
+      return HTML_JS_CSS_MEDIA_STARTER_CODE;
     case "p5":
       return P5_STARTER_CODE;
     case "p5-ts":
@@ -2818,11 +2984,11 @@ var useSandboxState = (persistenceKey, initialCodeOverride, defaultMode = "dom")
       return fallback;
     }
   }, [persistenceKey, getStorageKey, initialCodeOverride]);
-  const [environmentMode, setEnvironmentMode] = useState5(() => loadState("env_mode", defaultMode, VALID_MODES));
-  const [themeMode, setThemeMode] = useState5(() => loadState("theme_mode", "dark", ["light", "dark"]));
-  const [activeThemeName, setActiveThemeName] = useState5(() => loadState("theme_name", themes[0].name, themes.map((t) => t.name)));
-  const [code, setCode] = useState5(() => loadCode(environmentMode));
-  const [sessionId, setSessionId] = useState5(() => Math.floor(Math.random() * 1e6));
+  const [environmentMode, setEnvironmentMode] = useState6(() => loadState("env_mode", defaultMode, VALID_MODES));
+  const [themeMode, setThemeMode] = useState6(() => loadState("theme_mode", "dark", ["light", "dark"]));
+  const [activeThemeName, setActiveThemeName] = useState6(() => loadState("theme_name", themes[0].name, themes.map((t) => t.name)));
+  const [code, setCode] = useState6(() => loadCode(environmentMode));
+  const [sessionId, setSessionId] = useState6(() => Math.floor(Math.random() * 1e6));
   useEffect5(() => {
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey("env_mode"), environmentMode);

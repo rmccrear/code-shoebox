@@ -669,6 +669,14 @@ video {
   margin-top: 0.5rem;
 }
 
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
+.mt-5 {
+  margin-top: 1.25rem;
+}
+
 .block {
   display: block;
 }
@@ -721,8 +729,16 @@ video {
   height: 100vh;
 }
 
+.max-h-64 {
+  max-height: 16rem;
+}
+
 .min-h-0 {
   min-height: 0px;
+}
+
+.min-h-40 {
+  min-height: 10rem;
 }
 
 .w-1\.5 {
@@ -763,6 +779,10 @@ video {
 
 .min-w-0 {
   min-width: 0px;
+}
+
+.max-w-full {
+  max-width: 100%;
 }
 
 .max-w-md {
@@ -881,6 +901,12 @@ video {
   margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
 }
 
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+}
+
 .space-y-6 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
@@ -901,6 +927,10 @@ video {
 
 .overflow-y-auto {
   overflow-y: auto;
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
 }
 
 .whitespace-pre {
@@ -1144,6 +1174,11 @@ video {
   background-color: rgb(234 179 8 / 0.05);
 }
 
+.object-contain {
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
 .\!p-1 {
   padding: 0.25rem !important;
 }
@@ -1203,6 +1238,11 @@ video {
   padding-right: 1rem;
 }
 
+.px-5 {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
 .py-0\.5 {
   padding-top: 0.125rem;
   padding-bottom: 0.125rem;
@@ -1226,6 +1266,11 @@ video {
 .py-3 {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
+}
+
+.py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .py-8 {
@@ -1298,6 +1343,10 @@ video {
 
 .tracking-tight {
   letter-spacing: -0.025em;
+}
+
+.tracking-wide {
+  letter-spacing: 0.025em;
 }
 
 .tracking-wider {

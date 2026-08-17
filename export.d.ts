@@ -27,7 +27,21 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type MediaAsset = {
+    kind: 'image';
+    name: string;
+    src: string;
+    alt: string;
+} | {
+    kind: 'audio';
+    name: string;
+    src: string;
+} | {
+    kind: 'video';
+    name: string;
+    src: string;
+};
 interface EditorProps {
     initialCode: string;
     onChange: (code: string) => void;
@@ -41,6 +55,8 @@ interface CodeShoeboxProps {
     fixtureHtml?: string;
     /** Trusted host-authored styles restored with fixtureHtml in dom mode. */
     fixtureCss?: string;
+    /** Host-authored media shown read-only in html-js-css-media mode. */
+    mediaAssets?: readonly MediaAsset[];
     themeMode: ThemeMode;
     theme: Theme;
     sessionId?: number;
@@ -77,4 +93,4 @@ declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: s
  */
 declare const useAutoKey: (identifier: string, initialCode?: string, prefix?: string) => string;
 
-export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
+export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type MediaAsset, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
