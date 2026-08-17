@@ -46,8 +46,8 @@ const P5_RUNTIME_STYLES = `
 // Hono CDN - Using a module script to inject into window
 const HONO_CDN = '<script type="module">import { Hono } from "https://esm.sh/hono@4.1.0"; window.Hono = Hono;</script>';
 
-// Shared by the html / html-css modes: full-bleed nested frame plus the
-// notice banners rendered above the learner's page.
+// Shared by the bounded HTML modes: full-bleed output plus the notice banners
+// rendered above the learner's page.
 const HTML_RUNTIME_STYLES = `
   #root {
     display: flex;
@@ -191,6 +191,66 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         // Learner HTML never creates a second execution path. The bundled
         // script.js file is the only JavaScript this mode executes.
         doc.querySelectorAll('script').forEach((script) => script.remove());
+
+        if (!linkedScript && files.js.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+          root.appendChild(hint);
+        }
+
+        doc.body.childNodes.forEach((node) => {
+          root.appendChild(document.importNode(node, true));
+        });
+
+        if (!linkedScript) return;
+        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
+  'html-css-js': {
+    name: "HTML, CSS & JavaScript (3 files)",
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    logic: `
+      window.__RUN_MODE__ = (code, root) => {
+        root.replaceChildren();
+        document.querySelectorAll('style[data-code-shoebox-html-css-js]').forEach((style) => style.remove());
+
+        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+        // The iframe kernel cannot import modules; keep both copies in sync.
+        let files;
+        try {
+          const parsed = JSON.parse(code);
+          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+            ? {
+                html: String(parsed.files['index.html'] ?? ''),
+                css: String(parsed.files['style.css'] ?? ''),
+                js: String(parsed.files['script.js'] ?? '')
+              }
+            : { html: code, css: '', js: '' };
+        } catch (e) { files = { html: code, css: '', js: '' }; }
+
+        const doc = new DOMParser().parseFromString(files.html, 'text/html');
+        const linkedStyles = doc.querySelector('link[rel="stylesheet"][href="style.css"]');
+        const linkedScript = doc.querySelector('script[src="script.js"]');
+
+        // The bundled files are the only CSS/JS resource paths in this mode.
+        // Detect their markers first, then remove every parsed resource node.
+        doc.querySelectorAll('script').forEach((script) => script.remove());
+        doc.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => link.remove());
+
+        if (linkedStyles) {
+          const style = document.createElement('style');
+          style.setAttribute('data-code-shoebox-html-css-js', '');
+          style.textContent = files.css;
+          document.head.appendChild(style);
+        } else if (files.css.trim()) {
+          const hint = document.createElement('div');
+          hint.className = 'cs-hint-banner';
+          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+          root.appendChild(hint);
+        }
 
         if (!linkedScript && files.js.trim()) {
           const hint = document.createElement('div');

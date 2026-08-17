@@ -3,7 +3,12 @@ import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingEnvironment } from './CodingEnvironment';
 import type { EnvironmentMode } from '../types';
-import { HTML_JS_FILE_NAMES, parseFileBundle, serializeFileBundle } from '../runtime/fileBundle';
+import {
+  HTML_CSS_JS_FILE_NAMES,
+  HTML_JS_FILE_NAMES,
+  parseFileBundle,
+  serializeFileBundle,
+} from '../runtime/fileBundle';
 
 vi.mock('../runtime/runner', () => ({
   getSandboxHtml: vi.fn(() => '<!doctype html><html><body></body></html>'),
@@ -215,6 +220,43 @@ describe('CodingEnvironment routing', () => {
     fireEvent.change(editor, { target: { value: 'console.log("launched")' } });
     const jsEdit = parseFileBundle(onChange.mock.calls[1][0], HTML_JS_FILE_NAMES);
     expect(jsEdit['index.html']).toContain('<button id="go">');
+    expect(jsEdit['script.js']).toBe('console.log("launched")');
+  });
+
+  it('preserves three editable html-css-js files with filename-specific languages', () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'index.html': '<button id="go">Go</button><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
+      'style.css': 'button { color: blue; }',
+      'script.js': 'document.getElementById("go").focus();',
+    });
+    renderCodingEnvironment('html-css-js', { code, onChange });
+    let editor = screen.getByLabelText('Code editor');
+
+    expect(getFileTabNames()).toEqual(['index.html', 'style.css', 'script.js']);
+    expect(editor).toHaveAttribute('data-language', 'html');
+    fireEvent.change(editor, { target: { value: '<button id="go">Launch</button>' } });
+    const htmlEdit = parseFileBundle(onChange.mock.calls[0][0], HTML_CSS_JS_FILE_NAMES);
+    expect(htmlEdit['style.css']).toBe('button { color: blue; }');
+    expect(htmlEdit['script.js']).toBe('document.getElementById("go").focus();');
+
+    fireEvent.click(screen.getByRole('button', { name: 'style.css' }));
+    editor = screen.getByLabelText('Code editor');
+    expect(editor).not.toHaveAttribute('readonly');
+    expect(editor).toHaveAttribute('data-language', 'css');
+    fireEvent.change(editor, { target: { value: 'button { color: green; }' } });
+    const cssEdit = parseFileBundle(onChange.mock.calls[1][0], HTML_CSS_JS_FILE_NAMES);
+    expect(cssEdit['index.html']).toContain('<button id="go">');
+    expect(cssEdit['script.js']).toBe('document.getElementById("go").focus();');
+
+    fireEvent.click(screen.getByRole('button', { name: 'script.js' }));
+    editor = screen.getByLabelText('Code editor');
+    expect(editor).not.toHaveAttribute('readonly');
+    expect(editor).toHaveAttribute('data-language', 'javascript');
+    fireEvent.change(editor, { target: { value: 'console.log("launched")' } });
+    const jsEdit = parseFileBundle(onChange.mock.calls[2][0], HTML_CSS_JS_FILE_NAMES);
+    expect(jsEdit['index.html']).toContain('<button id="go">');
+    expect(jsEdit['style.css']).toBe('button { color: blue; }');
     expect(jsEdit['script.js']).toBe('console.log("launched")');
   });
 });

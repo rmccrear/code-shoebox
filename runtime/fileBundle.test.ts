@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { HTML_JS_FILE_NAMES, serializeFileBundle, parseFileBundle } from './fileBundle';
+import {
+  HTML_CSS_JS_FILE_NAMES,
+  HTML_JS_FILE_NAMES,
+  serializeFileBundle,
+  parseFileBundle,
+} from './fileBundle';
 
 describe('fileBundle', () => {
   it('round-trips a two-file bundle', () => {
@@ -63,6 +68,33 @@ describe('fileBundle', () => {
     expect(parseFileBundle(raw, HTML_JS_FILE_NAMES)).toEqual({
       'index.html': '<p>only html</p>',
       'script.js': ''
+    });
+  });
+
+  it('round-trips an HTML, CSS, and JavaScript bundle without interpreting learner text', () => {
+    const files = {
+      'index.html': '<main>{ Page }</main><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
+      'style.css': 'main::after { content: "\\\\ { styled }"; }',
+      'script.js': 'const template = `quotes " \\ ${value}`;\nconst closing = "</script>";',
+    };
+
+    expect(parseFileBundle(serializeFileBundle(files), HTML_CSS_JS_FILE_NAMES)).toEqual(files);
+  });
+
+  it('uses the requested three-file shape for plain-text fallback', () => {
+    expect(parseFileBundle('<h1>bare</h1>', HTML_CSS_JS_FILE_NAMES)).toEqual({
+      'index.html': '<h1>bare</h1>',
+      'style.css': '',
+      'script.js': '',
+    });
+  });
+
+  it('defaults missing three-file companion entries to empty strings', () => {
+    const raw = JSON.stringify({ __csFiles__: 1, files: { 'index.html': '<p>only html</p>' } });
+    expect(parseFileBundle(raw, HTML_CSS_JS_FILE_NAMES)).toEqual({
+      'index.html': '<p>only html</p>',
+      'style.css': '',
+      'script.js': '',
     });
   });
 });

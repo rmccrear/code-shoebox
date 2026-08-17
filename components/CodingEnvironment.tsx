@@ -17,11 +17,18 @@ import { ThemeMode, EnvironmentMode } from '../types';
 import {
   HTML_CSS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
+  HTML_CSS_JS_FILE_NAMES,
   parseFileBundle,
   serializeFileBundle,
 } from '../runtime/fileBundle';
 
 type EditorFileName = 'script.js' | 'index.html' | 'style.css';
+
+const EDITABLE_BUNDLE_FILES = {
+  'html-css': HTML_CSS_FILE_NAMES,
+  'html-js': HTML_JS_FILE_NAMES,
+  'html-css-js': HTML_CSS_JS_FILE_NAMES,
+} as const satisfies Partial<Record<EnvironmentMode, readonly EditorFileName[]>>;
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
   mode === 'html' ? 'index.html' : `${mode}.script`;
@@ -64,11 +71,9 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
 
-  const editableBundleFileNames = environmentMode === 'html-css'
-    ? HTML_CSS_FILE_NAMES
-    : environmentMode === 'html-js'
-      ? HTML_JS_FILE_NAMES
-      : null;
+  const editableBundleFileNames = environmentMode in EDITABLE_BUNDLE_FILES
+    ? EDITABLE_BUNDLE_FILES[environmentMode as keyof typeof EDITABLE_BUNDLE_FILES]
+    : null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === 'dom'
     && (fixtureHtml !== undefined || fixtureCss !== undefined);
