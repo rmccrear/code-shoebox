@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-css-js', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -115,6 +115,40 @@ describe('getSandboxHtml', () => {
     expect(html).toContain('script.js is not linked');
     expect(html).toContain('<script src="script.js"><\\/script>');
     expect(html).not.toContain('<script src="script.js"></script> before </body>');
+    expect(html).toContain('cs-hint-banner');
+    expect(html).toContain('event.source !== window.parent');
+    expect(html).not.toContain('allow-same-origin');
+    expect(html).not.toContain("setAttribute('sandbox', '')");
+    expect(html).not.toContain('unpkg.com');
+    expect(html).not.toContain('esm.sh');
+    expect(html).not.toContain('cdnjs');
+  });
+
+  it('builds html-css-js with independent local style and script semantics', () => {
+    const html = getSandboxHtml('html-css-js');
+    const cleanupAt = html.indexOf("style[data-code-shoebox-html-css-js]");
+    const parseAt = html.indexOf('__csFiles__');
+    const styleLinkAt = html.indexOf('link[rel="stylesheet"][href="style.css"]');
+    const scriptLinkAt = html.indexOf('script[src="script.js"]');
+    const scriptRemoveAt = html.indexOf("querySelectorAll('script').forEach");
+    const linkRemoveAt = html.indexOf("querySelectorAll('link[rel~=\"stylesheet\"]')");
+    const styleTextAt = html.indexOf('style.textContent = files.css');
+    const styleAppendAt = html.indexOf('document.head.appendChild(style)');
+    const importAt = html.indexOf('root.appendChild(document.importNode(node, true))');
+    const executeAt = html.indexOf("new Function('root', files.js)(root)");
+
+    expect(cleanupAt).toBeGreaterThan(-1);
+    expect(parseAt).toBeGreaterThan(cleanupAt);
+    expect(styleLinkAt).toBeGreaterThan(parseAt);
+    expect(scriptLinkAt).toBeGreaterThan(styleLinkAt);
+    expect(scriptRemoveAt).toBeGreaterThan(scriptLinkAt);
+    expect(linkRemoveAt).toBeGreaterThan(scriptRemoveAt);
+    expect(styleTextAt).toBeGreaterThan(linkRemoveAt);
+    expect(styleAppendAt).toBeGreaterThan(styleTextAt);
+    expect(importAt).toBeGreaterThan(styleAppendAt);
+    expect(executeAt).toBeGreaterThan(importAt);
+    expect(html.indexOf('style.css is not linked')).toBeLessThan(html.indexOf('script.js is not linked'));
+    expect(html).toContain('<script src="script.js"><\\/script>');
     expect(html).toContain('cs-hint-banner');
     expect(html).toContain('event.source !== window.parent');
     expect(html).not.toContain('allow-same-origin');

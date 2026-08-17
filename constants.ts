@@ -82,6 +82,52 @@ button.addEventListener('click', () => {
 `
 });
 
+export const HTML_CSS_JS_STARTER_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Three Files</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="message-card">
+    <p class="eyebrow">HTML + CSS + JavaScript</p>
+    <h1 id="message">Ready for all three layers.</h1>
+    <button id="change-message" type="button">Change message</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  'style.css': `body {
+  margin: 0;
+  padding: 2rem;
+  background: #eef2ff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.message-card {
+  max-width: 28rem;
+  padding: 1.5rem;
+  border: 1px solid #a5b4fc;
+  border-radius: 1rem;
+  background: white;
+  color: #1e1b4b;
+}
+
+.eyebrow { color: #4f46e5; font-weight: 700; }
+button { padding: 0.7rem 1rem; border: 0; border-radius: 999px; background: #4f46e5; color: white; }
+`,
+  'script.js': `const button = document.getElementById('change-message');
+const message = document.getElementById('message');
+
+button.addEventListener('click', () => {
+  message.textContent = 'HTML, CSS, and JavaScript are connected!';
+  console.log('Three-file interaction complete');
+});
+`
+});
+
 export const STARTER_CODE = `// Welcome to your coding sandbox!
 // You can use standard JavaScript here.
 // 'root' is a reference to the main container div.

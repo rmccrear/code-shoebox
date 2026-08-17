@@ -62,6 +62,20 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   The learner body is restored below `#root`; `<head>` metadata, `<title>`, body attributes, parser timing, `async`, and `defer` behavior are not reproduced.
     *   Native browser JavaScript only: no TypeScript, Babel, modules, `import`/`export`, packages, or additional files.
 
+### `html-css-js` (HTML, CSS & JavaScript, three tabs)
+*   **Engine:** Native browser JavaScript in the existing sandbox DOM, with three editable files packed into the version-1 bundle: `index.html`, `style.css`, and `script.js`.
+*   **Code format:** `{"__csFiles__":1,"files":{"index.html":"…","style.css":"…","script.js":"…"}}`. A plain string becomes `index.html` with empty CSS and JS.
+*   **Capabilities:**
+    *   **Independent explicit links:** bundled CSS requires literal `<link rel="stylesheet" href="style.css">`; bundled JS requires literal `<script src="script.js"></script>`. A missing non-empty file link shows its own blue hint without blocking the other linked file.
+    *   Pressing Run clears the previous page and generated stylesheet, applies the current linked CSS, restores HTML body children under `#root`, and executes linked `script.js` once.
+    *   All three tabs are editable with separate Monaco models and undo histories. The console captures logs, warnings, errors, and rejected promises.
+*   **Limitations:**
+    *   Manual-run only. Editing does not update output or execute JavaScript automatically.
+    *   Parsed script and stylesheet-link elements are removed. HTML-authored scripts and remote stylesheets do not create alternate resource paths; only bundled CSS and JS resolve.
+    *   `<head>` metadata, title, body attributes, parser timing, `async`, and `defer` behavior are not reproduced. Inline `<style>` elements in body content may still apply.
+    *   Native JavaScript only: no TypeScript, Babel, modules, imports, packages, CDNs, extra files, or renames.
+    *   Re-running replaces learner DOM and bundled CSS, but learner timers or listeners attached directly to `window`/`document` are not automatically disposed.
+
 ### `dom` (DOM / JS)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).
 *   **Pre-loaded Libraries:** None.

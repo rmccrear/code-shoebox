@@ -265,6 +265,40 @@ describe('OutputFrame', () => {
     expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(expect.anything(), nextBundle);
   });
 
+  it('keeps html-css-js manual-run and exposes its console', () => {
+    vi.useFakeTimers();
+    const firstBundle = '{"__csFiles__":1,"files":{"index.html":"<button>Go</button>","style.css":"button{}","script.js":"console.log(1)"}}';
+    const nextBundle = '{"__csFiles__":1,"files":{"index.html":"<button>Launch</button>","style.css":"button{color:blue}","script.js":"console.log(2)"}}';
+    const { container, rerender } = renderOutputFrame({ environmentMode: 'html-css-js', code: firstBundle });
+
+    expect(screen.getByTitle('Code Output')).not.toHaveClass('hidden');
+    expect(screen.getByText('Console (0)')).toBeInTheDocument();
+    loadFrame(container);
+    expect(mockedExecuteCodeInSandbox).not.toHaveBeenCalled();
+
+    rerender(
+      <OutputFrame
+        runTrigger={0}
+        code={nextBundle}
+        themeMode="dark"
+        environmentMode="html-css-js"
+      />
+    );
+    act(() => vi.advanceTimersByTime(500));
+    expect(mockedExecuteCodeInSandbox).not.toHaveBeenCalled();
+
+    rerender(
+      <OutputFrame
+        runTrigger={1}
+        code={nextBundle}
+        themeMode="dark"
+        environmentMode="html-css-js"
+      />
+    );
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledTimes(1);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(expect.anything(), nextBundle);
+  });
+
   it('keeps message handling alive when debugMode toggles', () => {
     const { container, rerender } = renderOutputFrame({ debugMode: false });
     const { channel } = loadFrame(container);

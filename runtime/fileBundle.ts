@@ -1,7 +1,8 @@
 /**
  * Serialization for bounded multi-file environment modes:
- * 'html-css' (index.html + style.css) and
- * 'html-js' (index.html + script.js).
+ * 'html-css' (index.html + style.css),
+ * 'html-js' (index.html + script.js), and
+ * 'html-css-js' (index.html + style.css + script.js).
  *
  * The public CodeShoebox contract is ONE code string everywhere (props,
  * localStorage, presets, the EXECUTE message). Multi-file modes pack their
@@ -9,22 +10,26 @@
  * an envelope parses as a bare index.html with the mode's companion file
  * empty, so hand-authored content and stale persisted code degrade gracefully.
  *
- * NOTE: the 'html-css' and 'html-js' recipes in runner.ts contain inline
- * plain-JS copies of parseFileBundle (the iframe kernel cannot import
- * modules). Keep them in sync — runner.test.ts and fileBundle.test.ts guard
- * both.
+ * NOTE: the bounded HTML recipes in runner.ts contain inline plain-JS copies
+ * of parseFileBundle (the iframe kernel cannot import modules). Keep them in
+ * sync — runner.test.ts and fileBundle.test.ts guard both.
  */
 
 export const HTML_CSS_FILE_NAMES = ['index.html', 'style.css'] as const;
 export const HTML_JS_FILE_NAMES = ['index.html', 'script.js'] as const;
+export const HTML_CSS_JS_FILE_NAMES = ['index.html', 'style.css', 'script.js'] as const;
 
-export type WebFileName = typeof HTML_CSS_FILE_NAMES[number] | typeof HTML_JS_FILE_NAMES[number];
+export type WebFileName =
+  | typeof HTML_CSS_FILE_NAMES[number]
+  | typeof HTML_JS_FILE_NAMES[number]
+  | typeof HTML_CSS_JS_FILE_NAMES[number];
 export type FileBundleFor<T extends readonly WebFileName[]> = { [K in T[number]]: string };
 export type WebFileBundle = FileBundleFor<typeof HTML_CSS_FILE_NAMES>;
 export type HtmlJsFileBundle = FileBundleFor<typeof HTML_JS_FILE_NAMES>;
+export type HtmlCssJsFileBundle = FileBundleFor<typeof HTML_CSS_JS_FILE_NAMES>;
 
 export const serializeFileBundle = (
-  files: Readonly<WebFileBundle> | Readonly<HtmlJsFileBundle>
+  files: Readonly<WebFileBundle> | Readonly<HtmlJsFileBundle> | Readonly<HtmlCssJsFileBundle>
 ): string =>
   JSON.stringify({ __csFiles__: 1, files });
 

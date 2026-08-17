@@ -5,6 +5,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
   switch (mode) {
     case 'html-js':
       return "What text will appear after the button's click handler runs?";
+    case 'html-css-js':
+      return "How will the styled message change after the button's click handler runs?";
     case 'dom':
       return "Examine the code below. What message will be logged to the console when the 'Click Me' button is pressed?";
     case 'p5':

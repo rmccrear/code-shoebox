@@ -105,6 +105,54 @@ button.addEventListener('click', () => {
     })
   },
   {
+    id: 'html-css-js-tabs-demo',
+    mode: 'html-css-js',
+    code: serializeFileBundle({
+      'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Launch Checklist</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="launch-card">
+    <p class="eyebrow">Three-file mission</p>
+    <h1>Launch checklist</h1>
+    <p id="launch-status">Systems are standing by.</p>
+    <button id="launch" type="button">Run launch check</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      'style.css': `body {
+  margin: 0;
+  padding: 2rem;
+  background: #ecfeff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #164e63;
+}
+
+.launch-card {
+  max-width: 26rem;
+  padding: 1.5rem;
+  border: 1px solid #67e8f9;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 16px 40px rgba(8, 145, 178, 0.16);
+}
+
+.eyebrow { color: #0891b2; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+button { border: 0; border-radius: 999px; padding: 0.75rem 1rem; background: #0891b2; color: white; font-weight: 700; }`,
+      'script.js': `const button = document.getElementById('launch');
+const status = document.getElementById('launch-status');
+
+button.addEventListener('click', () => {
+  status.textContent = 'All systems go!';
+  console.log('Launch check complete');
+});`
+    })
+  },
+  {
     id: 'ts-express-rest-demo',
     mode: 'express-ts',
     aliases: ['express-rest-demo'],

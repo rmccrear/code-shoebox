@@ -138,6 +138,51 @@ button.addEventListener('click', () => {
 });`
 });
 
+const HTML_CSS_JS_DEMO_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Launch Checklist</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="launch-card">
+    <p class="eyebrow">Three-file mission</p>
+    <h1>Launch checklist</h1>
+    <p id="launch-status">Systems are standing by.</p>
+    <button id="launch" type="button">Run launch check</button>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>`,
+  'style.css': `body {
+  margin: 0;
+  padding: 2rem;
+  background: #ecfeff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: #164e63;
+}
+
+.launch-card {
+  max-width: 26rem;
+  padding: 1.5rem;
+  border: 1px solid #67e8f9;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 16px 40px rgba(8, 145, 178, 0.16);
+}
+
+.eyebrow { color: #0891b2; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+button { border: 0; border-radius: 999px; padding: 0.75rem 1rem; background: #0891b2; color: white; font-weight: 700; }`,
+  'script.js': `const button = document.getElementById('launch');
+const status = document.getElementById('launch-status');
+
+button.addEventListener('click', () => {
+  status.textContent = 'All systems go!';
+  console.log('Launch check complete');
+});`
+});
+
 const DOM_FIXTURE_DEMO_CODE = `const statusLine = document.getElementById('status-line');
 const diagnosticButton = document.getElementById('run-diagnostic');
 
@@ -366,6 +411,7 @@ export const Demo: React.FC = () => {
     const htmlState = useSandboxState('demo_html_v1', HTML_DEMO_CODE, 'html');
     const htmlCssState = useSandboxState('demo_html_css_v1', HTML_CSS_DEMO_CODE, 'html-css');
     const htmlJsState = useSandboxState('demo_html_js_v1', HTML_JS_DEMO_CODE, 'html-js');
+    const htmlCssJsState = useSandboxState('demo_html_css_js_v1', HTML_CSS_JS_DEMO_CODE, 'html-css-js');
     const domFixtureState = useSandboxState('demo_dom_fixture_v1', DOM_FIXTURE_DEMO_CODE, 'dom');
     const p5State = useSandboxState('demo_p5_v2', P5_DEMO_CODE, 'p5');
     const p5TsState = useSandboxState('demo_p5_ts_v2', P5_TS_DEMO_CODE, 'p5-ts');
@@ -381,6 +427,7 @@ export const Demo: React.FC = () => {
             htmlState.resetCode();
             htmlCssState.resetCode();
             htmlJsState.resetCode();
+            htmlCssJsState.resetCode();
             domFixtureState.resetCode();
             p5State.resetCode();
             p5TsState.resetCode();
@@ -424,6 +471,13 @@ export const Demo: React.FC = () => {
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-indigo-500" /> Two Files (index.html + script.js)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
                         <CodeShoebox code={htmlJsState.code} onCodeChange={htmlJsState.setCode} environmentMode={htmlJsState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlJsState.sessionId} />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-cyan-500" /> Three Files (index.html + style.css + script.js)</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox code={htmlCssJsState.code} onCodeChange={htmlCssJsState.setCode} environmentMode={htmlCssJsState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlCssJsState.sessionId} />
                     </div>
                 </section>
 
