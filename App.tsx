@@ -11,6 +11,7 @@ import { getPredictionPrompt } from './prompts';
 import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
 import { useEditorHashPresets } from './hooks/useEditorHashPresets';
+import { getPresetMediaAssetsForMode } from './demoPresets';
 
 const App: React.FC = () => {
   const {
@@ -117,6 +118,7 @@ const App: React.FC = () => {
                     <option value="html-css">HTML & CSS (style.css)</option>
                     <option value="html-js">HTML & JavaScript (script.js)</option>
                     <option value="html-css-js">HTML, CSS & JavaScript (3 files)</option>
+                    <option value="html-js-css-media">HTML, CSS, JavaScript & Media (4 tabs)</option>
                     <option value="dom">DOM / JS</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>
@@ -211,6 +213,7 @@ const App: React.FC = () => {
             code={code}
             onCodeChange={setCode}
             environmentMode={environmentMode}
+            mediaAssets={getPresetMediaAssetsForMode(environmentMode)}
             themeMode={themeMode}
             theme={activeTheme}
             sessionId={sessionId}

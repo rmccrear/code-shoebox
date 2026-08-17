@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'html-css-js', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-css-js', 'html-js-css-media', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -156,6 +156,27 @@ describe('getSandboxHtml', () => {
     expect(html).not.toContain('unpkg.com');
     expect(html).not.toContain('esm.sh');
     expect(html).not.toContain('cdnjs');
+  });
+
+  it('reuses the three-file sandbox contract for html-js-css-media', () => {
+    const html = getSandboxHtml('html-js-css-media');
+
+    for (const marker of [
+      '__csFiles__',
+      'link[rel="stylesheet"][href="style.css"]',
+      'script[src="script.js"]',
+      "querySelectorAll('script').forEach",
+      'style.textContent = files.css',
+      "new Function('root', files.js)(root)",
+      'style.css is not linked',
+      'script.js is not linked',
+    ]) {
+      expect(html).toContain(marker);
+    }
+    expect(html).toContain('event.source !== window.parent');
+    expect(html).not.toContain('allow-same-origin');
+    expect(html).not.toContain('mediaAssets');
+    expect(html).not.toContain('interactive-examples.mdn.mozilla.net');
   });
 
   it('builds the html mode around a nested fully-sandboxed iframe with no CDNs', () => {

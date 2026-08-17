@@ -7,6 +7,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
       return "What text will appear after the button's click handler runs?";
     case 'html-css-js':
       return "How will the styled message change after the button's click handler runs?";
+    case 'html-js-css-media':
+      return "What will the status message say after the audio starts playing?";
     case 'dom':
       return "Examine the code below. What message will be logged to the console when the 'Click Me' button is pressed?";
     case 'p5':

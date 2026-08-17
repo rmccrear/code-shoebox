@@ -10,10 +10,11 @@ import {
   GripHorizontal
 } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
+import { MediaPanel } from './MediaPanel';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
-import { ThemeMode, EnvironmentMode } from '../types';
+import { ThemeMode, EnvironmentMode, MediaAsset } from '../types';
 import {
   HTML_CSS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
@@ -23,12 +24,17 @@ import {
 } from '../runtime/fileBundle';
 
 type EditorFileName = 'script.js' | 'index.html' | 'style.css';
+type WorkspaceTab = EditorFileName | 'media';
 
-const EDITABLE_BUNDLE_FILES = {
-  'html-css': HTML_CSS_FILE_NAMES,
-  'html-js': HTML_JS_FILE_NAMES,
-  'html-css-js': HTML_CSS_JS_FILE_NAMES,
-} as const satisfies Partial<Record<EnvironmentMode, readonly EditorFileName[]>>;
+const BUNDLE_MODE_CONFIG = {
+  'html-css': { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
+  'html-js': { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
+  'html-css-js': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
+  'html-js-css-media': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
+} as const satisfies Partial<Record<EnvironmentMode, {
+  files: readonly EditorFileName[];
+  hasMediaTab: boolean;
+}>>;
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
   mode === 'html' ? 'index.html' : `${mode}.script`;
@@ -43,6 +49,7 @@ interface CodingEnvironmentProps {
   environmentMode: EnvironmentMode;
   fixtureHtml?: string;
   fixtureCss?: string;
+  mediaAssets?: readonly MediaAsset[];
   sessionId: number;
   predictionPrompt?: React.ReactNode;
   debugMode?: boolean;
@@ -58,6 +65,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   environmentMode,
   fixtureHtml,
   fixtureCss,
+  mediaAssets,
   sessionId,
   predictionPrompt,
   debugMode = false
@@ -71,36 +79,43 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
 
-  const editableBundleFileNames = environmentMode in EDITABLE_BUNDLE_FILES
-    ? EDITABLE_BUNDLE_FILES[environmentMode as keyof typeof EDITABLE_BUNDLE_FILES]
+  const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG
+    ? BUNDLE_MODE_CONFIG[environmentMode as keyof typeof BUNDLE_MODE_CONFIG]
     : null;
+  const editableBundleFileNames = bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === 'dom'
     && (fixtureHtml !== undefined || fixtureCss !== undefined);
-  const visibleFiles = useMemo<EditorFileName[]>(() => {
-    if (editableBundleFileNames) return [...editableBundleFileNames];
+  const visibleTabs = useMemo<WorkspaceTab[]>(() => {
+    if (editableBundleFileNames) {
+      return [
+        ...editableBundleFileNames,
+        ...(bundleModeConfig?.hasMediaTab ? ['media' as const] : []),
+      ];
+    }
     if (!hasDomFixtures) return ['script.js'];
     return [
       'script.js',
       ...(fixtureHtml !== undefined ? ['index.html' as const] : []),
       ...(fixtureCss !== undefined ? ['style.css' as const] : []),
     ];
-  }, [editableBundleFileNames, hasDomFixtures, fixtureHtml, fixtureCss]);
-  const isTabbedMode = visibleFiles.length > 1;
-  const [activeFile, setActiveFile] = useState<EditorFileName>(
+  }, [editableBundleFileNames, bundleModeConfig, hasDomFixtures, fixtureHtml, fixtureCss]);
+  const isTabbedMode = visibleTabs.length > 1;
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
     isEditableBundleMode ? 'index.html' : 'script.js'
   );
-  const selectedFile = visibleFiles.includes(activeFile) ? activeFile : visibleFiles[0];
+  const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
+  const selectedFile = selectedTab === 'media' ? null : selectedTab;
   const files = useMemo(
     () => (editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null),
     [editableBundleFileNames, code]
   );
 
   useEffect(() => {
-    if (!visibleFiles.includes(activeFile)) setActiveFile(visibleFiles[0]);
-  }, [activeFile, visibleFiles]);
+    if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
+  }, [activeTab, visibleTabs]);
 
-  const editorCode = isEditableBundleMode && files
+  const editorCode = isEditableBundleMode && files && selectedFile
     ? files[selectedFile]
     : hasDomFixtures && selectedFile === 'index.html'
       ? fixtureHtml ?? ''
@@ -109,7 +124,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         : code;
   const handleEditorChange = (value: string | undefined) => {
     const next = value || '';
-    if (isEditableBundleMode && files) {
+    if (isEditableBundleMode && files && selectedFile) {
       onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
     } else if (!hasDomFixtures || selectedFile === 'script.js') {
       onChange(next);
@@ -174,25 +189,29 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
       {/* Toolbar */}
       <div className={`h-12 px-4 border-b flex items-center justify-between ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10 text-gray-400' : 'bg-white border-gray-100'}`}>
-        <div className="flex items-center gap-2">
-          <FileCode className="w-4 h-4 text-blue-500" />
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <FileCode className="h-4 w-4 shrink-0 text-blue-500" />
           {isTabbedMode ? (
-            <div className="flex items-center gap-1">
-              {visibleFiles.map((file) => {
-                const isFixtureFile = hasDomFixtures && file !== 'script.js';
+            <div className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap">
+              {visibleTabs.map((tab) => {
+                const isMediaTab = tab === 'media';
+                const isFixtureFile = hasDomFixtures && tab !== 'script.js';
+                const isReadOnlyTab = isMediaTab || isFixtureFile;
                 return (
                 <button
-                  key={file}
-                  onClick={() => setActiveFile(file)}
-                  title={isFixtureFile ? 'Fixed fixture' : undefined}
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  title={isMediaTab ? 'Read-only media' : isFixtureFile ? 'Fixed fixture' : undefined}
+                  aria-pressed={selectedTab === tab}
                   className={`px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${
-                    selectedFile === file
+                    selectedTab === tab
                       ? (themeMode === 'dark' ? 'bg-white/10 text-blue-400' : 'bg-blue-50 text-blue-600')
                       : 'opacity-50 hover:opacity-80'
                   }`}
                 >
-                  {file}
-                  {isFixtureFile && <Lock aria-hidden="true" className="ml-1 inline h-3 w-3" />}
+                  {isMediaTab ? 'Media' : tab}
+                  {isReadOnlyTab && <Lock aria-hidden="true" className="ml-1 inline h-3 w-3" />}
                 </button>
                 );
               })}
@@ -240,15 +259,22 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       {/* Editor & Output Workspace */}
       <div ref={containerRef} className={`flex-1 flex overflow-hidden ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
         <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` }} className="relative flex flex-col min-w-0 min-h-0">
-          <CodeEditor
-            code={editorCode}
-            onChange={handleEditorChange}
-            themeMode={themeMode}
-            environmentMode={environmentMode}
-            sessionId={sessionId}
-            activeFile={isTabbedMode ? selectedFile : undefined}
-            readOnly={(!!predictionPrompt && isPredictionLocked) || (hasDomFixtures && selectedFile !== 'script.js')}
-          />
+          {selectedTab === 'media' ? (
+            <MediaPanel
+              mediaAssets={environmentMode === 'html-js-css-media' ? mediaAssets ?? [] : []}
+              themeMode={themeMode}
+            />
+          ) : (
+            <CodeEditor
+              code={editorCode}
+              onChange={handleEditorChange}
+              themeMode={themeMode}
+              environmentMode={environmentMode}
+              sessionId={sessionId}
+              activeFile={isTabbedMode ? selectedFile ?? undefined : undefined}
+              readOnly={(!!predictionPrompt && isPredictionLocked) || (hasDomFixtures && selectedFile !== 'script.js')}
+            />
+          )}
         </div>
 
         <div 

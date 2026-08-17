@@ -6,6 +6,7 @@ import {
   HTML_CSS_STARTER_CODE,
   HTML_JS_STARTER_CODE,
   HTML_CSS_JS_STARTER_CODE,
+  HTML_JS_CSS_MEDIA_STARTER_CODE,
 } from '../constants';
 import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from '../runtime/fileBundle';
 
@@ -80,6 +81,20 @@ describe('useSandboxState', () => {
     expect(files['style.css'].trim().length).toBeGreaterThan(0);
     expect(files['script.js'].trim().length).toBeGreaterThan(0);
     expect(localStorage.getItem('cs_lesson-1_code_html-css-js')).toBe(HTML_CSS_JS_STARTER_CODE);
+  });
+
+  it('switching to html-js-css-media loads a linked three-file starter under its own key', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('html-js-css-media'));
+
+    expect(result.current.code).toBe(HTML_JS_CSS_MEDIA_STARTER_CODE);
+    const files = parseFileBundle(result.current.code, HTML_CSS_JS_FILE_NAMES);
+    expect(files['index.html']).toContain('<link rel="stylesheet" href="style.css">');
+    expect(files['index.html']).toContain('<script src="script.js"></script>');
+    expect(files['index.html']).toContain('id="media-gallery"');
+    expect(files['style.css'].trim().length).toBeGreaterThan(0);
+    expect(files['script.js'].trim().length).toBeGreaterThan(0);
+    expect(localStorage.getItem('cs_lesson-1_code_html-js-css-media')).toBe(HTML_JS_CSS_MEDIA_STARTER_CODE);
   });
 
   it('restores previously saved code when switching back to a mode', () => {

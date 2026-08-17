@@ -76,6 +76,20 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
     *   Native JavaScript only: no TypeScript, Babel, modules, imports, packages, CDNs, extra files, or renames.
     *   Re-running replaces learner DOM and bundled CSS, but learner timers or listeners attached directly to `window`/`document` are not automatically disposed.
 
+### `html-js-css-media` (HTML, CSS, JavaScript & Media, four tabs)
+*   **Engine:** The same native three-file sandbox recipe as `html-css-js`. `index.html`, `style.css`, and `script.js` remain in the version-1 code envelope; the fourth `Media` tab is host-owned UI and is never part of execution data.
+*   **Media input:** `mediaAssets?: readonly MediaAsset[]`, where each descriptor is an image (`name`, `src`, required `alt`), audio (`name`, `src`), or video (`name`, `src`). The first three are shown; extra descriptors produce a visible cap notice, and no descriptors produce an empty state.
+*   **Capabilities:**
+    *   Three editable code tabs plus one read-only Media tab. Media contains up to three read-only asset sub-tabs.
+    *   Native image, audio, and video previews. Audio/video controls are available, `preload="metadata"` is used, and nothing autoplays.
+    *   Images show escaped HTML and CSS snippets. Audio/video show escaped HTML and JavaScript playback snippets. Snippets are plain text; learners paste them into code and press Run.
+    *   Manual execution, exact `style.css`/`script.js` link markers, page restoration, and console behavior are identical to `html-css-js`.
+*   **Limitations:**
+    *   Media is host-authored URL metadata only. There are no uploads, recordings, edits, deletion, persistence, binary bundles, proxies, or custom players.
+    *   MP3/WAV/image/video support depends on the browser's codecs. Absolute HTTPS or data URLs are most portable; relative URLs depend on the host page.
+    *   External URLs cause normal browser requests. Cross-origin media may display or play while pixel/sample access through Canvas or Web Audio remains blocked by CORS.
+    *   Media is not automatically added to learner output. The learner must paste the appropriate snippet into HTML/CSS/JavaScript.
+
 ### `dom` (DOM / JS)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).
 *   **Pre-loaded Libraries:** None.
