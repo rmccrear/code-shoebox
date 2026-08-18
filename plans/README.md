@@ -35,6 +35,7 @@ your row when done.
 | 012  | Component tests for iframe hosts (ServerOutput, OutputFrame, routing) | P2 | M | 008, 009 | DONE (implemented 2026-06-12; 57 tests pass) |
 | 013  | Harden build-toolchain audit findings (Vite + esbuild) | P2 | S-M | 010 | TODO |
 | 014  | DOM fixtures, bounded file tabs, and useful runtime errors | P1 | M-L | 012 | DONE (implemented 2026-07-16; typecheck/lint/builds/70 tests pass; browser smoke passed) |
+| 018  | Persistence-key lifecycle contract: docs, save guard, tests | P2 | S–M | — | DONE (2026-08-17; 101 tests + typecheck/lint/build/package/browser checks pass) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -52,6 +53,10 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 014 depends on 012 because it changes the iframe host and editor routing;
   the existing component tests are its regression safety net. It is otherwise
   independent of the unfinished build-toolchain plan 013.
+- 018 has no in-repo dependency. Its external sequencing gate cleared when
+  Lesson Architect PR #157 merged as `b240f6e0`; a Code Shoebox dist publish is
+  allowed, while a Lesson Architect dependency-pin bump remains optional
+  follow-up hardening. Details are in Plan 018's coordination section.
 - 008/009 carry manual browser smoke-test steps because there is still no
   browser-level automation (Playwright deferred again this round — see below).
 

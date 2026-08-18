@@ -11,6 +11,10 @@ import { useMemo } from 'react';
  * @param initialCode Optional code snippet to ensure uniqueness if prompts are identical.
  * @param prefix Optional prefix to namespace the key (default: 'auto').
  * @returns A unique hash string to be passed to useSandboxState.
+ *
+ * The pathname is captured when the memo computes and is not reactive to SPA
+ * navigation by itself. Remount the owning exercise per page/activity, and
+ * keep the returned key stable for each mounted useSandboxState instance.
  */
 export const useAutoKey = (identifier: string, initialCode: string = '', prefix: string = 'auto'): string => {
   const key = useMemo(() => {

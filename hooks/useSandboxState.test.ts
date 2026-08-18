@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useSandboxState } from './useSandboxState';
 import {
@@ -9,6 +9,14 @@ import {
   HTML_JS_CSS_MEDIA_STARTER_CODE,
 } from '../constants';
 import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from '../runtime/fileBundle';
+
+const storageNamespace = (persistenceKey: string) => Object.fromEntries(
+  Object.entries(localStorage).filter(([key]) => key.startsWith(`cs_${persistenceKey}_`)),
+);
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('useSandboxState', () => {
   it('defaults to dom mode with the dom starter code', () => {
@@ -27,6 +35,85 @@ describe('useSandboxState', () => {
     act(() => result.current.setCode('const answer = 42;'));
     expect(localStorage.getItem('cs_lesson-1_code_dom')).toBe('const answer = 42;');
     expect(localStorage.getItem('cs_lesson-1_env_mode')).toBe('dom');
+  });
+
+  it('continues persisting when a mounted hook rerenders with the same key', () => {
+    const { result, rerender } = renderHook(
+      ({ persistenceKey }) => useSandboxState(persistenceKey),
+      { initialProps: { persistenceKey: 'lesson-stable' } },
+    );
+
+    act(() => result.current.setCode('// first stable edit'));
+    rerender({ persistenceKey: 'lesson-stable' });
+    act(() => result.current.setCode('// second stable edit'));
+
+    expect(localStorage.getItem('cs_lesson-stable_code_dom')).toBe('// second stable edit');
+  });
+
+  it('blocks all writes to both namespaces after A to B on one mounted hook', () => {
+    localStorage.setItem('cs_lesson-a_env_mode', 'dom');
+    localStorage.setItem('cs_lesson-a_theme_mode', 'dark');
+    localStorage.setItem('cs_lesson-a_theme_name', 'Base (Indigo)');
+    localStorage.setItem('cs_lesson-a_code_dom', '// saved A');
+    localStorage.setItem('cs_lesson-b_env_mode', 'dom');
+    localStorage.setItem('cs_lesson-b_theme_mode', 'light');
+    localStorage.setItem('cs_lesson-b_theme_name', 'GitHub Light');
+    localStorage.setItem('cs_lesson-b_code_dom', '// saved B');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result, rerender } = renderHook(
+      ({ persistenceKey }) => useSandboxState(persistenceKey),
+      { initialProps: { persistenceKey: 'lesson-a' } },
+    );
+
+    act(() => result.current.setCode('// latest A edit'));
+    const namespaceA = storageNamespace('lesson-a');
+    const namespaceB = storageNamespace('lesson-b');
+
+    rerender({ persistenceKey: 'lesson-b' });
+    act(() => {
+      result.current.setCode('// edit after A to B');
+      result.current.setThemeMode('light');
+    });
+
+    expect(storageNamespace('lesson-a')).toEqual(namespaceA);
+    expect(storageNamespace('lesson-b')).toEqual(namespaceB);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps persistence disabled after A to B to A on one mounted hook', () => {
+    localStorage.setItem('cs_return-a_code_dom', '// saved A');
+    localStorage.setItem('cs_return-b_code_dom', '// saved B');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result, rerender } = renderHook(
+      ({ persistenceKey }) => useSandboxState(persistenceKey),
+      { initialProps: { persistenceKey: 'return-a' } },
+    );
+
+    act(() => result.current.setCode('// latest A edit'));
+    const namespaceA = storageNamespace('return-a');
+    const namespaceB = storageNamespace('return-b');
+
+    rerender({ persistenceKey: 'return-b' });
+    act(() => result.current.setCode('// edit after A to B'));
+    rerender({ persistenceKey: 'return-a' });
+    act(() => result.current.setCode('// edit after A to B to A'));
+
+    expect(storageNamespace('return-a')).toEqual(namespaceA);
+    expect(storageNamespace('return-b')).toEqual(namespaceB);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows normal keyed remounts without a lifecycle warning', () => {
+    localStorage.setItem('cs_lesson-b_code_dom', '// saved B');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const firstMount = renderHook(() => useSandboxState('lesson-a'));
+    act(() => firstMount.result.current.setCode('// saved A'));
+    firstMount.unmount();
+
+    const secondMount = renderHook(() => useSandboxState('lesson-b'));
+
+    expect(secondMount.result.current.code).toBe('// saved B');
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('switching modes loads that mode\'s starter code and bumps sessionId', () => {
