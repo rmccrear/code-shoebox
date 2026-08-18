@@ -76,7 +76,7 @@ Two components own an iframe and talk to the kernel. They are selected in `Codin
 
 ## State, persistence, and presets
 
-- **`hooks/useSandboxState.ts`** is the primary consumer-facing hook. It owns `code`, `environmentMode`, `themeMode`, `activeThemeName`, and a numeric `sessionId`. Pass a `persistenceKey` to enable per-mode localStorage persistence (key shape `cs_<persistenceKey>_code_<mode>`); omit it for an ephemeral scratchpad. Switching modes loads that mode's saved code or its starter (`constants.ts`) and **bumps `sessionId`**.
+- **`hooks/useSandboxState.ts`** is the primary consumer-facing hook. It owns `code`, `environmentMode`, `themeMode`, `activeThemeName`, and a numeric `sessionId`. Pass a `persistenceKey` to enable per-mode localStorage persistence (key shape `cs_<persistenceKey>_code_<mode>`); omit it for an ephemeral scratchpad. `persistenceKey`, `initialCodeOverride`, and `defaultMode` are mount-stable identity inputs: remount the hook owner when they change. A mounted instance that observes a `persistenceKey` mismatch warns once and permanently degrades to ephemeral mode, even if the key later changes back; it never rehydrates on key changes. Switching modes loads that mode's saved code or its starter (`constants.ts`) and **bumps `sessionId`**.
 - **`sessionId` is the remount signal.** `CodeShoebox` keys `CodingEnvironment` on it; incrementing it forces a full editor/iframe remount. Reset and mode-switch both rely on this.
 - **`hooks/useEditorHashPresets.ts`** (demo only) syncs `window.location.hash` ↔ presets defined in `demoPresets.ts`.
 

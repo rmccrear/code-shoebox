@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeMode, EnvironmentMode } from '../types';
 import { themes } from '../theme';
 import {
@@ -48,7 +48,18 @@ const getStarterCode = (mode: EnvironmentMode): string => {
   }
 };
 
+/**
+ * Owns sandbox state for one mounted activity identity.
+ *
+ * `persistenceKey`, `initialCodeOverride`, and `defaultMode` must remain stable
+ * for this hook's mounted lifetime. Remount the component that owns the hook
+ * when the activity identity changes. A persistence-key mismatch permanently
+ * disables saves for that mounted instance; key changes do not rehydrate.
+ */
 export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: string, defaultMode: EnvironmentMode = 'dom') => {
+  const hydratedKeyRef = useRef(persistenceKey);
+  const persistenceDisabledRef = useRef(false);
+  const keyChangeWarnedRef = useRef(false);
   const STORAGE_PREFIX = persistenceKey ? `cs_${persistenceKey}` : '';
   const getStorageKey = useCallback((key: string) => `${STORAGE_PREFIX}_${key}`, [STORAGE_PREFIX]);
 
@@ -83,6 +94,19 @@ export const useSandboxState = (persistenceKey?: string, initialCodeOverride?: s
 
   // Persistence Effects
   useEffect(() => {
+    if (persistenceDisabledRef.current) return;
+    if (persistenceKey !== hydratedKeyRef.current) {
+      persistenceDisabledRef.current = true;
+      if (!keyChangeWarnedRef.current) {
+        keyChangeWarnedRef.current = true;
+        console.warn(
+          '[code-shoebox] useSandboxState: persistenceKey changed on a mounted hook; ' +
+          'persistence is disabled for this instance. Remount the component ' +
+          '(e.g. with a React key) when the activity identity changes.'
+        );
+      }
+      return;
+    }
     if (!persistenceKey) return;
     localStorage.setItem(getStorageKey('env_mode'), environmentMode);
     localStorage.setItem(getStorageKey('theme_mode'), themeMode);
