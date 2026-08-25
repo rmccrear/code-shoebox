@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import Editor, { OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
+import { registerHtmlEmmetForModel } from './emmet';
 
 const EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
@@ -75,6 +76,8 @@ interface CodeEditorProps {
   sessionId: number;
   /** Active filename for multi-file modes; selects the Monaco model and language. */
   activeFile?: string;
+  /** Enables Emmet completions for this editor's editable HTML model. */
+  enableEmmet?: boolean;
   readOnly?: boolean;
 }
 
@@ -85,6 +88,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   environmentMode,
   sessionId,
   activeFile,
+  enableEmmet = false,
   readOnly = false
 }) => {
   // Construct a deterministic path.
@@ -137,6 +141,26 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     document.fonts?.ready
       .then(refreshEditorMetrics)
       .catch(() => undefined);
+
+    if (enableEmmet && language === 'html' && !readOnly) {
+      const model = editor.getModel();
+      if (model) {
+        let editorDisposed = false;
+        let disposeEmmet: (() => void) | undefined;
+
+        void registerHtmlEmmetForModel(monaco, model).then((dispose) => {
+          if (editorDisposed) dispose();
+          else disposeEmmet = dispose;
+        }).catch((error) => {
+          if (!editorDisposed) console.error('[CodeShoebox] Failed to enable Emmet.', error);
+        });
+
+        editor.onDidDispose(() => {
+          editorDisposed = true;
+          disposeEmmet?.();
+        });
+      }
+    }
 
     // Match the JS lib set to this environment, and re-assert it whenever this
     // editor regains focus — the language defaults are shared across every
@@ -322,7 +346,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   return (
     <div className="monaco-editor-container h-full w-full overflow-hidden">
       <Editor
-        key={modelPath} // Force full re-render of Editor component when path changes
+        key={`${modelPath}-${enableEmmet ? 'emmet' : 'plain'}`} // Re-register editor features when the opt-in changes.
         height="100%"
         path={modelPath}
         language={language}

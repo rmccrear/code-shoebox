@@ -466,9 +466,9 @@ export const Demo: React.FC = () => {
                 </header>
 
                 <section>
-                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-emerald-500" /> Web Page (HTML & CSS)</h2></div>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><FileCode className="w-6 h-6 text-emerald-500" /> Web Page (HTML & CSS, Emmet enabled)</h2></div>
                     <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
-                        <CodeShoebox code={htmlState.code} onCodeChange={htmlState.setCode} environmentMode={htmlState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlState.sessionId} />
+                        <CodeShoebox code={htmlState.code} onCodeChange={htmlState.setCode} environmentMode={htmlState.environmentMode} theme={themes[0]} themeMode="dark" sessionId={htmlState.sessionId} enableEmmet />
                     </div>
                 </section>
 

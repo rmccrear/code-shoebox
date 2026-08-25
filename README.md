@@ -6,6 +6,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 - **Secure Execution**: Uses a sandboxed iframe with strict permissions (`allow-scripts`).
 - **Monaco Editor**: Full-featured code editing experience via `@monaco-editor/react`.
+- **Optional Emmet**: Set `enableEmmet` to expand Emmet abbreviations in editable HTML models.
 - **Multiple Environments**:
   - `html`: Static HTML pages with live preview (no JavaScript execution).
   - `html-css`: Two-tab HTML & CSS editing (`index.html` + `style.css`) with live preview.
@@ -108,6 +109,24 @@ const MyEditor = () => {
     </div>
   );
 };
+```
+
+### Optional Emmet completions
+
+Pass `enableEmmet` to opt an editor into Emmet abbreviation completions. The
+feature applies only to editable HTML models, including the `index.html` tab in
+multi-file web modes. It is disabled by default and does not change sandbox
+execution.
+
+```tsx
+<CodeShoebox
+  code={code}
+  onCodeChange={setCode}
+  environmentMode="html-css-js"
+  theme={themes[0]}
+  themeMode="dark"
+  enableEmmet
+/>
 ```
 
 ### Hono Usage
@@ -312,6 +331,7 @@ const ExerciseComponent = () => {
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
+| `enableEmmet` | `boolean` | No | Enables Emmet abbreviation completions in editable HTML models; defaults to `false`. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |
