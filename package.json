@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
+    "emmet-monaco-es": "^5.7.0",
     "lucide-react": "^0.469.0"
   },
   "devDependencies": {

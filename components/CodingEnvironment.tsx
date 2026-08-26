@@ -50,6 +50,7 @@ interface CodingEnvironmentProps {
   fixtureHtml?: string;
   fixtureCss?: string;
   mediaAssets?: readonly MediaAsset[];
+  enableEmmet?: boolean;
   sessionId: number;
   predictionPrompt?: React.ReactNode;
   debugMode?: boolean;
@@ -66,6 +67,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   fixtureHtml,
   fixtureCss,
   mediaAssets,
+  enableEmmet = false,
   sessionId,
   predictionPrompt,
   debugMode = false
@@ -272,6 +274,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
               environmentMode={environmentMode}
               sessionId={sessionId}
               activeFile={isTabbedMode ? selectedFile ?? undefined : undefined}
+              enableEmmet={enableEmmet}
               readOnly={(!!predictionPrompt && isPredictionLocked) || (hasDomFixtures && selectedFile !== 'script.js')}
             />
           )}

@@ -22,6 +22,10 @@ CodeShoebox runs code entirely within the browser using a sandboxed `<iframe>`. 
 
 These environments are designed for standard DOM manipulation and vanilla JavaScript/TypeScript logic.
 
+Hosts can pass `enableEmmet` to enable Emmet abbreviation completions in any
+editable HTML model. This editor-only opt-in is disabled by default and does not
+change runtime behavior.
+
 ### `html` (HTML, single file)
 *   **Engine:** Nested `<iframe sandbox="">` — the editor buffer is rendered **verbatim** as the inner frame's `srcdoc`, exactly like opening a saved `.html` file. No transpiler.
 *   **Pre-loaded Libraries:** None (no CDNs).
