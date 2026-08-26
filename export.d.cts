@@ -57,6 +57,8 @@ interface CodeShoeboxProps {
     fixtureCss?: string;
     /** Host-authored media shown read-only in html-js-css-media mode. */
     mediaAssets?: readonly MediaAsset[];
+    /** Enables Emmet abbreviation completions in editable HTML models. */
+    enableEmmet?: boolean;
     themeMode: ThemeMode;
     theme: Theme;
     sessionId?: number;

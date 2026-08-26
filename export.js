@@ -17,6 +17,33 @@ import {
 // components/CodeEditor.tsx
 import { useMemo } from "react";
 import Editor from "@monaco-editor/react";
+
+// components/emmet.ts
+var registerHtmlEmmetForModel = (monaco, enabledModel) => import("emmet-monaco-es").then(({ emmetHTML }) => {
+  const languagesProxy = new Proxy(monaco.languages, {
+    get(target, property) {
+      if (property !== "registerCompletionItemProvider") {
+        return Reflect.get(target, property, target);
+      }
+      return (languageSelector, provider) => target.registerCompletionItemProvider(languageSelector, {
+        ...provider,
+        provideCompletionItems(model, position, context, token) {
+          if (model !== enabledModel) return void 0;
+          return provider.provideCompletionItems(model, position, context, token);
+        }
+      });
+    }
+  });
+  const gatedMonaco = new Proxy(monaco, {
+    get(target, property) {
+      if (property === "languages") return languagesProxy;
+      return Reflect.get(target, property, target);
+    }
+  });
+  return emmetHTML(gatedMonaco, ["html"], { tokenizer: "standard" });
+});
+
+// components/CodeEditor.tsx
 import { jsx } from "react/jsx-runtime";
 var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 var CONSOLE_ONLY_JS_MODES = ["node-js", "express", "hono"];
@@ -60,6 +87,7 @@ var CodeEditor = ({
   environmentMode,
   sessionId,
   activeFile,
+  enableEmmet = false,
   readOnly = false
 }) => {
   const modelPath = useMemo(() => {
@@ -103,6 +131,23 @@ var CodeEditor = ({
     window.requestAnimationFrame(refreshEditorMetrics);
     window.setTimeout(refreshEditorMetrics, 250);
     document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
+    if (enableEmmet && language === "html" && !readOnly) {
+      const model = editor.getModel();
+      if (model) {
+        let editorDisposed = false;
+        let disposeEmmet;
+        void registerHtmlEmmetForModel(monaco, model).then((dispose) => {
+          if (editorDisposed) dispose();
+          else disposeEmmet = dispose;
+        }).catch((error) => {
+          if (!editorDisposed) console.error("[CodeShoebox] Failed to enable Emmet.", error);
+        });
+        editor.onDidDispose(() => {
+          editorDisposed = true;
+          disposeEmmet?.();
+        });
+      }
+    }
     if (language === "javascript") {
       applyJavaScriptLibs(monaco, environmentMode);
       editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
@@ -297,7 +342,7 @@ var CodeEditor = ({
         letterSpacing: 0
       }
     },
-    modelPath
+    `${modelPath}-${enableEmmet ? "emmet" : "plain"}`
   ) });
 };
 
@@ -1976,6 +2021,7 @@ var CodingEnvironment = ({
   fixtureHtml,
   fixtureCss,
   mediaAssets,
+  enableEmmet = false,
   sessionId,
   predictionPrompt,
   debugMode = false
@@ -2151,6 +2197,7 @@ var CodingEnvironment = ({
           environmentMode,
           sessionId,
           activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
+          enableEmmet,
           readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
         }
       ) }),
@@ -2200,6 +2247,7 @@ var CodeShoebox = ({
   fixtureHtml,
   fixtureCss,
   mediaAssets,
+  enableEmmet = false,
   theme,
   themeMode,
   sessionId = 0,
@@ -2253,6 +2301,7 @@ var CodeShoebox = ({
           fixtureHtml,
           fixtureCss,
           mediaAssets,
+          enableEmmet,
           predictionPrompt: prediction_prompt,
           debugMode
         },

@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "type": "module",
   "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
   "main": "export.cjs",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
+    "emmet-monaco-es": "^5.7.0",
     "lucide-react": "^0.469.0"
   },
   "keywords": [
