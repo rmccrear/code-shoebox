@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
-import { ThemeMode, EnvironmentMode } from '../types';
+import { ThemeMode, EnvironmentMode, MockApiConfig } from '../types';
 import { PreviewContainer } from './PreviewContainer';
 import { Console, LogEntry } from './Console';
 import { GripHorizontal } from 'lucide-react';
@@ -19,9 +19,11 @@ interface OutputFrameProps {
   environmentMode: EnvironmentMode;
   fixtureHtml?: string;
   fixtureCss?: string;
+  mockApi?: MockApiConfig;
   isBlurred?: boolean;
   isPredictionMode?: boolean;
   debugMode?: boolean;
+  onExecutionComplete?: () => void;
 }
 
 export const OutputFrame: React.FC<OutputFrameProps> = ({ 
@@ -31,14 +33,17 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   environmentMode,
   fixtureHtml,
   fixtureCss,
+  mockApi,
   isBlurred = false,
   isPredictionMode = false,
-  debugMode = false
+  debugMode = false,
+  onExecutionComplete,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<MessageChannel | null>(null);
-  const executionRef = useRef({ code, environmentMode, fixtureHtml, fixtureCss, debugMode });
+  const executionRef = useRef({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
+  const latestExecutionIdRef = useRef<number | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   
   const [consoleHeight, setConsoleHeight] = useState(150); 
@@ -64,8 +69,8 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   );
 
   useEffect(() => {
-    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, debugMode };
-  }, [code, environmentMode, fixtureHtml, fixtureCss, debugMode]);
+    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode };
+  }, [code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode]);
 
   const handleKernelMessage = useCallback((data: any) => {
     if (!data || typeof data !== 'object') return;
@@ -78,8 +83,14 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       }));
     } else if (type === 'READY_SIGNAL' && debugMode) {
       addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
+    } else if (
+      type === 'EXECUTION_COMPLETE'
+      && environmentMode === 'fetch'
+      && payload?.executionId === latestExecutionIdRef.current
+    ) {
+      onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog]);
+  }, [debugMode, addSystemLog, environmentMode, onExecutionComplete]);
 
   // Keep the latest message handler without recreating the transferred port.
   const kernelMessageRef = useRef(handleKernelMessage);
@@ -98,6 +109,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         setLogs([]);
         if (execution.debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
+             if (execution.environmentMode === 'fetch') latestExecutionIdRef.current = runTrigger;
              const hasDomFixture = execution.environmentMode === 'dom'
                && (execution.fixtureHtml !== undefined || execution.fixtureCss !== undefined);
              if (hasDomFixture) {
@@ -105,6 +117,10 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
                  fixtureHtml: execution.fixtureHtml,
                  fixtureCss: execution.fixtureCss,
                });
+             } else if (execution.environmentMode === 'fetch') {
+               executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+                 mockApi: execution.mockApi,
+               }, runTrigger);
              } else {
                executeCodeInSandbox(iframeRef.current.contentWindow, execution.code);
              }

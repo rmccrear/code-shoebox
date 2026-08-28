@@ -3,6 +3,8 @@ import { EnvironmentMode, EnvironmentRecipe } from "./types";
 import { BASE_HTML_WRAPPER } from "./templates/common";
 import { EXPRESS_MOCK_SETUP } from "./templates/express";
 import { HONO_MOCK_SETUP } from "./templates/hono";
+import { FETCH_MOCK_SETUP } from "./templates/fetch";
+import type { MockApiConfig } from "../types";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 
@@ -292,6 +294,35 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         }
 
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
+  fetch: {
+    name: "Fetch API",
+    mocks: FETCH_MOCK_SETUP,
+    showPlaceholder: false,
+    contentSecurityPolicy: "connect-src 'none'",
+    logic: `
+      let activeRunController = null;
+      let runGeneration = 0;
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+      window.__RUN_MODE__ = async (code, root, options = {}) => {
+        const generation = ++runGeneration;
+        if (activeRunController) activeRunController.abort();
+        activeRunController = new AbortController();
+
+        const runRoot = document.createElement('div');
+        runRoot.style.width = '100%';
+        root.replaceChildren(runRoot);
+        window.__installFetchMock(options.mockApi, activeRunController.signal);
+
+        try {
+          await new AsyncFunction('root', code)(runRoot);
+        } catch (error) {
+          if (generation !== runGeneration || (error && error.name === 'AbortError')) return;
+          throw error;
+        }
       };
     `
   },
@@ -602,22 +633,28 @@ export const getSandboxHtml = (mode: EnvironmentMode = 'dom', isPredictionMode: 
     mocks: recipe.mocks,
     styles: recipe.styles,
     logic: recipe.logic || '',
-    showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder
+    showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder,
+    contentSecurityPolicy: recipe.contentSecurityPolicy,
   });
 };
 
 export interface SandboxExecutionOptions {
   fixtureHtml?: string;
   fixtureCss?: string;
+  mockApi?: MockApiConfig;
 }
 
 export const executeCodeInSandbox = (
   iframeContentWindow: Window,
   code: string,
-  options?: SandboxExecutionOptions
+  options?: SandboxExecutionOptions,
+  executionId?: number,
 ) => {
-  const message = options === undefined
-    ? { type: 'EXECUTE', code }
-    : { type: 'EXECUTE', code, payload: options };
+  const message = {
+    type: 'EXECUTE',
+    code,
+    ...(options === undefined ? {} : { payload: options }),
+    ...(executionId === undefined ? {} : { executionId }),
+  };
   iframeContentWindow.postMessage(message, '*');
 };

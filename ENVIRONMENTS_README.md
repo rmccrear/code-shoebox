@@ -109,6 +109,24 @@ change runtime behavior.
     *   `import` / `export` syntax is not supported.
     *   Fixture props are ignored outside `dom` mode. They are trusted host input inside the existing sandbox, not editable project files or a dependency-loading mechanism.
 
+### `fetch` (Fetch API + Mock Server)
+*   **Engine:** Native browser JavaScript executed through an async function, so top-level `await` is legal.
+*   **Workspace:** Editable `script.js`, read-only **API Server** route documentation, visual output, and console output.
+*   **Mock input:** `mockApi?: MockApiConfig` is trusted host data delivered through the structured `EXECUTE.payload`. It is never interpolated into iframe `srcDoc`, placed in learner code, or persisted by `useSandboxState`.
+*   **Capabilities:**
+    *   Relative `fetch()` calls resolve to genuine `Response` objects with JSON bodies and `Content-Type: application/json` by default.
+    *   The default 1000 ms latency occurs before `fetch()` resolves. Routes can override it with `delayMs`, including `0` for tests.
+    *   Matching uses the request method and pathname. A route with `query` requires the exact query key/value set and takes precedence; a route without `query` ignores the request query string.
+    *   HTTP error responses such as 404 and 500 resolve normally. A route with `networkError: true`, or an aborted request, rejects.
+    *   A new Run aborts pending mock requests from the previous run. Completion messages carry an execution ID so stale runs cannot finish the current Run state.
+*   **Containment:**
+    *   Absolute URL strings and URL/Request objects for other origins are rejected with a learner-facing disabled-network error.
+    *   The mode adds `Content-Security-Policy: connect-src 'none'`; the iframe keeps its existing sandbox flags and does not gain `allow-same-origin`.
+*   **Limitations:**
+    *   Routes are stateless exact fixtures. There are no dynamic handlers, path parameters, response templates, request validation, or persistent CRUD state.
+    *   POST bodies and headers can be authored for practice but are not inspected; the declared response is canned.
+    *   Response bodies are JSON values. Malformed raw response bodies are not part of v1.
+
 ### `typescript` (TypeScript)
 *   **Engine:** Babel Standalone (in-browser transpilation).
 *   **Pre-loaded Libraries:** Babel (`@babel/standalone`).

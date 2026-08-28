@@ -204,6 +204,16 @@ root.appendChild(button);
 console.log('Code loaded successfully.');
 `;
 
+export const FETCH_STARTER_CODE = `// Fetch data from the routes in the API Server tab.
+// The mock server waits one second so you can observe that await pauses here.
+
+let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+
+console.log("The first city is " + readings[0].city);
+console.log(readings);
+`;
+
 export const TYPESCRIPT_STARTER_CODE = [
   '// Welcome to TypeScript!',
   '// The browser will transpile this code before running it.',

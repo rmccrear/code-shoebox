@@ -106,7 +106,7 @@ export const KERNEL_SCRIPTS = `
 
     window.addEventListener('message', (event) => {
         if (event.source !== window.parent) return;
-        const { type, code, mode, payload } = event.data;
+        const { type, code, mode, payload, executionId } = event.data;
         if (type === 'INIT_PORT' && event.ports[0]) {
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
             window.messagePort = event.ports[0];
@@ -122,7 +122,17 @@ export const KERNEL_SCRIPTS = `
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
             if (placeholder) placeholder.style.display = 'none';
-            window.__RUN_MODE__(code, root, payload || {});
+            let execution;
+            try {
+                execution = window.__RUN_MODE__(code, root, payload || {});
+            } catch (error) {
+                console.error(error);
+                sendPayload('EXECUTION_COMPLETE', { executionId });
+                return;
+            }
+            Promise.resolve(execution)
+                .catch((error) => console.error(error))
+                .then(() => sendPayload('EXECUTION_COMPLETE', { executionId }));
         }
     });
 `;
@@ -132,12 +142,14 @@ export const BASE_HTML_WRAPPER = (recipe: {
   mocks?: string, 
   styles?: string,
   logic: string,
-  showPlaceholder?: boolean 
+  showPlaceholder?: boolean,
+  contentSecurityPolicy?: string,
 }) => `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
+    ${recipe.contentSecurityPolicy ? `<meta http-equiv="Content-Security-Policy" content="${recipe.contentSecurityPolicy}">` : ''}
     <style>${BASE_STYLES} ${recipe.styles || ''}</style>
     ${(recipe.cdns || []).join('\n')}
 </head>

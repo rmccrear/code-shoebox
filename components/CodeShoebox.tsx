@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CodingEnvironment } from './CodingEnvironment';
 import { CodeShoeboxProps } from '../types';
 
@@ -11,6 +11,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  mockApi,
   theme,
   themeMode,
   sessionId = 0,
@@ -19,19 +20,33 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
 }) => {
   const [runTrigger, setRunTrigger] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const runFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setRunTrigger(0);
     setIsRunning(false);
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
   }, [sessionId]);
+
+  useEffect(() => () => {
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+  }, []);
 
   const handleRun = () => {
     setIsRunning(true);
     setRunTrigger(prev => prev + 1);
-    
-    setTimeout(() => {
+
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+    runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
-    }, 500);
+      runFallbackRef.current = null;
+    }, environmentMode === 'fetch' ? 10000 : 500);
+  };
+
+  const handleExecutionComplete = () => {
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+    runFallbackRef.current = null;
+    setIsRunning(false);
   };
 
   const themeStyles = useMemo(() => {
@@ -70,8 +85,10 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
         fixtureCss={fixtureCss}
         mediaAssets={mediaAssets}
         enableEmmet={enableEmmet}
+        mockApi={mockApi}
         predictionPrompt={prediction_prompt}
         debugMode={debugMode}
+        onExecutionComplete={handleExecutionComplete}
       />
     </div>
   );
