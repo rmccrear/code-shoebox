@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'html-css-js', 'html-js-css-media', 'dom', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -76,6 +76,22 @@ describe('getSandboxHtml', () => {
       expect(html, mode).toContain('window.__startHonoServer');
       expect(html, mode).toContain('esm.sh/hono');
     }
+  });
+
+  it('builds fetch mode with top-level await, local mock routes, and network containment', () => {
+    const html = getSandboxHtml('fetch');
+
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain("connect-src 'none'");
+    expect(html).toContain('window.__installFetchMock');
+    expect(html).toContain("new AsyncFunction('root', code)");
+    expect(html).toContain('await new AsyncFunction');
+    expect(html).toContain('candidate.query !== undefined');
+    expect(html).toContain('candidate.query === undefined');
+    expect(html).toContain('new Response(body, { status, headers })');
+    expect(html).toContain('activeRunController.abort()');
+    expect(html).not.toContain('allow-same-origin');
+    expect(html).not.toContain('api/air-quality');
   });
 
   it('shows the output placeholder for visual modes but hides it for server modes', () => {
@@ -273,5 +289,28 @@ describe('executeCodeInSandbox', () => {
     }, '*');
     expect(getSandboxHtml('dom')).not.toContain(fixtureHtml);
     expect(getSandboxHtml('dom')).not.toContain(fixtureCss);
+  });
+
+  it('sends mock API fixtures as structured payload data with an execution id', () => {
+    const postMessage = vi.fn();
+    const mockApi = {
+      defaultDelayMs: 1000,
+      routes: [{ method: 'GET' as const, path: '/api/readings', body: [{ aqi: 42 }] }],
+    };
+
+    executeCodeInSandbox(
+      { postMessage } as unknown as Window,
+      'let response = await fetch("/api/readings");',
+      { mockApi },
+      7
+    );
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'EXECUTE',
+      code: 'let response = await fetch("/api/readings");',
+      payload: { mockApi },
+      executionId: 7,
+    }, '*');
+    expect(getSandboxHtml('fetch')).not.toContain('/api/readings');
   });
 });

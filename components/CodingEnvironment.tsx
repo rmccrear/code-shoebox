@@ -11,10 +11,11 @@ import {
 } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { MediaPanel } from './MediaPanel';
+import { ApiServerPanel } from './ApiServerPanel';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
-import { ThemeMode, EnvironmentMode, MediaAsset } from '../types';
+import { ThemeMode, EnvironmentMode, MediaAsset, MockApiConfig } from '../types';
 import {
   HTML_CSS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
@@ -24,7 +25,7 @@ import {
 } from '../runtime/fileBundle';
 
 type EditorFileName = 'script.js' | 'index.html' | 'style.css';
-type WorkspaceTab = EditorFileName | 'media';
+type WorkspaceTab = EditorFileName | 'media' | 'api-server';
 
 const BUNDLE_MODE_CONFIG = {
   'html-css': { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
@@ -51,9 +52,11 @@ interface CodingEnvironmentProps {
   fixtureCss?: string;
   mediaAssets?: readonly MediaAsset[];
   enableEmmet?: boolean;
+  mockApi?: MockApiConfig;
   sessionId: number;
   predictionPrompt?: React.ReactNode;
   debugMode?: boolean;
+  onExecutionComplete?: () => void;
 }
 
 export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({ 
@@ -68,9 +71,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  mockApi,
   sessionId,
   predictionPrompt,
-  debugMode = false
+  debugMode = false,
+  onExecutionComplete,
 }) => {
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
@@ -95,19 +100,20 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
         ...(bundleModeConfig?.hasMediaTab ? ['media' as const] : []),
       ];
     }
+    if (environmentMode === 'fetch') return ['script.js', 'api-server'];
     if (!hasDomFixtures) return ['script.js'];
     return [
       'script.js',
       ...(fixtureHtml !== undefined ? ['index.html' as const] : []),
       ...(fixtureCss !== undefined ? ['style.css' as const] : []),
     ];
-  }, [editableBundleFileNames, bundleModeConfig, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(
     isEditableBundleMode ? 'index.html' : 'script.js'
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
-  const selectedFile = selectedTab === 'media' ? null : selectedTab;
+  const selectedFile = selectedTab === 'media' || selectedTab === 'api-server' ? null : selectedTab;
   const files = useMemo(
     () => (editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null),
     [editableBundleFileNames, code]
@@ -197,14 +203,16 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap">
               {visibleTabs.map((tab) => {
                 const isMediaTab = tab === 'media';
+                const isApiServerTab = tab === 'api-server';
                 const isFixtureFile = hasDomFixtures && tab !== 'script.js';
-                const isReadOnlyTab = isMediaTab || isFixtureFile;
+                const isReadOnlyTab = isMediaTab || isApiServerTab || isFixtureFile;
+                const tabLabel = isMediaTab ? 'Media' : isApiServerTab ? 'API Server' : tab;
                 return (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  title={isMediaTab ? 'Read-only media' : isFixtureFile ? 'Fixed fixture' : undefined}
+                  title={isMediaTab ? 'Read-only media' : isApiServerTab ? 'Read-only mock API' : isFixtureFile ? 'Fixed fixture' : undefined}
                   aria-pressed={selectedTab === tab}
                   className={`px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${
                     selectedTab === tab
@@ -212,7 +220,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                       : 'opacity-50 hover:opacity-80'
                   }`}
                 >
-                  {isMediaTab ? 'Media' : tab}
+                  {tabLabel}
                   {isReadOnlyTab && <Lock aria-hidden="true" className="ml-1 inline h-3 w-3" />}
                 </button>
                 );
@@ -247,12 +255,12 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           {!isServerMode && (
             <Button 
               onClick={handleRunClick} 
-              disabled={isRunning || !isPredictionFulfilled}
+              disabled={(isRunning && environmentMode !== 'fetch') || !isPredictionFulfilled}
               variant="primary"
               className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
               icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
             >
-              {isRunning ? 'RUNNING...' : 'RUN CODE'}
+              {isRunning ? (environmentMode === 'fetch' ? 'RUN AGAIN' : 'RUNNING...') : 'RUN CODE'}
             </Button>
           )}
         </div>
@@ -266,6 +274,8 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
               mediaAssets={environmentMode === 'html-js-css-media' ? mediaAssets ?? [] : []}
               themeMode={themeMode}
             />
+          ) : selectedTab === 'api-server' ? (
+            <ApiServerPanel mockApi={mockApi} themeMode={themeMode} />
           ) : (
             <CodeEditor
               code={editorCode}
@@ -307,9 +317,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 environmentMode={environmentMode}
                 fixtureHtml={environmentMode === 'dom' ? fixtureHtml : undefined}
                 fixtureCss={environmentMode === 'dom' ? fixtureCss : undefined}
+                mockApi={environmentMode === 'fetch' ? mockApi : undefined}
                 isBlurred={!isPredictionFulfilled}
                 isPredictionMode={!!predictionPrompt}
                 debugMode={debugMode}
+                onExecutionComplete={environmentMode === 'fetch' ? onExecutionComplete : undefined}
               />
             )}
           </div>

@@ -130,6 +130,56 @@ describe('OutputFrame', () => {
     );
   });
 
+  it('executes fetch code with mock routes and a correlated execution id', () => {
+    const mockApi = {
+      defaultDelayMs: 1000,
+      routes: [{ method: 'GET' as const, path: '/api/readings', body: [{ aqi: 42 }] }],
+    };
+    const { rerender } = renderOutputFrame({ environmentMode: 'fetch', mockApi });
+
+    rerender(
+      <OutputFrame
+        runTrigger={3}
+        code={'let response = await fetch("/api/readings");'}
+        themeMode="dark"
+        environmentMode="fetch"
+        mockApi={mockApi}
+      />
+    );
+
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(
+      expect.anything(),
+      'let response = await fetch("/api/readings");',
+      { mockApi },
+      3
+    );
+  });
+
+  it('reports completion only for the latest fetch execution', () => {
+    const onExecutionComplete = vi.fn();
+    const { container, rerender } = renderOutputFrame({
+      environmentMode: 'fetch',
+      onExecutionComplete,
+    });
+    const { channel } = loadFrame(container);
+
+    rerender(
+      <OutputFrame
+        runTrigger={2}
+        code={'await fetch("/api/readings");'}
+        themeMode="dark"
+        environmentMode="fetch"
+        onExecutionComplete={onExecutionComplete}
+      />
+    );
+
+    act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 1 } }));
+    expect(onExecutionComplete).not.toHaveBeenCalled();
+
+    act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 2 } }));
+    expect(onExecutionComplete).toHaveBeenCalledTimes(1);
+  });
+
   it('does not forward fixture execution data outside DOM mode', () => {
     const { rerender } = renderOutputFrame({
       environmentMode: 'typescript',

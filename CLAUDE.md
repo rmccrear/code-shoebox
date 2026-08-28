@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-CodeShoebox is a publishable React component library (`code-shoebox`) that embeds a self-contained, secure code playground: a Monaco editor paired with a sandboxed `<iframe>` execution engine. It supports many runtime "environment modes" (DOM, TypeScript, p5.js, React, Express mock, Hono, headless Node). **All user code runs in the browser inside a sandboxed iframe — there is no backend.**
+CodeShoebox is a publishable React component library (`code-shoebox`) that embeds a self-contained, secure code playground: a Monaco editor paired with a sandboxed `<iframe>` execution engine. It supports many runtime "environment modes" (DOM, mocked Fetch API, TypeScript, p5.js, React, Express mock, Hono, headless Node). **All user code runs in the browser inside a sandboxed iframe — there is no backend.**
 
 The repo serves a dual purpose:
 - **The library** — what gets published. Entry point is `export.ts`, which exports only `CodeShoebox`, `useSandboxState`, `useAutoKey`, and the `types`/`theme` modules.
@@ -44,6 +44,7 @@ The execution pipeline spans three layers. Understanding the message flow is ess
 - `mocks` — a setup script (e.g. `EXPRESS_MOCK_SETUP`, `HONO_MOCK_SETUP`) injected before `logic`.
 - `logic` — a **string of JavaScript** that defines `window.__RUN_MODE__ = (code, root, payload) => {...}`. This is the per-mode executor. It's a string because it's serialized into the iframe's `srcDoc`. DOM fixtures travel in the structured `EXECUTE.payload`; never interpolate fixture strings into `srcDoc`.
 - `showPlaceholder`, `headless` — UI flags.
+- `contentSecurityPolicy` — optional mode-specific CSP inserted into the generated document. Fetch mode uses `connect-src 'none'`.
 
 `getSandboxHtml(mode)` looks up the recipe and feeds it to `BASE_HTML_WRAPPER`.
 
@@ -71,6 +72,7 @@ Two components own an iframe and talk to the kernel. They are selected in `Codin
 - **HTML + CSS + JavaScript + Media** reuses that exact sandbox recipe. `mediaAssets` stops at `CodingEnvironment`/`MediaPanel`: it is read-only host state, capped at three, and must never enter the code envelope, localStorage, `OutputFrame`, an `EXECUTE` payload, or iframe `srcDoc`. Snippet strings are escaped for their target language and rendered only as React text.
 - **DOM fixtures** are trusted host-owned `fixtureHtml`/`fixtureCss` values sent in `EXECUTE.payload`. The DOM recipe removes the prior fixture, installs fresh styles/markup, and only then runs learner JavaScript. Fixture tabs are read-only and bounded to `script.js`, `index.html`, and `style.css`.
 - **Emmet** is an editor-only, default-off `enableEmmet` prop. Its adapter is lazy-loaded and each completion provider is gated to the opted-in HTML model because Monaco language providers are otherwise global.
+- **Fetch** receives trusted host-owned `mockApi` routes in `EXECUTE.payload`, replaces `window.fetch` with an abortable `Response`-based mock, and runs learner code with top-level `await`. The read-only API Server panel is host UI; routes never enter persisted code or `srcDoc`. A mode-specific `connect-src 'none'` CSP prevents real connection APIs, and iframe permissions remain unchanged.
 - **React** patches `ReactDOM.createRoot` to capture and unmount the root between runs (prevents leaks / "container not found").
 - **Express** is a hand-written mock object (`templates/express.ts`), *not* the real library — no middleware, no `app.use`.
 - **Hono** is the *real* library loaded from `esm.sh`. User code **must** `export default app`. `.fire()`/`.listen()` are patched to start the bridge. TS/`export default` is handled by transpiling to CommonJS via Babel and reading `module.exports.default`.

@@ -4,6 +4,7 @@ import {
   resolvePresetFromHash,
   getPresetHashForMode,
   getPresetMediaAssetsForMode,
+  getPresetMockApiForMode,
 } from './demoPresets';
 import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from './runtime/fileBundle';
 
@@ -85,6 +86,17 @@ describe('demoPresets', () => {
     const hash = getPresetHashForMode('hono');
     expect(hash).toBe('hono-api-demo');
     expect(resolvePresetFromHash(hash!)?.mode).toBe('hono');
+  });
+
+  it('provides fetch fixtures outside learner code', () => {
+    const preset = resolvePresetFromHash('fetch-air-quality-demo');
+    const mockApi = getPresetMockApiForMode('fetch');
+
+    expect(preset?.mode).toBe('fetch');
+    expect(mockApi?.defaultDelayMs).toBe(1000);
+    expect(mockApi?.routes.some((route) => route.query?.limit === '4')).toBe(true);
+    expect(preset?.code).toContain('await fetch("/api/air-quality?limit=4")');
+    expect(preset?.code).not.toContain('Portland');
   });
 
   it('returns undefined for a mode with no preset', () => {

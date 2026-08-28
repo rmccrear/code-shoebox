@@ -189,6 +189,46 @@ const [code, setCode] = React.useState(`
 
 Fixtures are trusted host input delivered as message data to the sandboxed iframe. They do not add module imports, arbitrary libraries, or same-origin privileges, and they are ignored outside `dom` mode.
 
+## Fetch API Tutorial Mode
+
+Use `fetch` mode to teach browser `fetch()` against deterministic, host-authored mock routes. Learners edit `script.js` and read the locked **API Server** tab. Top-level `await` works, responses are genuine browser `Response` objects, and the default one-second delay makes asynchronous execution visible.
+
+```tsx
+import type { MockApiConfig } from 'code-shoebox';
+
+const mockApi: MockApiConfig = {
+  defaultDelayMs: 1000,
+  routes: [
+    {
+      method: 'GET',
+      path: '/api/air-quality',
+      query: { limit: '4' },
+      body: [
+        { city: 'Portland', aqi: 38 },
+        { city: 'Sacramento', aqi: 52 },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/offline',
+      networkError: true,
+      errorMessage: 'The mock API is offline',
+    },
+  ],
+};
+
+<CodeShoebox
+  code={'let response = await fetch("/api/air-quality?limit=4");\nlet readings = await response.json();\nconsole.log(readings);'}
+  onCodeChange={setCode}
+  environmentMode="fetch"
+  mockApi={mockApi}
+  theme={activeTheme}
+  themeMode="dark"
+/>
+```
+
+Routes match by method and pathname. A declared `query` requires the exact key/value set and takes precedence over a query-agnostic route. Undeclared `/api/...` routes resolve as JSON `404` responses; declared network errors reject. Absolute URL strings are rejected and the iframe uses `connect-src 'none'`, so tutorial calls never contact a real API. POST request bodies are accepted but not inspected in v1; responses remain stateless and canned.
+
 ## HTML + JavaScript Mode
 
 Use `html-js` when learners should edit both the page structure and its behavior. The editor exposes editable `index.html` and `script.js` tabs. JavaScript runs only after pressing Run and only when the HTML contains `<script src="script.js"></script>`; the existing console captures logs and runtime errors.
@@ -327,11 +367,12 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
 | `enableEmmet` | `boolean` | No | Enables Emmet abbreviation completions in editable HTML models; defaults to `false`. |
+| `mockApi` | `MockApiConfig` | No | Host-authored mock routes shown and executed only in `fetch` mode. Routes remain outside learner code and persistence. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |

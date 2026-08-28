@@ -115,6 +115,37 @@ describe('CodingEnvironment routing', () => {
     expect(screen.getByLabelText('Code editor')).not.toHaveAttribute('readonly');
   });
 
+  it('shows editable script.js and a read-only API Server panel in fetch mode', () => {
+    const onChange = vi.fn();
+    renderCodingEnvironment('fetch', {
+      code: 'let response = await fetch("/api/readings");',
+      onChange,
+      mockApi: {
+        routes: [{ method: 'GET', path: '/api/readings', body: [{ aqi: 42 }] }],
+      },
+    });
+
+    expect(screen.getByRole('button', { name: 'script.js' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'API Server' })).toHaveAttribute('title', 'Read-only mock API');
+    expect(screen.getByLabelText('Code editor')).toHaveValue('let response = await fetch("/api/readings");');
+
+    fireEvent.click(screen.getByRole('button', { name: 'API Server' }));
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByText('/api/readings')).toBeInTheDocument();
+    expect(screen.getByText('Mock API — no network request')).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('allows a fetch run to be restarted while a mock request is pending', () => {
+    const onRun = vi.fn();
+    renderCodingEnvironment('fetch', { isRunning: true, onRun });
+
+    const runAgain = screen.getByRole('button', { name: 'RUN AGAIN' });
+    expect(runAgain).toBeEnabled();
+    fireEvent.click(runAgain);
+    expect(onRun).toHaveBeenCalledTimes(1);
+  });
+
   it('shows script.js and a locked index.html tab for an HTML fixture', () => {
     renderCodingEnvironment('dom', {
       code: 'document.body.dataset.ready = "yes";',

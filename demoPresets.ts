@@ -1,4 +1,4 @@
-import { EnvironmentMode, MediaAsset } from './types';
+import { EnvironmentMode, MediaAsset, MockApiConfig } from './types';
 import { serializeFileBundle } from './runtime/fileBundle';
 
 export const HTML_JS_CSS_MEDIA_DEMO_ASSETS = [
@@ -25,6 +25,7 @@ export interface EditorDemoPreset {
   mode: EnvironmentMode;
   code: string;
   mediaAssets?: readonly MediaAsset[];
+  mockApi?: MockApiConfig;
   aliases?: string[];
 }
 
@@ -232,6 +233,58 @@ playButton.addEventListener('click', async () => {
     })
   },
   {
+    id: 'fetch-air-quality-demo',
+    mode: 'fetch',
+    mockApi: {
+      defaultDelayMs: 1000,
+      routes: [
+        {
+          method: 'GET',
+          path: '/api/air-quality',
+          body: [
+            { city: 'Portland', aqi: 38, category: 'Good' },
+            { city: 'Sacramento', aqi: 52, category: 'Moderate' },
+            { city: 'Boise', aqi: 44, category: 'Good' },
+            { city: 'Reno', aqi: 61, category: 'Moderate' },
+          ],
+        },
+        {
+          method: 'GET',
+          path: '/api/air-quality',
+          query: { limit: '1' },
+          body: [{ city: 'Portland', aqi: 38, category: 'Good' }],
+        },
+        {
+          method: 'GET',
+          path: '/api/air-quality',
+          query: { limit: '4' },
+          body: [
+            { city: 'Portland', aqi: 38, category: 'Good' },
+            { city: 'Sacramento', aqi: 52, category: 'Moderate' },
+            { city: 'Boise', aqi: 44, category: 'Good' },
+            { city: 'Reno', aqi: 61, category: 'Moderate' },
+          ],
+        },
+        {
+          method: 'POST',
+          path: '/api/alerts',
+          status: 201,
+          body: { id: 1, message: 'Air-quality alert created' },
+        },
+        {
+          method: 'GET',
+          path: '/api/offline',
+          networkError: true,
+          errorMessage: 'The mock API is offline',
+        },
+      ],
+    },
+    code: `let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+console.log("The first city is " + readings[0].city);
+console.log(readings);`
+  },
+  {
     id: 'ts-express-rest-demo',
     mode: 'express-ts',
     aliases: ['express-rest-demo'],
@@ -324,4 +377,8 @@ export const getPresetHashForMode = (mode: EnvironmentMode): string | undefined 
 
 export const getPresetMediaAssetsForMode = (mode: EnvironmentMode): readonly MediaAsset[] | undefined => {
   return PRESET_BY_MODE.get(mode)?.mediaAssets;
+};
+
+export const getPresetMockApiForMode = (mode: EnvironmentMode): MockApiConfig | undefined => {
+  return PRESET_BY_MODE.get(mode)?.mockApi;
 };

@@ -9,7 +9,48 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | readonly JsonValue[]
+  | { readonly [key: string]: JsonValue };
+
+export type MockApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+interface MockApiRouteBase {
+  method: MockApiMethod;
+  path: string;
+  /** Exact query match. Routes without this field accept any query string. */
+  query?: Readonly<Record<string, string>>;
+  /** Overrides the API-wide simulated latency for this route. */
+  delayMs?: number;
+}
+
+export type MockApiRoute = MockApiRouteBase & (
+  | {
+      networkError: true;
+      errorMessage?: string;
+      body?: never;
+      status?: never;
+      headers?: never;
+    }
+  | {
+      networkError?: false;
+      body: JsonValue;
+      status?: number;
+      headers?: Readonly<Record<string, string>>;
+    }
+);
+
+export interface MockApiConfig {
+  /** Defaults to 1000 ms so learners can observe that awaited data arrives later. */
+  defaultDelayMs?: number;
+  routes: readonly MockApiRoute[];
+}
 
 export type MediaAsset =
   | { kind: 'image'; name: string; src: string; alt: string }
@@ -34,6 +75,8 @@ export interface CodeShoeboxProps {
   mediaAssets?: readonly MediaAsset[];
   /** Enables Emmet abbreviation completions in editable HTML models. */
   enableEmmet?: boolean;
+  /** Host-authored, local-only routes shown and executed in fetch mode. */
+  mockApi?: MockApiConfig;
   themeMode: ThemeMode;
   theme: Theme;
   sessionId?: number;

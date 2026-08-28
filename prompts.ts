@@ -11,6 +11,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
       return "What will the status message say after the audio starts playing?";
     case 'dom':
       return "Examine the code below. What message will be logged to the console when the 'Click Me' button is pressed?";
+    case 'fetch':
+      return "Which city name will be logged after the two awaited fetch steps finish?";
     case 'p5':
     case 'p5-ts':
       return "Look at the conditional statement in the draw loop. What color will the shape fill with when the mouse is pressed?";
