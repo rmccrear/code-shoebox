@@ -45,7 +45,7 @@ var import_react8 = require("react");
 
 // components/CodingEnvironment.tsx
 var import_react7 = require("react");
-var import_lucide_react5 = require("lucide-react");
+var import_lucide_react6 = require("lucide-react");
 
 // components/CodeEditor.tsx
 var import_react = require("react");
@@ -469,6 +469,71 @@ var MediaPanel = ({ mediaAssets, themeMode }) => {
   ] });
 };
 
+// components/ApiServerPanel.tsx
+var import_lucide_react2 = require("lucide-react");
+var import_jsx_runtime3 = require("react/jsx-runtime");
+var getRouteLabel = (route) => {
+  if (!route.query) return route.path;
+  const query = new URLSearchParams(Object.entries(route.query)).toString();
+  return query ? `${route.path}?${query}` : route.path;
+};
+var ApiServerPanel = ({ mockApi, themeMode }) => {
+  const routes = mockApi?.routes ?? [];
+  const defaultDelayMs = mockApi?.defaultDelayMs ?? 1e3;
+  const dark = themeMode === "dark";
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+    "section",
+    {
+      "aria-label": "Mock API server",
+      className: `h-full overflow-auto p-4 ${dark ? "bg-[#181818] text-gray-200" : "bg-slate-50 text-slate-800"}`,
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: `mb-4 rounded-lg border p-3 ${dark ? "border-blue-400/30 bg-blue-400/10" : "border-blue-200 bg-blue-50"}`, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex items-center gap-2 text-sm font-semibold", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_lucide_react2.CloudOff, { "aria-hidden": "true", size: 16 }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Mock API \u2014 no network request" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "mt-1 text-xs opacity-70", children: "Use these relative routes with fetch(). Responses are simulated inside the sandbox." })
+        ] }),
+        routes.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-sm opacity-60", children: "No mock API routes are configured for this activity." }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "space-y-3", children: routes.map((route, index) => {
+          const delayMs = route.delayMs ?? defaultDelayMs;
+          const status = route.networkError ? "Network error" : route.status ?? 200;
+          return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+            "article",
+            {
+              className: `rounded-lg border p-3 ${dark ? "border-white/10 bg-white/[0.03]" : "border-slate-200 bg-white"}`,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "flex flex-wrap items-center gap-2", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-xs font-bold text-emerald-500", children: route.method }),
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("code", { className: "break-all text-sm font-semibold", children: getRouteLabel(route) })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("dl", { className: "mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-70", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dt", { className: "inline font-semibold", children: "Status: " }),
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dd", { className: "inline", children: status })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dt", { className: "inline font-semibold", children: "Delay: " }),
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("dd", { className: "inline", children: [
+                      delayMs,
+                      " ms"
+                    ] })
+                  ] }),
+                  route.method === "POST" && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dt", { className: "inline font-semibold", children: "Request body: " }),
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dd", { className: "inline", children: "accepted, not inspected" })
+                  ] })
+                ] }),
+                route.networkError ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "mt-3 font-mono text-xs text-red-400", children: route.errorMessage ?? "Simulated network error" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("pre", { className: `mt-3 overflow-auto rounded p-3 text-xs ${dark ? "bg-black/30" : "bg-slate-100"}`, children: JSON.stringify(route.body, null, 2) })
+              ]
+            },
+            `${route.method}-${getRouteLabel(route)}-${index}`
+          );
+        }) })
+      ]
+    }
+  );
+};
+
 // components/OutputFrame.tsx
 var import_react5 = require("react");
 
@@ -574,7 +639,7 @@ var KERNEL_SCRIPTS = `
 
     window.addEventListener('message', (event) => {
         if (event.source !== window.parent) return;
-        const { type, code, mode, payload } = event.data;
+        const { type, code, mode, payload, executionId } = event.data;
         if (type === 'INIT_PORT' && event.ports[0]) {
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
             window.messagePort = event.ports[0];
@@ -590,7 +655,17 @@ var KERNEL_SCRIPTS = `
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
             if (placeholder) placeholder.style.display = 'none';
-            window.__RUN_MODE__(code, root, payload || {});
+            let execution;
+            try {
+                execution = window.__RUN_MODE__(code, root, payload || {});
+            } catch (error) {
+                console.error(error);
+                sendPayload('EXECUTION_COMPLETE', { executionId });
+                return;
+            }
+            Promise.resolve(execution)
+                .catch((error) => console.error(error))
+                .then(() => sendPayload('EXECUTION_COMPLETE', { executionId }));
         }
     });
 `;
@@ -599,6 +674,7 @@ var BASE_HTML_WRAPPER = (recipe) => `
 <html>
 <head>
     <meta charset="UTF-8">
+    ${recipe.contentSecurityPolicy ? `<meta http-equiv="Content-Security-Policy" content="${recipe.contentSecurityPolicy}">` : ""}
     <style>${BASE_STYLES} ${recipe.styles || ""}</style>
     ${(recipe.cdns || []).join("\n")}
 </head>
@@ -876,6 +952,127 @@ var HONO_MOCK_SETUP = `
     }, 100);
 `;
 
+// runtime/templates/fetch.ts
+var FETCH_MOCK_SETUP = `
+    (() => {
+        const DEFAULT_DELAY_MS = 1000;
+        const ABSOLUTE_URL = /^[a-zA-Z][a-zA-Z\\d+.-]*:/;
+
+        const safeDelay = (value, fallback) => {
+            const number = Number(value);
+            return Number.isFinite(number) && number >= 0 ? number : fallback;
+        };
+
+        const abortError = () => {
+            try { return new DOMException('The operation was aborted.', 'AbortError'); }
+            catch (e) {
+                const error = new Error('The operation was aborted.');
+                error.name = 'AbortError';
+                return error;
+            }
+        };
+
+        const delay = (milliseconds, signals) => new Promise((resolve, reject) => {
+            let timer;
+            const activeSignals = signals.filter(Boolean);
+            const cleanup = () => activeSignals.forEach((signal) => signal.removeEventListener('abort', onAbort));
+            const onAbort = () => {
+                clearTimeout(timer);
+                cleanup();
+                reject(abortError());
+            };
+
+            if (activeSignals.some((signal) => signal.aborted)) {
+                onAbort();
+                return;
+            }
+
+            activeSignals.forEach((signal) => signal.addEventListener('abort', onAbort, { once: true }));
+            timer = setTimeout(() => {
+                cleanup();
+                resolve();
+            }, milliseconds);
+        });
+
+        const queryMatches = (searchParams, expected) => {
+            const expectedEntries = Object.entries(expected || {});
+            const actualEntries = Array.from(searchParams.entries());
+            if (actualEntries.length !== expectedEntries.length) return false;
+            return expectedEntries.every(([key, value]) => (
+                searchParams.getAll(key).length === 1 && searchParams.get(key) === String(value)
+            ));
+        };
+
+        const parseInput = (input, init) => {
+            const isRequest = typeof Request !== 'undefined' && input instanceof Request;
+            const isUrl = typeof URL !== 'undefined' && input instanceof URL;
+            const rawUrl = isRequest ? input.url : isUrl ? input.href : String(input);
+            const baseUrl = new URL(document.baseURI);
+
+            let url;
+            if (isRequest || isUrl) {
+                url = new URL(rawUrl);
+                if (url.origin !== baseUrl.origin) {
+                    throw new TypeError('Network access is disabled in Fetch tutorial mode. Use a relative /api/... route.');
+                }
+            } else {
+                if (ABSOLUTE_URL.test(rawUrl) || rawUrl.startsWith('//')) {
+                    throw new TypeError('Network access is disabled in Fetch tutorial mode. Use a relative /api/... route.');
+                }
+                url = new URL(rawUrl, baseUrl);
+            }
+
+            return {
+                url,
+                method: String((init && init.method) || (isRequest && input.method) || 'GET').toUpperCase(),
+                signal: (init && init.signal) || (isRequest && input.signal) || null
+            };
+        };
+
+        const jsonResponse = (route, fallbackBody) => {
+            const status = route.status === undefined ? 200 : Number(route.status);
+            const headers = new Headers(route.headers || {});
+            if (!headers.has('content-type')) headers.set('content-type', 'application/json');
+            const body = status === 204 || status === 205 || status === 304
+                ? null
+                : JSON.stringify(route.body === undefined ? fallbackBody : route.body);
+            return new Response(body, { status, headers });
+        };
+
+        window.__installFetchMock = (rawConfig, runSignal) => {
+            const config = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+            const routes = Array.isArray(config.routes) ? config.routes : [];
+            const defaultDelayMs = safeDelay(config.defaultDelayMs, DEFAULT_DELAY_MS);
+
+            window.fetch = async (input, init) => {
+                const request = parseInput(input, init);
+                const candidates = routes.filter((route) => (
+                    route
+                    && String(route.method || 'GET').toUpperCase() === request.method
+                    && route.path === request.url.pathname
+                ));
+                const route = candidates.find((candidate) => (
+                    candidate.query !== undefined && queryMatches(request.url.searchParams, candidate.query)
+                )) || candidates.find((candidate) => candidate.query === undefined);
+
+                if (!route) {
+                    await delay(defaultDelayMs, [runSignal, request.signal]);
+                    return jsonResponse(
+                        { status: 404, body: { error: 'No mock route for ' + request.method + ' ' + request.url.pathname } },
+                        null
+                    );
+                }
+
+                await delay(safeDelay(route.delayMs, defaultDelayMs), [runSignal, request.signal]);
+                if (route.networkError === true) {
+                    throw new TypeError(route.errorMessage || 'Simulated network error');
+                }
+                return jsonResponse(route, null);
+            };
+        };
+    })();
+`;
+
 // runtime/runner.ts
 var SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 var BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>';
@@ -1149,6 +1346,35 @@ var ENV_RECIPES = {
         }
 
         try { new Function('root', code)(root); } catch (e) { console.error(e); }
+      };
+    `
+  },
+  fetch: {
+    name: "Fetch API",
+    mocks: FETCH_MOCK_SETUP,
+    showPlaceholder: false,
+    contentSecurityPolicy: "connect-src 'none'",
+    logic: `
+      let activeRunController = null;
+      let runGeneration = 0;
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+      window.__RUN_MODE__ = async (code, root, options = {}) => {
+        const generation = ++runGeneration;
+        if (activeRunController) activeRunController.abort();
+        activeRunController = new AbortController();
+
+        const runRoot = document.createElement('div');
+        runRoot.style.width = '100%';
+        root.replaceChildren(runRoot);
+        window.__installFetchMock(options.mockApi, activeRunController.signal);
+
+        try {
+          await new AsyncFunction('root', code)(runRoot);
+        } catch (error) {
+          if (generation !== runGeneration || (error && error.name === 'AbortError')) return;
+          throw error;
+        }
       };
     `
   },
@@ -1457,34 +1683,40 @@ var getSandboxHtml = (mode = "dom", isPredictionMode = false) => {
     mocks: recipe.mocks,
     styles: recipe.styles,
     logic: recipe.logic || "",
-    showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder
+    showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder,
+    contentSecurityPolicy: recipe.contentSecurityPolicy
   });
 };
-var executeCodeInSandbox = (iframeContentWindow, code, options) => {
-  const message = options === void 0 ? { type: "EXECUTE", code } : { type: "EXECUTE", code, payload: options };
+var executeCodeInSandbox = (iframeContentWindow, code, options, executionId) => {
+  const message = {
+    type: "EXECUTE",
+    code,
+    ...options === void 0 ? {} : { payload: options },
+    ...executionId === void 0 ? {} : { executionId }
+  };
   iframeContentWindow.postMessage(message, "*");
 };
 
 // components/PreviewContainer.tsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 var PreviewContainer = ({
   themeMode,
   isReady,
   children,
   overlayMessage
 }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: `w-full h-full rounded-md overflow-hidden shadow-inner relative border transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1a1a1a] border-gray-700" : "bg-white border-gray-200"}`, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: `w-full h-full rounded-md overflow-hidden shadow-inner relative border transition-colors duration-300 ${themeMode === "dark" ? "bg-[#1a1a1a] border-gray-700" : "bg-white border-gray-200"}`, children: [
     children,
-    !isReady && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "text-gray-400 font-medium", children: overlayMessage || "Click 'Run Code' to execute" }) })
+    !isReady && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "text-gray-400 font-medium", children: overlayMessage || "Click 'Run Code' to execute" }) })
   ] });
 };
 
 // components/Console.tsx
 var import_react4 = __toESM(require("react"), 1);
-var import_lucide_react2 = require("lucide-react");
+var import_lucide_react3 = require("lucide-react");
 
 // components/Button.tsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var Button = ({
   children,
   variant = "primary",
@@ -1498,13 +1730,13 @@ var Button = ({
     secondary: "bg-gray-700 hover:bg-gray-600 text-white focus:ring-gray-500",
     ghost: "bg-transparent hover:bg-black/10 dark:hover:bg-white/10 text-inherit focus:ring-gray-500"
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
     "button",
     {
       className: `${baseStyles} ${variants[variant]} ${className}`,
       ...props,
       children: [
-        icon && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "w-4 h-4", children: icon }),
+        icon && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "w-4 h-4", children: icon }),
         children
       ]
     }
@@ -1512,37 +1744,37 @@ var Button = ({
 };
 
 // components/Console.tsx
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 var Console = import_react4.default.memo(function Console2({
   logs,
   onClear,
   themeMode,
   className = ""
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react2.Terminal, { className: "w-3 h-3" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: `flex flex-col h-full w-full overflow-hidden ${className} ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: `flex items-center justify-between px-3 py-1 shrink-0 border-b ${themeMode === "dark" ? "border-white/10 bg-[#252526]" : "border-gray-200 bg-gray-100"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "flex items-center gap-2 text-xs font-semibold opacity-70", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_lucide_react3.Terminal, { className: "w-3 h-3" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { children: [
           "Console (",
           logs.length,
           ")"
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react2.Ban, { className: "w-3 h-3" }) })
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Button, { variant: "ghost", onClick: onClear, className: "!p-1 h-6 w-6", title: "Clear Console", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_lucide_react3.Ban, { className: "w-3 h-3" }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
       "div",
       {
         className: `flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1 ${themeMode === "dark" ? "text-gray-300" : "text-gray-700"}`,
         children: [
-          logs.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "italic", children: "No output" }) }),
-          logs.map((log, i) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: `
+          logs.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "h-full flex flex-col items-center justify-center opacity-30 select-none", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "italic", children: "No output" }) }),
+          logs.map((log, i) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: `
             border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre
             ${log.type === "error" ? "text-red-500 bg-red-500/5" : ""}
             ${log.type === "warn" ? "text-yellow-500 bg-yellow-500/5" : ""}
           `, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
             log.content
           ] }, i))
         ]
@@ -1552,8 +1784,8 @@ var Console = import_react4.default.memo(function Console2({
 });
 
 // components/OutputFrame.tsx
-var import_lucide_react3 = require("lucide-react");
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_lucide_react4 = require("lucide-react");
+var import_jsx_runtime7 = require("react/jsx-runtime");
 var MAX_CONSOLE_LOGS = 500;
 var appendLog = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS ? [...prev.slice(-(MAX_CONSOLE_LOGS - 1)), entry] : [...prev, entry];
 var OutputFrame = ({
@@ -1563,14 +1795,17 @@ var OutputFrame = ({
   environmentMode,
   fixtureHtml,
   fixtureCss,
+  mockApi,
   isBlurred = false,
   isPredictionMode = false,
-  debugMode = false
+  debugMode = false,
+  onExecutionComplete
 }) => {
   const iframeRef = (0, import_react5.useRef)(null);
   const containerRef = (0, import_react5.useRef)(null);
   const channelRef = (0, import_react5.useRef)(null);
-  const executionRef = (0, import_react5.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, debugMode });
+  const executionRef = (0, import_react5.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
+  const latestExecutionIdRef = (0, import_react5.useRef)(null);
   const [logs, setLogs] = (0, import_react5.useState)([]);
   const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
@@ -1588,8 +1823,8 @@ var OutputFrame = ({
     [environmentMode, isPredictionMode]
   );
   (0, import_react5.useEffect)(() => {
-    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, debugMode };
-  }, [code, environmentMode, fixtureHtml, fixtureCss, debugMode]);
+    executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode };
+  }, [code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode]);
   const handleKernelMessage = (0, import_react5.useCallback)((data) => {
     if (!data || typeof data !== "object") return;
     const { type, payload } = data;
@@ -1601,8 +1836,10 @@ var OutputFrame = ({
       }));
     } else if (type === "READY_SIGNAL" && debugMode) {
       addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
+    } else if (type === "EXECUTION_COMPLETE" && environmentMode === "fetch" && payload?.executionId === latestExecutionIdRef.current) {
+      onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog]);
+  }, [debugMode, addSystemLog, environmentMode, onExecutionComplete]);
   const kernelMessageRef = (0, import_react5.useRef)(handleKernelMessage);
   (0, import_react5.useEffect)(() => {
     kernelMessageRef.current = handleKernelMessage;
@@ -1617,12 +1854,17 @@ var OutputFrame = ({
       setLogs([]);
       if (execution.debugMode) addSystemLog("Attempting to execute code...");
       if (iframeRef.current?.contentWindow) {
+        if (execution.environmentMode === "fetch") latestExecutionIdRef.current = runTrigger;
         const hasDomFixture = execution.environmentMode === "dom" && (execution.fixtureHtml !== void 0 || execution.fixtureCss !== void 0);
         if (hasDomFixture) {
           executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
             fixtureHtml: execution.fixtureHtml,
             fixtureCss: execution.fixtureCss
           });
+        } else if (execution.environmentMode === "fetch") {
+          executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+            mockApi: execution.mockApi
+          }, runTrigger);
         } else {
           executeCodeInSandbox(iframeRef.current.contentWindow, execution.code);
         }
@@ -1685,14 +1927,14 @@ var OutputFrame = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
     PreviewContainer,
     {
       themeMode,
       isReady: isStaticHtmlMode || runTrigger > 0,
       overlayMessage: isBlurred ? "Make your Prediction" : void 0,
-      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
-        !isHeadless && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { ref: containerRef, className: "w-full h-full flex flex-col relative", children: [
+        !isHeadless && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex-1 min-h-0 relative", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "iframe",
           {
             ref: iframeRef,
@@ -1704,16 +1946,16 @@ var OutputFrame = ({
           },
           `${environmentMode}-${isPredictionMode}`
         ) }),
-        !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "div",
           {
             onMouseDown: handleMouseDown,
             className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize z-10 hover:bg-blue-500 hover:text-white transition-colors ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`,
-            children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_lucide_react3.GripHorizontal, { className: "w-3 h-3" })
+            children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
-        isHeadless && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        isHeadless && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "iframe",
           {
             ref: iframeRef,
@@ -1732,8 +1974,8 @@ var OutputFrame = ({
 
 // components/ServerOutput.tsx
 var import_react6 = require("react");
-var import_lucide_react4 = require("lucide-react");
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_lucide_react5 = require("lucide-react");
+var import_jsx_runtime8 = require("react/jsx-runtime");
 var MAX_CONSOLE_LOGS2 = 500;
 var appendLog2 = (prev, entry) => prev.length >= MAX_CONSOLE_LOGS2 ? [...prev.slice(-(MAX_CONSOLE_LOGS2 - 1)), entry] : [...prev, entry];
 var ServerOutput = ({
@@ -1949,10 +2191,10 @@ var ServerOutput = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isReady = runTrigger > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex flex-col h-full w-full gap-2", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `flex items-center gap-2 p-2 rounded-md border transition-colors ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: `px-3 py-1.5 rounded text-xs font-bold tracking-wider ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}`, children: method }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex flex-col h-full w-full gap-2", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `flex items-center gap-2 p-2 rounded-md border transition-colors ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-white border-gray-200"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: `px-3 py-1.5 rounded text-xs font-bold tracking-wider ${themeMode === "dark" ? "bg-blue-900/50 text-blue-400" : "bg-blue-100 text-blue-700"}`, children: method }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         "input",
         {
           type: "text",
@@ -1963,7 +2205,7 @@ var ServerOutput = ({
           onKeyDown: (e) => e.key === "Enter" && handleSendClick()
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         Button,
         {
           onClick: handleSendClick,
@@ -1974,31 +2216,31 @@ var ServerOutput = ({
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(PreviewContainer, { themeMode, isReady, overlayMessage: isBlurred ? "Make your Prediction" : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
-      isLoading && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs shadow-lg backdrop-blur-md", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.Clock, { className: "w-3 h-3 animate-pulse" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: pendingRequest ? "Starting Server..." : "Processing..." })
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(PreviewContainer, { themeMode, isReady, overlayMessage: isBlurred ? "Make your Prediction" : void 0, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: containerRef, className: "flex flex-col h-full relative", children: [
+      isLoading && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "absolute top-2 right-2 z-10 flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs shadow-lg backdrop-blur-md", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Clock, { className: "w-3 h-3 animate-pulse" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: pendingRequest ? "Starting Server..." : "Processing..." })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "p-4 border border-red-500/20 rounded bg-red-500/5 text-red-400", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.AlertCircle, { className: "w-4 h-4" }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "Runtime Error" })
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: `flex-1 overflow-auto p-4 font-mono text-sm ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-gray-50"}`, children: runtimeError ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "p-4 border border-red-500/20 rounded bg-red-500/5 text-red-400", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex items-center gap-2 text-red-500 font-bold mb-2", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.AlertCircle, { className: "w-4 h-4" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: "Runtime Error" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("pre", { className: "whitespace-pre-wrap break-all", children: runtimeError })
-      ] }) : response ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "animate-in fade-in slide-in-from-top-2 duration-300", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: `font-bold ${response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { className: "whitespace-pre-wrap break-all", children: runtimeError })
+      ] }) : response ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "animate-in fade-in slide-in-from-top-2 duration-300", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "flex items-center justify-between mb-4 pb-2 border-b border-dashed border-gray-500/20", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: `font-bold ${response.status < 300 ? "text-green-500" : "text-red-500"}`, children: [
           response.status,
           " ",
           response.status === 200 ? "OK" : ""
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("pre", { className: `${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "h-full flex flex-col items-center justify-center opacity-20", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.Server, { className: "w-12 h-12 mb-2" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "Server Standby" })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { className: `${themeMode === "dark" ? "text-blue-300" : "text-blue-700"}`, children: JSON.stringify(response.data, null, 2) })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "h-full flex flex-col items-center justify-center opacity-20", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Server, { className: "w-12 h-12 mb-2" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "Server Standby" })
       ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { onMouseDown: handleMouseDown, className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.GripHorizontal, { className: "w-3 h-3" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Console, { logs, onClear: clearConsole, themeMode }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { onMouseDown: handleMouseDown, className: `h-3 shrink-0 flex items-center justify-center cursor-row-resize ${themeMode === "dark" ? "bg-[#252526] text-gray-600 border-t border-b border-black/20" : "bg-gray-100 text-gray-400 border-t border-b border-gray-200"}`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.GripHorizontal, { className: "w-3 h-3" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { height: consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Console, { logs, onClear: clearConsole, themeMode }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         "iframe",
         {
           ref: iframeRef,
@@ -2035,7 +2277,7 @@ function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
 }
 
 // components/CodingEnvironment.tsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime9 = require("react/jsx-runtime");
 var BUNDLE_MODE_CONFIG = {
   "html-css": { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
   "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
@@ -2055,9 +2297,11 @@ var CodingEnvironment = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  mockApi,
   sessionId,
   predictionPrompt,
-  debugMode = false
+  debugMode = false,
+  onExecutionComplete
 }) => {
   const [predictionAnswer, setPredictionAnswer] = (0, import_react7.useState)("");
   const [isPredictionLocked, setIsPredictionLocked] = (0, import_react7.useState)(false);
@@ -2077,19 +2321,20 @@ var CodingEnvironment = ({
         ...bundleModeConfig?.hasMediaTab ? ["media"] : []
       ];
     }
+    if (environmentMode === "fetch") return ["script.js", "api-server"];
     if (!hasDomFixtures) return ["script.js"];
     return [
       "script.js",
       ...fixtureHtml !== void 0 ? ["index.html"] : [],
       ...fixtureCss !== void 0 ? ["style.css"] : []
     ];
-  }, [editableBundleFileNames, bundleModeConfig, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = (0, import_react7.useState)(
     isEditableBundleMode ? "index.html" : "script.js"
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
-  const selectedFile = selectedTab === "media" ? null : selectedTab;
+  const selectedFile = selectedTab === "media" || selectedTab === "api-server" ? null : selectedTab;
   const files = (0, import_react7.useMemo)(
     () => editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null,
     [editableBundleFileNames, code]
@@ -2135,11 +2380,11 @@ var CodingEnvironment = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isServerMode = environmentMode.startsWith("express") || environmentMode.startsWith("hono");
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
-    predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex-1", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
+    predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex-1", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         "textarea",
         {
           value: predictionAnswer,
@@ -2150,78 +2395,80 @@ var CodingEnvironment = ({
         }
       )
     ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex min-w-0 items-center gap-2 overflow-hidden", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.FileCode, { className: "h-4 w-4 shrink-0 text-blue-500" }),
-        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap", children: visibleTabs.map((tab) => {
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex min-w-0 items-center gap-2 overflow-hidden", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.FileCode, { className: "h-4 w-4 shrink-0 text-blue-500" }),
+        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap", children: visibleTabs.map((tab) => {
           const isMediaTab = tab === "media";
+          const isApiServerTab = tab === "api-server";
           const isFixtureFile = hasDomFixtures && tab !== "script.js";
-          const isReadOnlyTab = isMediaTab || isFixtureFile;
-          return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          const isReadOnlyTab = isMediaTab || isApiServerTab || isFixtureFile;
+          const tabLabel = isMediaTab ? "Media" : isApiServerTab ? "API Server" : tab;
+          return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "button",
             {
               type: "button",
               onClick: () => setActiveTab(tab),
-              title: isMediaTab ? "Read-only media" : isFixtureFile ? "Fixed fixture" : void 0,
+              title: isMediaTab ? "Read-only media" : isApiServerTab ? "Read-only mock API" : isFixtureFile ? "Fixed fixture" : void 0,
               "aria-pressed": selectedTab === tab,
               className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${selectedTab === tab ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
               children: [
-                isMediaTab ? "Media" : tab,
-                isReadOnlyTab && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
+                tabLabel,
+                isReadOnlyTab && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
               ]
             },
             tab
           );
-        }) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
+        }) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "button",
             {
               onClick: () => setLayout("horizontal"),
               title: "Split View (Side by Side)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "horizontal" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Columns, { size: 12 }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "hidden md:inline", children: "Split" })
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Columns, { size: 12 }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "hidden md:inline", children: "Split" })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "button",
             {
               onClick: () => setLayout("vertical"),
               title: "Vertical View (Stacked)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "vertical" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Rows, { size: 12 }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "hidden md:inline", children: "Stacked" })
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Rows, { size: 12 }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "hidden md:inline", children: "Stacked" })
               ]
             }
           )
         ] }),
-        !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           Button,
           {
             onClick: handleRunClick,
-            disabled: isRunning || !isPredictionFulfilled,
+            disabled: isRunning && environmentMode !== "fetch" || !isPredictionFulfilled,
             variant: "primary",
             className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
-            icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.Play, { size: 14 }),
-            children: isRunning ? "RUNNING..." : "RUN CODE"
+            icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Play, { size: 14 }),
+            children: isRunning ? environmentMode === "fetch" ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         MediaPanel,
         {
           mediaAssets: environmentMode === "html-js-css-media" ? mediaAssets ?? [] : [],
           themeMode
         }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      ) : selectedTab === "api-server" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ApiServerPanel, { mockApi, themeMode }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         CodeEditor,
         {
           code: editorCode,
@@ -2234,15 +2481,15 @@ var CodingEnvironment = ({
           readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
         }
       ) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         "div",
         {
           onMouseDown: handleMouseDown,
           className: `flex items-center justify-center shrink-0 hover:bg-blue-500/50 transition-colors z-10 ${layout === "horizontal" ? "w-1.5 cursor-col-resize" : "h-1.5 cursor-row-resize"} ${themeMode === "dark" ? "bg-black/40" : "bg-gray-100"}`,
-          children: layout === "horizontal" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_lucide_react5.GripHorizontal, { size: 10, className: "opacity-20" })
+          children: layout === "horizontal" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.GripHorizontal, { size: 10, className: "opacity-20" })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         ServerOutput,
         {
           runTrigger,
@@ -2253,7 +2500,7 @@ var CodingEnvironment = ({
           debugMode,
           onTriggerRun: handleRunClick
         }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      ) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         OutputFrame,
         {
           runTrigger,
@@ -2262,9 +2509,11 @@ var CodingEnvironment = ({
           environmentMode,
           fixtureHtml: environmentMode === "dom" ? fixtureHtml : void 0,
           fixtureCss: environmentMode === "dom" ? fixtureCss : void 0,
+          mockApi: environmentMode === "fetch" ? mockApi : void 0,
           isBlurred: !isPredictionFulfilled,
           isPredictionMode: !!predictionPrompt,
-          debugMode
+          debugMode,
+          onExecutionComplete: environmentMode === "fetch" ? onExecutionComplete : void 0
         }
       ) }) })
     ] })
@@ -2272,7 +2521,7 @@ var CodingEnvironment = ({
 };
 
 // components/CodeShoebox.tsx
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 var CodeShoebox = ({
   code,
   onCodeChange,
@@ -2281,6 +2530,7 @@ var CodeShoebox = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  mockApi,
   theme,
   themeMode,
   sessionId = 0,
@@ -2289,16 +2539,28 @@ var CodeShoebox = ({
 }) => {
   const [runTrigger, setRunTrigger] = (0, import_react8.useState)(0);
   const [isRunning, setIsRunning] = (0, import_react8.useState)(false);
+  const runFallbackRef = (0, import_react8.useRef)(null);
   (0, import_react8.useEffect)(() => {
     setRunTrigger(0);
     setIsRunning(false);
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
   }, [sessionId]);
+  (0, import_react8.useEffect)(() => () => {
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+  }, []);
   const handleRun = () => {
     setIsRunning(true);
     setRunTrigger((prev) => prev + 1);
-    setTimeout(() => {
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+    runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
-    }, 500);
+      runFallbackRef.current = null;
+    }, environmentMode === "fetch" ? 1e4 : 500);
+  };
+  const handleExecutionComplete = () => {
+    if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
+    runFallbackRef.current = null;
+    setIsRunning(false);
   };
   const themeStyles = (0, import_react8.useMemo)(() => {
     const colors = themeMode === "dark" ? theme.dark : theme.light;
@@ -2315,12 +2577,12 @@ var CodeShoebox = ({
       "--foreground": colors.foreground || defaultFg
     };
   }, [themeMode, theme]);
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
     "div",
     {
       className: "flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
       style: themeStyles,
-      children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         CodingEnvironment,
         {
           sessionId,
@@ -2335,8 +2597,10 @@ var CodeShoebox = ({
           fixtureCss,
           mediaAssets,
           enableEmmet,
+          mockApi,
           predictionPrompt: prediction_prompt,
-          debugMode
+          debugMode,
+          onExecutionComplete: handleExecutionComplete
         },
         sessionId
       )
@@ -2622,6 +2886,15 @@ root.appendChild(button);
 
 // Example 3: Console logging
 console.log('Code loaded successfully.');
+`;
+var FETCH_STARTER_CODE = `// Fetch data from the routes in the API Server tab.
+// The mock server waits one second so you can observe that await pauses here.
+
+let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+
+console.log("The first city is " + readings[0].city);
+console.log(readings);
 `;
 var TYPESCRIPT_STARTER_CODE = [
   "// Welcome to TypeScript!",
@@ -2992,6 +3265,7 @@ var VALID_MODES = [
   "html-css-js",
   "html-js-css-media",
   "dom",
+  "fetch",
   "typescript",
   "p5",
   "p5-ts",
@@ -3016,6 +3290,8 @@ var getStarterCode = (mode) => {
       return HTML_CSS_JS_STARTER_CODE;
     case "html-js-css-media":
       return HTML_JS_CSS_MEDIA_STARTER_CODE;
+    case "fetch":
+      return FETCH_STARTER_CODE;
     case "p5":
       return P5_STARTER_CODE;
     case "p5-ts":

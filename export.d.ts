@@ -27,7 +27,36 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
+    readonly [key: string]: JsonValue;
+};
+type MockApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+interface MockApiRouteBase {
+    method: MockApiMethod;
+    path: string;
+    /** Exact query match. Routes without this field accept any query string. */
+    query?: Readonly<Record<string, string>>;
+    /** Overrides the API-wide simulated latency for this route. */
+    delayMs?: number;
+}
+type MockApiRoute = MockApiRouteBase & ({
+    networkError: true;
+    errorMessage?: string;
+    body?: never;
+    status?: never;
+    headers?: never;
+} | {
+    networkError?: false;
+    body: JsonValue;
+    status?: number;
+    headers?: Readonly<Record<string, string>>;
+});
+interface MockApiConfig {
+    /** Defaults to 1000 ms so learners can observe that awaited data arrives later. */
+    defaultDelayMs?: number;
+    routes: readonly MockApiRoute[];
+}
 type MediaAsset = {
     kind: 'image';
     name: string;
@@ -59,6 +88,8 @@ interface CodeShoeboxProps {
     mediaAssets?: readonly MediaAsset[];
     /** Enables Emmet abbreviation completions in editable HTML models. */
     enableEmmet?: boolean;
+    /** Host-authored, local-only routes shown and executed in fetch mode. */
+    mockApi?: MockApiConfig;
     themeMode: ThemeMode;
     theme: Theme;
     sessionId?: number;
@@ -95,4 +126,4 @@ declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: s
  */
 declare const useAutoKey: (identifier: string, initialCode?: string, prefix?: string) => string;
 
-export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type MediaAsset, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
+export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type JsonValue, type MediaAsset, type MockApiConfig, type MockApiMethod, type MockApiRoute, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
