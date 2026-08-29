@@ -87,6 +87,72 @@ const HTML_RUNTIME_STYLES = `
   }
 `;
 
+// Shared by the plain and mock-fetch two-file modes. The presence of the
+// fetch installer switches script.js to the async, abortable execution path;
+// plain html-js keeps its synchronous behavior and network permissions.
+const HTML_JS_RUNTIME_LOGIC = `
+  let activeHtmlJsRunController = null;
+  let htmlJsRunGeneration = 0;
+  const HtmlJsAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+  window.__RUN_MODE__ = (code, root, options = {}) => {
+    const usesMockFetch = typeof window.__installFetchMock === 'function';
+    let generation = htmlJsRunGeneration;
+    let runRoot = root;
+
+    if (usesMockFetch) {
+      generation = ++htmlJsRunGeneration;
+      if (activeHtmlJsRunController) activeHtmlJsRunController.abort();
+      activeHtmlJsRunController = new AbortController();
+      runRoot = document.createElement('div');
+      runRoot.style.width = '100%';
+      root.replaceChildren(runRoot);
+      window.__installFetchMock(options.mockApi, activeHtmlJsRunController.signal);
+    } else {
+      root.replaceChildren();
+    }
+
+    // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+    // The iframe kernel cannot import modules; keep both copies in sync.
+    let files;
+    try {
+      const parsed = JSON.parse(code);
+      files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+        ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
+        : { html: code, js: '' };
+    } catch (e) { files = { html: code, js: '' }; }
+
+    const doc = new DOMParser().parseFromString(files.html, 'text/html');
+    const linkedScript = doc.querySelector('script[src="script.js"]');
+
+    // Learner HTML never creates a second execution path. The bundled
+    // script.js file is the only JavaScript this mode executes.
+    doc.querySelectorAll('script').forEach((script) => script.remove());
+
+    if (!linkedScript && files.js.trim()) {
+      const hint = document.createElement('div');
+      hint.className = 'cs-hint-banner';
+      hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+      runRoot.appendChild(hint);
+    }
+
+    doc.body.childNodes.forEach((node) => {
+      runRoot.appendChild(document.importNode(node, true));
+    });
+
+    if (!linkedScript) return;
+    if (!usesMockFetch) {
+      try { new Function('root', files.js)(runRoot); } catch (error) { console.error(error); }
+      return;
+    }
+
+    return new HtmlJsAsyncFunction('root', files.js)(runRoot).catch((error) => {
+      if (generation !== htmlJsRunGeneration || (error && error.name === 'AbortError')) return;
+      throw error;
+    });
+  };
+`;
+
 /**
  * Registry of environment configurations.
  * This makes it trivial to add new modes without creating new files.
@@ -174,41 +240,15 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     name: "HTML & JavaScript (script.js)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: `
-      window.__RUN_MODE__ = (code, root) => {
-        root.replaceChildren();
-        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
-        // The iframe kernel cannot import modules; keep both copies in sync.
-        let files;
-        try {
-          const parsed = JSON.parse(code);
-          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-            ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
-            : { html: code, js: '' };
-        } catch (e) { files = { html: code, js: '' }; }
-
-        const doc = new DOMParser().parseFromString(files.html, 'text/html');
-        const linkedScript = doc.querySelector('script[src="script.js"]');
-
-        // Learner HTML never creates a second execution path. The bundled
-        // script.js file is the only JavaScript this mode executes.
-        doc.querySelectorAll('script').forEach((script) => script.remove());
-
-        if (!linkedScript && files.js.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-          root.appendChild(hint);
-        }
-
-        doc.body.childNodes.forEach((node) => {
-          root.appendChild(document.importNode(node, true));
-        });
-
-        if (!linkedScript) return;
-        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
-      };
-    `
+    logic: HTML_JS_RUNTIME_LOGIC,
+  },
+  'html-js-fetch': {
+    name: "HTML, JavaScript & Fetch (Mock API)",
+    mocks: FETCH_MOCK_SETUP,
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    contentSecurityPolicy: "connect-src 'none'",
+    logic: HTML_JS_RUNTIME_LOGIC,
   },
   'html-css-js': {
     name: "HTML, CSS & JavaScript (3 files)",

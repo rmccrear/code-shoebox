@@ -14,7 +14,7 @@ CodeShoebox runs code entirely within the browser using a sandboxed `<iframe>`. 
     *   In **Hono** mode, imports are handled via ESM URL imports.
     *   In other modes, `import/export` statements may cause runtime errors unless transpiled and resolved by the specific environment logic.
 *   **Persistence:** LocalStorage is sandboxed to the iframe's origin.
-*   **Network:** `fetch()` is available but subject to standard Browser CORS policies.
+*   **Network:** `fetch()` is available but subject to standard Browser CORS policies, except in fetch tutorial modes where it is replaced by a contained host-authored mock.
 
 ---
 
@@ -65,6 +65,17 @@ change runtime behavior.
     *   All script elements are removed from parsed learner HTML. Inline, remote, data-URL, and differently named scripts do not execute; only the bundled `script.js` does.
     *   The learner body is restored below `#root`; `<head>` metadata, `<title>`, body attributes, parser timing, `async`, and `defer` behavior are not reproduced.
     *   Native browser JavaScript only: no TypeScript, Babel, modules, `import`/`export`, packages, or additional files.
+
+### `html-js-fetch` (HTML, JavaScript & Fetch, three tabs)
+*   **Engine:** The same bounded two-file page runner as `html-js`, with the async mock-fetch runtime used by `fetch` mode.
+*   **Workspace:** Editable `index.html`, editable `script.js`, and a read-only **API Server** tab. The code envelope contains only the two editable files.
+*   **Capabilities:**
+    *   The literal `<script src="script.js"></script>` link is required. Pressing Run rebuilds the learner page, installs the host's `mockApi`, and executes `script.js` with top-level `await`.
+    *   Relative mock requests return genuine `Response` objects after the configured delay, and learner JavaScript can render the returned JSON into its own HTML.
+    *   A new Run aborts pending requests and uses correlated completion IDs, so learners can safely rerun during the default one-second delay.
+*   **Containment and limitations:**
+    *   Routes stay outside the code envelope, persistence, and iframe `srcDoc`. `connect-src 'none'` and the fetch replacement prevent real API access.
+    *   File/link restrictions match `html-js`; route matching, canned response behavior, and request limitations match `fetch`.
 
 ### `html-css-js` (HTML, CSS & JavaScript, three tabs)
 *   **Engine:** Native browser JavaScript in the existing sandbox DOM, with three editable files packed into the version-1 bundle: `index.html`, `style.css`, and `script.js`.

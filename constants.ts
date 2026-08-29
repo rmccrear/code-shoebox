@@ -82,6 +82,38 @@ button.addEventListener('click', () => {
 `
 });
 
+export const HTML_JS_FETCH_STARTER_CODE = serializeFileBundle({
+  'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>Air Quality</title>
+</head>
+<body>
+  <main>
+    <h1>Air quality readings</h1>
+    <p id="status">Loading data from the mock API...</p>
+    <ul id="readings"></ul>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  'script.js': `let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+let status = document.getElementById("status");
+let list = document.getElementById("readings");
+
+status.textContent = "Loaded " + readings.length + " readings.";
+readings.forEach(function (reading) {
+  let item = document.createElement("li");
+  item.textContent = reading.city + ": AQI " + reading.aqi + " (" + reading.category + ")";
+  list.appendChild(item);
+});
+
+console.log(readings);
+`
+});
+
 export const HTML_CSS_JS_STARTER_CODE = serializeFileBundle({
   'index.html': `<!DOCTYPE html>
 <html>

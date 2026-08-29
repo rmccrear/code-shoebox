@@ -146,6 +146,48 @@ describe('CodingEnvironment routing', () => {
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
+  it('shows editable HTML and JavaScript plus the locked API Server in html-js-fetch mode', () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'index.html': '<p id="status">Loading</p><script src="script.js"></script>',
+      'script.js': 'let response = await fetch("/api/readings");',
+    });
+    renderCodingEnvironment('html-js-fetch', {
+      code,
+      onChange,
+      mockApi: { routes: [{ method: 'GET', path: '/api/readings', body: [{ aqi: 42 }] }] },
+    });
+
+    const workspaceTabNames = screen.getAllByRole('button')
+      .map((button) => button.textContent?.trim())
+      .filter((name) => ['index.html', 'script.js', 'API Server'].includes(name ?? ''));
+    expect(workspaceTabNames).toEqual(['index.html', 'script.js', 'API Server']);
+
+    fireEvent.change(screen.getByLabelText('Code editor'), {
+      target: { value: '<p id="status">Waiting</p><script src="script.js"></script>' },
+    });
+    expect(parseFileBundle(onChange.mock.calls[0][0], HTML_JS_FILE_NAMES)['script.js'])
+      .toBe('let response = await fetch("/api/readings");');
+
+    fireEvent.click(screen.getByRole('button', { name: 'script.js' }));
+    expect(screen.getByLabelText('Code editor')).toHaveValue('let response = await fetch("/api/readings");');
+
+    fireEvent.click(screen.getByRole('button', { name: 'API Server' }));
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByText('/api/readings')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'API Server' })).toHaveAttribute('title', 'Read-only mock API');
+  });
+
+  it('allows an html-js-fetch run to be restarted while a request is pending', () => {
+    const onRun = vi.fn();
+    renderCodingEnvironment('html-js-fetch', { isRunning: true, onRun });
+
+    const runAgain = screen.getByRole('button', { name: 'RUN AGAIN' });
+    expect(runAgain).toBeEnabled();
+    fireEvent.click(runAgain);
+    expect(onRun).toHaveBeenCalledTimes(1);
+  });
+
   it('shows script.js and a locked index.html tab for an HTML fixture', () => {
     renderCodingEnvironment('dom', {
       code: 'document.body.dataset.ready = "yes";',

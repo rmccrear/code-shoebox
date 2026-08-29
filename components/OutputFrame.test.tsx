@@ -155,6 +155,32 @@ describe('OutputFrame', () => {
     );
   });
 
+  it('executes html-js-fetch bundles with mock routes and a correlated execution id', () => {
+    const mockApi = {
+      defaultDelayMs: 1000,
+      routes: [{ method: 'GET' as const, path: '/api/readings', body: [{ aqi: 42 }] }],
+    };
+    const bundle = '{"__csFiles__":1,"files":{"index.html":"<p>Loading</p><script src=\\"script.js\\"></script>","script.js":"await fetch(\\"/api/readings\\")"}}';
+    const { rerender } = renderOutputFrame({ environmentMode: 'html-js-fetch', mockApi, code: bundle });
+
+    rerender(
+      <OutputFrame
+        runTrigger={4}
+        code={bundle}
+        themeMode="dark"
+        environmentMode="html-js-fetch"
+        mockApi={mockApi}
+      />
+    );
+
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledWith(
+      expect.anything(),
+      bundle,
+      { mockApi },
+      4
+    );
+  });
+
   it('reports completion only for the latest fetch execution', () => {
     const onExecutionComplete = vi.fn();
     const { container, rerender } = renderOutputFrame({

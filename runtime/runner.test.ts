@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -94,6 +94,21 @@ describe('getSandboxHtml', () => {
     expect(html).not.toContain('api/air-quality');
   });
 
+  it('combines bounded HTML/JS files with the abortable mock-fetch runtime', () => {
+    const html = getSandboxHtml('html-js-fetch');
+
+    expect(html).toContain('Content-Security-Policy');
+    expect(html).toContain("connect-src 'none'");
+    expect(html).toContain('window.__installFetchMock');
+    expect(html).toContain('__csFiles__');
+    expect(html).toContain('script[src="script.js"]');
+    expect(html).toContain("new HtmlJsAsyncFunction('root', files.js)");
+    expect(html).toContain('activeHtmlJsRunController.abort()');
+    expect(html).toContain('script.js is not linked');
+    expect(html).not.toContain('allow-same-origin');
+    expect(html).not.toContain('api/air-quality');
+  });
+
   it('shows the output placeholder for visual modes but hides it for server modes', () => {
     expect(getSandboxHtml('dom')).toContain('id="placeholder"');
     expect(getSandboxHtml('express')).not.toContain('id="placeholder"');
@@ -120,8 +135,8 @@ describe('getSandboxHtml', () => {
     const parseAt = html.indexOf('__csFiles__');
     const linkAt = html.indexOf('script[src="script.js"]');
     const removeAt = html.indexOf("querySelectorAll('script').forEach");
-    const importAt = html.indexOf('root.appendChild(document.importNode(node, true))');
-    const executeAt = html.indexOf("new Function('root', files.js)(root)");
+    const importAt = html.indexOf('runRoot.appendChild(document.importNode(node, true))');
+    const executeAt = html.indexOf("new Function('root', files.js)(runRoot)");
 
     expect(parseAt).toBeGreaterThan(-1);
     expect(linkAt).toBeGreaterThan(parseAt);

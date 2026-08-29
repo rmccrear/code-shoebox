@@ -99,6 +99,19 @@ describe('demoPresets', () => {
     expect(preset?.code).not.toContain('Portland');
   });
 
+  it('provides the same fetch fixtures to a linked HTML/JS bundle', () => {
+    const preset = resolvePresetFromHash('html-js-fetch-air-quality-demo');
+    const mockApi = getPresetMockApiForMode('html-js-fetch');
+    const files = parseFileBundle(preset!.code, HTML_JS_FILE_NAMES);
+
+    expect(preset?.mode).toBe('html-js-fetch');
+    expect(getPresetHashForMode('html-js-fetch')).toBe('html-js-fetch-air-quality-demo');
+    expect(mockApi?.defaultDelayMs).toBe(1000);
+    expect(files['index.html']).toContain('<script src="script.js"></script>');
+    expect(files['script.js']).toContain('await fetch("/api/air-quality?limit=4")');
+    expect(preset?.code).not.toContain('Portland');
+  });
+
   it('returns undefined for a mode with no preset', () => {
     expect(getPresetHashForMode('dom')).toBeUndefined();
   });

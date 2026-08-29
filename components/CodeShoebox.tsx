@@ -40,7 +40,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, environmentMode === 'fetch' ? 10000 : 500);
+    }, environmentMode === 'fetch' || environmentMode === 'html-js-fetch' ? 10000 : 500);
   };
 
   const handleExecutionComplete = () => {

@@ -9,7 +9,7 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
 
 export type JsonValue =
   | null
@@ -75,7 +75,7 @@ export interface CodeShoeboxProps {
   mediaAssets?: readonly MediaAsset[];
   /** Enables Emmet abbreviation completions in editable HTML models. */
   enableEmmet?: boolean;
-  /** Host-authored, local-only routes shown and executed in fetch mode. */
+  /** Host-authored, local-only routes shown and executed in fetch-enabled modes. */
   mockApi?: MockApiConfig;
   themeMode: ThemeMode;
   theme: Theme;

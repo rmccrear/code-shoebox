@@ -117,6 +117,7 @@ const App: React.FC = () => {
                     <option value="html">HTML (single file)</option>
                     <option value="html-css">HTML & CSS (style.css)</option>
                     <option value="html-js">HTML & JavaScript (script.js)</option>
+                    <option value="html-js-fetch">HTML, JavaScript & Fetch (Mock API)</option>
                     <option value="html-css-js">HTML, CSS & JavaScript (3 files)</option>
                     <option value="html-js-css-media">HTML, CSS, JavaScript & Media (4 tabs)</option>
                     <option value="dom">DOM / JS</option>
