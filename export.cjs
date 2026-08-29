@@ -1143,6 +1143,68 @@ var HTML_RUNTIME_STYLES = `
     background: #fff;
   }
 `;
+var HTML_JS_RUNTIME_LOGIC = `
+  let activeHtmlJsRunController = null;
+  let htmlJsRunGeneration = 0;
+  const HtmlJsAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+  window.__RUN_MODE__ = (code, root, options = {}) => {
+    const usesMockFetch = typeof window.__installFetchMock === 'function';
+    let generation = htmlJsRunGeneration;
+    let runRoot = root;
+
+    if (usesMockFetch) {
+      generation = ++htmlJsRunGeneration;
+      if (activeHtmlJsRunController) activeHtmlJsRunController.abort();
+      activeHtmlJsRunController = new AbortController();
+      runRoot = document.createElement('div');
+      runRoot.style.width = '100%';
+      root.replaceChildren(runRoot);
+      window.__installFetchMock(options.mockApi, activeHtmlJsRunController.signal);
+    } else {
+      root.replaceChildren();
+    }
+
+    // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
+    // The iframe kernel cannot import modules; keep both copies in sync.
+    let files;
+    try {
+      const parsed = JSON.parse(code);
+      files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
+        ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
+        : { html: code, js: '' };
+    } catch (e) { files = { html: code, js: '' }; }
+
+    const doc = new DOMParser().parseFromString(files.html, 'text/html');
+    const linkedScript = doc.querySelector('script[src="script.js"]');
+
+    // Learner HTML never creates a second execution path. The bundled
+    // script.js file is the only JavaScript this mode executes.
+    doc.querySelectorAll('script').forEach((script) => script.remove());
+
+    if (!linkedScript && files.js.trim()) {
+      const hint = document.createElement('div');
+      hint.className = 'cs-hint-banner';
+      hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
+      runRoot.appendChild(hint);
+    }
+
+    doc.body.childNodes.forEach((node) => {
+      runRoot.appendChild(document.importNode(node, true));
+    });
+
+    if (!linkedScript) return;
+    if (!usesMockFetch) {
+      try { new Function('root', files.js)(runRoot); } catch (error) { console.error(error); }
+      return;
+    }
+
+    return new HtmlJsAsyncFunction('root', files.js)(runRoot).catch((error) => {
+      if (generation !== htmlJsRunGeneration || (error && error.name === 'AbortError')) return;
+      throw error;
+    });
+  };
+`;
 var ENV_RECIPES = {
   html: {
     name: "HTML (single file)",
@@ -1226,41 +1288,15 @@ var ENV_RECIPES = {
     name: "HTML & JavaScript (script.js)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: `
-      window.__RUN_MODE__ = (code, root) => {
-        root.replaceChildren();
-        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
-        // The iframe kernel cannot import modules; keep both copies in sync.
-        let files;
-        try {
-          const parsed = JSON.parse(code);
-          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-            ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
-            : { html: code, js: '' };
-        } catch (e) { files = { html: code, js: '' }; }
-
-        const doc = new DOMParser().parseFromString(files.html, 'text/html');
-        const linkedScript = doc.querySelector('script[src="script.js"]');
-
-        // Learner HTML never creates a second execution path. The bundled
-        // script.js file is the only JavaScript this mode executes.
-        doc.querySelectorAll('script').forEach((script) => script.remove());
-
-        if (!linkedScript && files.js.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-          root.appendChild(hint);
-        }
-
-        doc.body.childNodes.forEach((node) => {
-          root.appendChild(document.importNode(node, true));
-        });
-
-        if (!linkedScript) return;
-        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
-      };
-    `
+    logic: HTML_JS_RUNTIME_LOGIC
+  },
+  "html-js-fetch": {
+    name: "HTML, JavaScript & Fetch (Mock API)",
+    mocks: FETCH_MOCK_SETUP,
+    showPlaceholder: false,
+    styles: HTML_RUNTIME_STYLES,
+    contentSecurityPolicy: "connect-src 'none'",
+    logic: HTML_JS_RUNTIME_LOGIC
   },
   "html-css-js": {
     name: "HTML, CSS & JavaScript (3 files)",
@@ -1810,6 +1846,7 @@ var OutputFrame = ({
   const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
+  const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const isStaticHtmlMode = environmentMode === "html" || environmentMode === "html-css";
   const addSystemLog = (0, import_react5.useCallback)((msg, type = "log") => {
     setLogs((prev) => appendLog(prev, {
@@ -1836,10 +1873,10 @@ var OutputFrame = ({
       }));
     } else if (type === "READY_SIGNAL" && debugMode) {
       addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
-    } else if (type === "EXECUTION_COMPLETE" && environmentMode === "fetch" && payload?.executionId === latestExecutionIdRef.current) {
+    } else if (type === "EXECUTION_COMPLETE" && isFetchMode && payload?.executionId === latestExecutionIdRef.current) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, environmentMode, onExecutionComplete]);
+  }, [debugMode, addSystemLog, isFetchMode, onExecutionComplete]);
   const kernelMessageRef = (0, import_react5.useRef)(handleKernelMessage);
   (0, import_react5.useEffect)(() => {
     kernelMessageRef.current = handleKernelMessage;
@@ -1854,14 +1891,15 @@ var OutputFrame = ({
       setLogs([]);
       if (execution.debugMode) addSystemLog("Attempting to execute code...");
       if (iframeRef.current?.contentWindow) {
-        if (execution.environmentMode === "fetch") latestExecutionIdRef.current = runTrigger;
+        const executionUsesFetch = execution.environmentMode === "fetch" || execution.environmentMode === "html-js-fetch";
+        if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
         const hasDomFixture = execution.environmentMode === "dom" && (execution.fixtureHtml !== void 0 || execution.fixtureCss !== void 0);
         if (hasDomFixture) {
           executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
             fixtureHtml: execution.fixtureHtml,
             fixtureCss: execution.fixtureCss
           });
-        } else if (execution.environmentMode === "fetch") {
+        } else if (executionUsesFetch) {
           executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
             mockApi: execution.mockApi
           }, runTrigger);
@@ -2281,6 +2319,7 @@ var import_jsx_runtime9 = require("react/jsx-runtime");
 var BUNDLE_MODE_CONFIG = {
   "html-css": { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
   "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
+  "html-js-fetch": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
@@ -2310,6 +2349,7 @@ var CodingEnvironment = ({
   const [isDragging, setIsDragging] = (0, import_react7.useState)(false);
   const containerRef = (0, import_react7.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
   const editableBundleFileNames = bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
@@ -2318,7 +2358,8 @@ var CodingEnvironment = ({
     if (editableBundleFileNames) {
       return [
         ...editableBundleFileNames,
-        ...bundleModeConfig?.hasMediaTab ? ["media"] : []
+        ...bundleModeConfig?.hasMediaTab ? ["media"] : [],
+        ...environmentMode === "html-js-fetch" ? ["api-server"] : []
       ];
     }
     if (environmentMode === "fetch") return ["script.js", "api-server"];
@@ -2452,11 +2493,11 @@ var CodingEnvironment = ({
           Button,
           {
             onClick: handleRunClick,
-            disabled: isRunning && environmentMode !== "fetch" || !isPredictionFulfilled,
+            disabled: isRunning && !isFetchMode || !isPredictionFulfilled,
             variant: "primary",
             className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
             icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Play, { size: 14 }),
-            children: isRunning ? environmentMode === "fetch" ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
+            children: isRunning ? isFetchMode ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
           }
         )
       ] })
@@ -2509,11 +2550,11 @@ var CodingEnvironment = ({
           environmentMode,
           fixtureHtml: environmentMode === "dom" ? fixtureHtml : void 0,
           fixtureCss: environmentMode === "dom" ? fixtureCss : void 0,
-          mockApi: environmentMode === "fetch" ? mockApi : void 0,
+          mockApi: isFetchMode ? mockApi : void 0,
           isBlurred: !isPredictionFulfilled,
           isPredictionMode: !!predictionPrompt,
           debugMode,
-          onExecutionComplete: environmentMode === "fetch" ? onExecutionComplete : void 0
+          onExecutionComplete: isFetchMode ? onExecutionComplete : void 0
         }
       ) }) })
     ] })
@@ -2555,7 +2596,7 @@ var CodeShoebox = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, environmentMode === "fetch" ? 1e4 : 500);
+    }, environmentMode === "fetch" || environmentMode === "html-js-fetch" ? 1e4 : 500);
   };
   const handleExecutionComplete = () => {
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
@@ -2766,6 +2807,37 @@ button.addEventListener('click', () => {
   message.textContent = 'JavaScript changed the page!';
   console.log('Message updated');
 });
+`
+});
+var HTML_JS_FETCH_STARTER_CODE = serializeFileBundle({
+  "index.html": `<!DOCTYPE html>
+<html>
+<head>
+  <title>Air Quality</title>
+</head>
+<body>
+  <main>
+    <h1>Air quality readings</h1>
+    <p id="status">Loading data from the mock API...</p>
+    <ul id="readings"></ul>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
+`,
+  "script.js": `let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+let status = document.getElementById("status");
+let list = document.getElementById("readings");
+
+status.textContent = "Loaded " + readings.length + " readings.";
+readings.forEach(function (reading) {
+  let item = document.createElement("li");
+  item.textContent = reading.city + ": AQI " + reading.aqi + " (" + reading.category + ")";
+  list.appendChild(item);
+});
+
+console.log(readings);
 `
 });
 var HTML_CSS_JS_STARTER_CODE = serializeFileBundle({
@@ -3262,6 +3334,7 @@ var VALID_MODES = [
   "html",
   "html-css",
   "html-js",
+  "html-js-fetch",
   "html-css-js",
   "html-js-css-media",
   "dom",
@@ -3286,6 +3359,8 @@ var getStarterCode = (mode) => {
       return HTML_CSS_STARTER_CODE;
     case "html-js":
       return HTML_JS_STARTER_CODE;
+    case "html-js-fetch":
+      return HTML_JS_FETCH_STARTER_CODE;
     case "html-css-js":
       return HTML_CSS_JS_STARTER_CODE;
     case "html-js-css-media":
