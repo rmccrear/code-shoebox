@@ -20,6 +20,51 @@ export const HTML_JS_CSS_MEDIA_DEMO_ASSETS = [
   },
 ] as const satisfies readonly MediaAsset[];
 
+export const FETCH_DEMO_API = {
+  defaultDelayMs: 1000,
+  routes: [
+    {
+      method: 'GET',
+      path: '/api/air-quality',
+      body: [
+        { city: 'Portland', aqi: 38, category: 'Good' },
+        { city: 'Sacramento', aqi: 52, category: 'Moderate' },
+        { city: 'Boise', aqi: 44, category: 'Good' },
+        { city: 'Reno', aqi: 61, category: 'Moderate' },
+      ],
+    },
+    {
+      method: 'GET',
+      path: '/api/air-quality',
+      query: { limit: '1' },
+      body: [{ city: 'Portland', aqi: 38, category: 'Good' }],
+    },
+    {
+      method: 'GET',
+      path: '/api/air-quality',
+      query: { limit: '4' },
+      body: [
+        { city: 'Portland', aqi: 38, category: 'Good' },
+        { city: 'Sacramento', aqi: 52, category: 'Moderate' },
+        { city: 'Boise', aqi: 44, category: 'Good' },
+        { city: 'Reno', aqi: 61, category: 'Moderate' },
+      ],
+    },
+    {
+      method: 'POST',
+      path: '/api/alerts',
+      status: 201,
+      body: { id: 1, message: 'Air-quality alert created' },
+    },
+    {
+      method: 'GET',
+      path: '/api/offline',
+      networkError: true,
+      errorMessage: 'The mock API is offline',
+    },
+  ],
+} as const satisfies MockApiConfig;
+
 export interface EditorDemoPreset {
   id: string;
   mode: EnvironmentMode;
@@ -235,54 +280,42 @@ playButton.addEventListener('click', async () => {
   {
     id: 'fetch-air-quality-demo',
     mode: 'fetch',
-    mockApi: {
-      defaultDelayMs: 1000,
-      routes: [
-        {
-          method: 'GET',
-          path: '/api/air-quality',
-          body: [
-            { city: 'Portland', aqi: 38, category: 'Good' },
-            { city: 'Sacramento', aqi: 52, category: 'Moderate' },
-            { city: 'Boise', aqi: 44, category: 'Good' },
-            { city: 'Reno', aqi: 61, category: 'Moderate' },
-          ],
-        },
-        {
-          method: 'GET',
-          path: '/api/air-quality',
-          query: { limit: '1' },
-          body: [{ city: 'Portland', aqi: 38, category: 'Good' }],
-        },
-        {
-          method: 'GET',
-          path: '/api/air-quality',
-          query: { limit: '4' },
-          body: [
-            { city: 'Portland', aqi: 38, category: 'Good' },
-            { city: 'Sacramento', aqi: 52, category: 'Moderate' },
-            { city: 'Boise', aqi: 44, category: 'Good' },
-            { city: 'Reno', aqi: 61, category: 'Moderate' },
-          ],
-        },
-        {
-          method: 'POST',
-          path: '/api/alerts',
-          status: 201,
-          body: { id: 1, message: 'Air-quality alert created' },
-        },
-        {
-          method: 'GET',
-          path: '/api/offline',
-          networkError: true,
-          errorMessage: 'The mock API is offline',
-        },
-      ],
-    },
+    mockApi: FETCH_DEMO_API,
     code: `let response = await fetch("/api/air-quality?limit=4");
 let readings = await response.json();
 console.log("The first city is " + readings[0].city);
 console.log(readings);`
+  },
+  {
+    id: 'html-js-fetch-air-quality-demo',
+    mode: 'html-js-fetch',
+    mockApi: FETCH_DEMO_API,
+    code: serializeFileBundle({
+      'index.html': `<!DOCTYPE html>
+<html>
+<head><title>Air Quality Dashboard</title></head>
+<body>
+  <main>
+    <h1>Air quality dashboard</h1>
+    <p id="status">Waiting for the API...</p>
+    <ul id="readings"></ul>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      'script.js': `let response = await fetch("/api/air-quality?limit=4");
+let readings = await response.json();
+let list = document.getElementById("readings");
+
+document.getElementById("status").textContent = "Loaded " + readings.length + " readings.";
+readings.forEach(function (reading) {
+  let item = document.createElement("li");
+  item.textContent = reading.city + ": AQI " + reading.aqi + " (" + reading.category + ")";
+  list.appendChild(item);
+});
+
+console.log(readings);`
+    })
   },
   {
     id: 'ts-express-rest-demo',

@@ -50,6 +50,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
+  const isFetchMode = environmentMode === 'fetch' || environmentMode === 'html-js-fetch';
   // HTML modes (single-file and tabbed): full-height output with no console
   // panel, rendered on mount and live-updated as the user types (safe: these
   // modes cannot run JS).
@@ -85,12 +86,12 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
     } else if (
       type === 'EXECUTION_COMPLETE'
-      && environmentMode === 'fetch'
+      && isFetchMode
       && payload?.executionId === latestExecutionIdRef.current
     ) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, environmentMode, onExecutionComplete]);
+  }, [debugMode, addSystemLog, isFetchMode, onExecutionComplete]);
 
   // Keep the latest message handler without recreating the transferred port.
   const kernelMessageRef = useRef(handleKernelMessage);
@@ -109,7 +110,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         setLogs([]);
         if (execution.debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
-             if (execution.environmentMode === 'fetch') latestExecutionIdRef.current = runTrigger;
+             const executionUsesFetch = execution.environmentMode === 'fetch'
+               || execution.environmentMode === 'html-js-fetch';
+             if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
              const hasDomFixture = execution.environmentMode === 'dom'
                && (execution.fixtureHtml !== undefined || execution.fixtureCss !== undefined);
              if (hasDomFixture) {
@@ -117,7 +120,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
                  fixtureHtml: execution.fixtureHtml,
                  fixtureCss: execution.fixtureCss,
                });
-             } else if (execution.environmentMode === 'fetch') {
+             } else if (executionUsesFetch) {
                executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
                  mockApi: execution.mockApi,
                }, runTrigger);

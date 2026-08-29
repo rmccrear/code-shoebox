@@ -191,7 +191,7 @@ Fixtures are trusted host input delivered as message data to the sandboxed ifram
 
 ## Fetch API Tutorial Mode
 
-Use `fetch` mode to teach browser `fetch()` against deterministic, host-authored mock routes. Learners edit `script.js` and read the locked **API Server** tab. Top-level `await` works, responses are genuine browser `Response` objects, and the default one-second delay makes asynchronous execution visible.
+Use `fetch` mode to teach browser `fetch()` against deterministic, host-authored mock routes. Learners edit `script.js` and read the locked **API Server** tab. Use `html-js-fetch` for the same mock API with editable `index.html` and `script.js` tabs, so fetched data can be rendered into a learner-authored page. Top-level `await` works in both modes, responses are genuine browser `Response` objects, and the default one-second delay makes asynchronous execution visible.
 
 ```tsx
 import type { MockApiConfig } from 'code-shoebox';
@@ -228,6 +228,8 @@ const mockApi: MockApiConfig = {
 ```
 
 Routes match by method and pathname. A declared `query` requires the exact key/value set and takes precedence over a query-agnostic route. Undeclared `/api/...` routes resolve as JSON `404` responses; declared network errors reject. Absolute URL strings are rejected and the iframe uses `connect-src 'none'`, so tutorial calls never contact a real API. POST request bodies are accepted but not inspected in v1; responses remain stateless and canned.
+
+In `html-js-fetch`, the code prop uses the same two-file envelope as `html-js`, and `index.html` must contain the literal `<script src="script.js"></script>` link. Each Run rebuilds the page, then executes `script.js` asynchronously with the configured mock routes.
 
 ## HTML + JavaScript Mode
 
@@ -367,12 +369,12 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-js-fetch' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
 | `enableEmmet` | `boolean` | No | Enables Emmet abbreviation completions in editable HTML models; defaults to `false`. |
-| `mockApi` | `MockApiConfig` | No | Host-authored mock routes shown and executed only in `fetch` mode. Routes remain outside learner code and persistence. |
+| `mockApi` | `MockApiConfig` | No | Host-authored mock routes shown and executed in `fetch` and `html-js-fetch`. Routes remain outside learner code and persistence. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |

@@ -30,6 +30,7 @@ type WorkspaceTab = EditorFileName | 'media' | 'api-server';
 const BUNDLE_MODE_CONFIG = {
   'html-css': { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
   'html-js': { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
+  'html-js-fetch': { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   'html-css-js': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   'html-js-css-media': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
 } as const satisfies Partial<Record<EnvironmentMode, {
@@ -85,6 +86,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const isFetchMode = environmentMode === 'fetch' || environmentMode === 'html-js-fetch';
 
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG
     ? BUNDLE_MODE_CONFIG[environmentMode as keyof typeof BUNDLE_MODE_CONFIG]
@@ -98,6 +100,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       return [
         ...editableBundleFileNames,
         ...(bundleModeConfig?.hasMediaTab ? ['media' as const] : []),
+        ...(environmentMode === 'html-js-fetch' ? ['api-server' as const] : []),
       ];
     }
     if (environmentMode === 'fetch') return ['script.js', 'api-server'];
@@ -255,12 +258,12 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           {!isServerMode && (
             <Button 
               onClick={handleRunClick} 
-              disabled={(isRunning && environmentMode !== 'fetch') || !isPredictionFulfilled}
+              disabled={(isRunning && !isFetchMode) || !isPredictionFulfilled}
               variant="primary"
               className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
               icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
             >
-              {isRunning ? (environmentMode === 'fetch' ? 'RUN AGAIN' : 'RUNNING...') : 'RUN CODE'}
+              {isRunning ? (isFetchMode ? 'RUN AGAIN' : 'RUNNING...') : 'RUN CODE'}
             </Button>
           )}
         </div>
@@ -317,11 +320,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 environmentMode={environmentMode}
                 fixtureHtml={environmentMode === 'dom' ? fixtureHtml : undefined}
                 fixtureCss={environmentMode === 'dom' ? fixtureCss : undefined}
-                mockApi={environmentMode === 'fetch' ? mockApi : undefined}
+                mockApi={isFetchMode ? mockApi : undefined}
                 isBlurred={!isPredictionFulfilled}
                 isPredictionMode={!!predictionPrompt}
                 debugMode={debugMode}
-                onExecutionComplete={environmentMode === 'fetch' ? onExecutionComplete : undefined}
+                onExecutionComplete={isFetchMode ? onExecutionComplete : undefined}
               />
             )}
           </div>

@@ -5,6 +5,7 @@ import {
   HTML_STARTER_CODE,
   HTML_CSS_STARTER_CODE,
   HTML_JS_STARTER_CODE,
+  HTML_JS_FETCH_STARTER_CODE,
   HTML_CSS_JS_STARTER_CODE,
   HTML_JS_CSS_MEDIA_STARTER_CODE,
   FETCH_STARTER_CODE,
@@ -105,6 +106,17 @@ describe('useSandboxState', () => {
     expect(result.current.code).toBe(FETCH_STARTER_CODE);
     expect(result.current.code).toContain('await fetch("/api/air-quality?limit=4")');
     expect(localStorage.getItem('cs_lesson-1_code_fetch')).toBe(FETCH_STARTER_CODE);
+  });
+
+  it('switching to html-js-fetch loads a linked two-file fetch starter', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('html-js-fetch'));
+
+    expect(result.current.code).toBe(HTML_JS_FETCH_STARTER_CODE);
+    const files = parseFileBundle(result.current.code, HTML_JS_FILE_NAMES);
+    expect(files['index.html']).toContain('<script src="script.js"></script>');
+    expect(files['script.js']).toContain('await fetch("/api/air-quality?limit=4")');
+    expect(localStorage.getItem('cs_lesson-1_code_html-js-fetch')).toBe(HTML_JS_FETCH_STARTER_CODE);
   });
 
   it('restores previously saved code when switching back to a mode', () => {

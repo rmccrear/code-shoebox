@@ -44,7 +44,7 @@ The execution pipeline spans three layers. Understanding the message flow is ess
 - `mocks` — a setup script (e.g. `EXPRESS_MOCK_SETUP`, `HONO_MOCK_SETUP`) injected before `logic`.
 - `logic` — a **string of JavaScript** that defines `window.__RUN_MODE__ = (code, root, payload) => {...}`. This is the per-mode executor. It's a string because it's serialized into the iframe's `srcDoc`. DOM fixtures travel in the structured `EXECUTE.payload`; never interpolate fixture strings into `srcDoc`.
 - `showPlaceholder`, `headless` — UI flags.
-- `contentSecurityPolicy` — optional mode-specific CSP inserted into the generated document. Fetch mode uses `connect-src 'none'`.
+- `contentSecurityPolicy` — optional mode-specific CSP inserted into the generated document. Fetch-enabled modes use `connect-src 'none'`.
 
 `getSandboxHtml(mode)` looks up the recipe and feeds it to `BASE_HTML_WRAPPER`.
 
@@ -66,13 +66,13 @@ Two components own an iframe and talk to the kernel. They are selected in `Codin
 ### Mode-specific gotchas
 
 - **p5** runs in global mode and uses a `MutationObserver` to relocate the auto-created `<canvas>` into `#root`.
-- **Bounded file bundles** use one version-1 JSON envelope for the fixed `html-css` (`index.html` + `style.css`), `html-js` (`index.html` + `script.js`), `html-css-js` (`index.html` + `style.css` + `script.js`), and `html-js-css-media` (the same three code files plus host UI) schemas. The runtime recipes contain small inline parsers because iframe logic cannot import modules.
+- **Bounded file bundles** use one version-1 JSON envelope for the fixed `html-css` (`index.html` + `style.css`), `html-js`/`html-js-fetch` (`index.html` + `script.js`), `html-css-js` (`index.html` + `style.css` + `script.js`), and `html-js-css-media` (the same three code files plus host UI) schemas. The runtime recipes contain small inline parsers because iframe logic cannot import modules.
 - **HTML + JavaScript** uses editable bundle tabs with DOM-style execution. It is manual-run, executes only the bundled JS when HTML contains a literal `src="script.js"` marker, removes every parsed HTML script node, and never interpolates learner bundle content into iframe `srcDoc`.
 - **HTML + CSS + JavaScript** is also manual-run. Its literal CSS and JS links resolve independently; every Run removes the prior marked bundle stylesheet and learner DOM, strips parsed scripts and stylesheet links, injects linked CSS with `textContent`, restores body nodes, then executes only bundled JS.
 - **HTML + CSS + JavaScript + Media** reuses that exact sandbox recipe. `mediaAssets` stops at `CodingEnvironment`/`MediaPanel`: it is read-only host state, capped at three, and must never enter the code envelope, localStorage, `OutputFrame`, an `EXECUTE` payload, or iframe `srcDoc`. Snippet strings are escaped for their target language and rendered only as React text.
 - **DOM fixtures** are trusted host-owned `fixtureHtml`/`fixtureCss` values sent in `EXECUTE.payload`. The DOM recipe removes the prior fixture, installs fresh styles/markup, and only then runs learner JavaScript. Fixture tabs are read-only and bounded to `script.js`, `index.html`, and `style.css`.
 - **Emmet** is an editor-only, default-off `enableEmmet` prop. Its adapter is lazy-loaded and each completion provider is gated to the opted-in HTML model because Monaco language providers are otherwise global.
-- **Fetch** receives trusted host-owned `mockApi` routes in `EXECUTE.payload`, replaces `window.fetch` with an abortable `Response`-based mock, and runs learner code with top-level `await`. The read-only API Server panel is host UI; routes never enter persisted code or `srcDoc`. A mode-specific `connect-src 'none'` CSP prevents real connection APIs, and iframe permissions remain unchanged.
+- **Fetch-enabled modes** receive trusted host-owned `mockApi` routes in `EXECUTE.payload`, replace `window.fetch` with an abortable `Response`-based mock, and run learner code with top-level `await`. `html-js-fetch` shares the bounded `html-js` renderer and adds the read-only API Server tab. Routes never enter persisted code or `srcDoc`; `connect-src 'none'` prevents real connection APIs, and iframe permissions remain unchanged.
 - **React** patches `ReactDOM.createRoot` to capture and unmount the root between runs (prevents leaks / "container not found").
 - **Express** is a hand-written mock object (`templates/express.ts`), *not* the real library — no middleware, no `app.use`.
 - **Hono** is the *real* library loaded from `esm.sh`. User code **must** `export default app`. `.fire()`/`.listen()` are patched to start the bridge. TS/`export default` is handled by transpiling to CommonJS via Babel and reading `module.exports.default`.
