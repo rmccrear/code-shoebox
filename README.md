@@ -209,6 +209,14 @@ const mockApi: MockApiConfig = {
       ],
     },
     {
+      method: 'POST',
+      path: '/api/alerts',
+      requestHeaders: { 'x-api-key': 'lesson-key' },
+      requestBody: { city: 'Portland', threshold: 50 },
+      status: 201,
+      body: { id: 1, message: 'Alert created' },
+    },
+    {
       method: 'GET',
       path: '/api/offline',
       networkError: true,
@@ -227,7 +235,21 @@ const mockApi: MockApiConfig = {
 />
 ```
 
-Routes match by method and pathname. A declared `query` requires the exact key/value set and takes precedence over a query-agnostic route. Undeclared `/api/...` routes resolve as JSON `404` responses; declared network errors reject. Absolute URL strings are rejected and the iframe uses `connect-src 'none'`, so tutorial calls never contact a real API. POST request bodies are accepted but not inspected in v1; responses remain stateless and canned.
+Routes match by method and pathname, plus any optional request matchers. `query` requires an exact key/value set. `requestHeaders` requires those header values case-insensitively while allowing extra learner headers. `requestBody` deep-matches parsed JSON, ignoring object key order but preserving array order. The most specific matching route wins; equally specific routes keep declaration order, which makes it straightforward to place a generic fallback beside authenticated or body-specific responses. Missing or malformed JSON does not match `requestBody`.
+
+```javascript
+let response = await fetch('/api/alerts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': 'lesson-key',
+  },
+  body: JSON.stringify({ city: 'Portland', threshold: 50 }),
+});
+console.log(await response.json());
+```
+
+Undeclared `/api/...` routes resolve as JSON `404` responses; declared network errors reject. Absolute URL strings are rejected and the iframe uses `connect-src 'none'`, so tutorial calls never contact a real API. Responses remain stateless and canned: request matchers select a response but do not run host callbacks or mutate server state. Values such as tutorial API keys are visible fixture data, not secrets—never place real credentials in `mockApi`.
 
 In `html-js-fetch`, the code prop uses the same two-file envelope as `html-js`, and `index.html` must contain the literal `<script src="script.js"></script>` link. Each Run rebuilds the page, then executes `script.js` asynchronously with the configured mock routes.
 

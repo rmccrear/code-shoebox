@@ -95,7 +95,13 @@ describe('demoPresets', () => {
     expect(preset?.mode).toBe('fetch');
     expect(mockApi?.defaultDelayMs).toBe(1000);
     expect(mockApi?.routes.some((route) => route.query?.limit === '4')).toBe(true);
+    expect(mockApi?.routes.some((route) => (
+      route.requestHeaders?.['x-api-key'] === 'air-demo-key'
+      && route.requestBody !== undefined
+    ))).toBe(true);
     expect(preset?.code).toContain('await fetch("/api/air-quality?limit=4")');
+    expect(preset?.code).toContain('"X-API-Key": "air-demo-key"');
+    expect(preset?.code).toContain('body: JSON.stringify');
     expect(preset?.code).not.toContain('Portland');
   });
 

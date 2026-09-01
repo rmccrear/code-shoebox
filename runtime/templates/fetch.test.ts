@@ -60,6 +60,100 @@ describe('fetch tutorial mock', () => {
     await expect((await fallbackPromise).json()).resolves.toEqual(['fallback']);
   });
 
+  it('matches JSON POST bodies and required headers before a generic fallback', async () => {
+    installMock({
+      defaultDelayMs: 0,
+      routes: [
+        { method: 'POST', path: '/api/messages', body: { accepted: false } },
+        {
+          method: 'POST',
+          path: '/api/messages',
+          requestHeaders: { 'x-api-key': 'lesson-secret' },
+          requestBody: { text: 'Hello', metadata: { urgent: true } },
+          status: 201,
+          body: { accepted: true, id: 7 },
+        },
+      ],
+    });
+
+    const pending = window.fetch('/api/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': 'lesson-secret',
+        'X-Unmatched-Extra': 'allowed',
+      },
+      body: JSON.stringify({ metadata: { urgent: true }, text: 'Hello' }),
+    });
+    await vi.runAllTimersAsync();
+    const response = await pending;
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({ accepted: true, id: 7 });
+  });
+
+  it('uses fallback routes when a required header or JSON body does not match', async () => {
+    installMock({
+      defaultDelayMs: 0,
+      routes: [
+        { method: 'POST', path: '/api/messages', body: { route: 'fallback' } },
+        {
+          method: 'POST',
+          path: '/api/messages',
+          requestHeaders: { 'x-api-key': 'lesson-secret' },
+          requestBody: { text: 'Hello' },
+          body: { route: 'protected' },
+        },
+      ],
+    });
+
+    const wrongHeader = window.fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': 'wrong' },
+      body: JSON.stringify({ text: 'Hello' }),
+    });
+    const wrongBody = window.fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': 'lesson-secret' },
+      body: JSON.stringify({ text: 'Goodbye' }),
+    });
+    const malformedBody = window.fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': 'lesson-secret' },
+      body: 'not json',
+    });
+    await vi.runAllTimersAsync();
+
+    await expect((await wrongHeader).json()).resolves.toEqual({ route: 'fallback' });
+    await expect((await wrongBody).json()).resolves.toEqual({ route: 'fallback' });
+    await expect((await malformedBody).json()).resolves.toEqual({ route: 'fallback' });
+  });
+
+  it('matches headers and JSON bodies inherited from a Request object', async () => {
+    installMock({
+      defaultDelayMs: 0,
+      routes: [
+        {
+          method: 'POST',
+          path: '/api/messages',
+          requestHeaders: { 'x-api-key': 'request-secret' },
+          requestBody: { text: 'From Request' },
+          body: { matched: true },
+        },
+      ],
+    });
+    const request = new Request(new URL('/api/messages', document.baseURI), {
+      method: 'POST',
+      headers: { 'X-API-Key': 'request-secret', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: 'From Request' }),
+    });
+
+    const pending = window.fetch(request);
+    await vi.runAllTimersAsync();
+
+    await expect((await pending).json()).resolves.toEqual({ matched: true });
+  });
+
   it('resolves unmatched routes as JSON 404 responses', async () => {
     installMock({ defaultDelayMs: 0, routes: [] });
 

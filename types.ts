@@ -26,6 +26,10 @@ interface MockApiRouteBase {
   path: string;
   /** Exact query match. Routes without this field accept any query string. */
   query?: Readonly<Record<string, string>>;
+  /** Required request headers. Names are case-insensitive; extra learner headers are allowed. */
+  requestHeaders?: Readonly<Record<string, string>>;
+  /** Deep-equal JSON request body match. Object key order is ignored. */
+  requestBody?: JsonValue;
   /** Overrides the API-wide simulated latency for this route. */
   delayMs?: number;
 }
