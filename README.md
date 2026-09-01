@@ -358,6 +358,20 @@ The library provides multiple ways to manage saved state.
 Pass a manual string ID (e.g., `useSandboxState('lesson-1')`).
 *   Code, theme, and mode preferences are saved to `localStorage` namespaced by this ID.
 
+#### Key lifecycle
+
+`useSandboxState` represents one mounted activity identity. Keep its
+`persistenceKey`, `initialCodeOverride`, and `defaultMode` stable for the
+lifetime of that mounted hook. When the page, lesson, or exercise identity
+changes, remount the component that owns the hook (for example, with a React
+`key`) so the new instance hydrates before it can save.
+
+If `persistenceKey` changes without a remount, the hook emits one lifecycle
+warning and permanently disables persistence for that mounted instance. It
+does not rehydrate or resume saving if the key later changes back; this
+defense prevents state hydrated for one activity from overwriting another
+activity's namespace.
+
 ### 2. Scratchpad Mode (No Key)
 Pass nothing (e.g., `useSandboxState()`).
 *   State is kept in memory only.
@@ -368,18 +382,33 @@ Use the `useAutoKey` helper to generate a key based on the page URL and prompt t
 ```tsx
 import { CodeShoebox, useSandboxState, useAutoKey } from 'code-shoebox';
 
-const ExerciseComponent = () => {
-  const promptText = "Write a function that calculates the factorial of n.";
-  const starterCode = "function factorial(n) { \n // TODO \n }";
+const Exercise = ({ promptText, starterCode }) => {
   const persistenceKey = useAutoKey(promptText, starterCode);
-  const { code, setCode, ...state } = useSandboxState(persistenceKey);
+
+  // useAutoKey changes when the exercise inputs change. Key the component
+  // that owns useSandboxState so every exercise hydrates in a fresh instance.
+  return (
+    <ExerciseSandbox
+      key={persistenceKey}
+      persistenceKey={persistenceKey}
+      promptText={promptText}
+      starterCode={starterCode}
+    />
+  );
+};
+
+const ExerciseSandbox = ({ persistenceKey, promptText, starterCode }) => {
+  const { code, setCode, ...state } = useSandboxState(
+    persistenceKey,
+    starterCode,
+  );
 
   return (
-    <CodeShoebox 
-        code={code} 
-        onCodeChange={setCode}
-        prediction_prompt={promptText}
-        {...state} 
+    <CodeShoebox
+      code={code}
+      onCodeChange={setCode}
+      prediction_prompt={promptText}
+      {...state}
     />
   );
 };
