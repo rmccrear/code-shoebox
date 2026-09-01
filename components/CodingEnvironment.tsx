@@ -9,7 +9,7 @@ import {
   GripVertical,
   GripHorizontal
 } from 'lucide-react';
-import { CodeEditor } from './CodeEditor';
+import { ReadOnlyCodeViewer } from './ReadOnlyCodeViewer';
 import { MediaPanel } from './MediaPanel';
 import { ApiServerPanel } from './ApiServerPanel';
 import { OutputFrame } from './OutputFrame';
@@ -40,6 +40,21 @@ const BUNDLE_MODE_CONFIG = {
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
   mode === 'html' ? 'index.html' : `${mode}.script`;
+
+const getCodeLanguage = (mode: EnvironmentMode, filename?: string): string => {
+  if (filename?.endsWith('.html')) return 'html';
+  if (filename?.endsWith('.css')) return 'css';
+  if (filename?.endsWith('.js')) return 'javascript';
+  if (mode === 'html') return 'html';
+  if (['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'].includes(mode)) {
+    return 'typescript';
+  }
+  return 'javascript';
+};
+
+const CodeEditor = React.lazy(() => import('./CodeEditor').then((module) => ({
+  default: module.CodeEditor,
+})));
 
 interface CodingEnvironmentProps {
   code: string;
@@ -86,6 +101,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
   const isFetchMode = environmentMode === 'fetch' || environmentMode === 'html-js-fetch';
 
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG
@@ -133,6 +149,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       : hasDomFixtures && selectedFile === 'style.css'
         ? fixtureCss ?? ''
         : code;
+  const displayedFilename = isTabbedMode && selectedFile
+    ? selectedFile
+    : getDisplayFilename(environmentMode);
+  const displayedLanguage = getCodeLanguage(
+    environmentMode,
+    isTabbedMode ? selectedFile ?? undefined : undefined
+  );
   const handleEditorChange = (value: string | undefined) => {
     const next = value || '';
     if (isEditableBundleMode && files && selectedFile) {
@@ -279,17 +302,30 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
             />
           ) : selectedTab === 'api-server' ? (
             <ApiServerPanel mockApi={mockApi} themeMode={themeMode} />
-          ) : (
-            <CodeEditor
+          ) : isPredictionSourceMode ? (
+            <ReadOnlyCodeViewer
               code={editorCode}
-              onChange={handleEditorChange}
+              filename={displayedFilename}
+              language={displayedLanguage}
               themeMode={themeMode}
-              environmentMode={environmentMode}
-              sessionId={sessionId}
-              activeFile={isTabbedMode ? selectedFile ?? undefined : undefined}
-              enableEmmet={enableEmmet}
-              readOnly={(!!predictionPrompt && isPredictionLocked) || (hasDomFixtures && selectedFile !== 'script.js')}
             />
+          ) : (
+            <React.Suspense fallback={(
+              <div className="h-full w-full flex items-center justify-center text-sm opacity-50">
+                Loading Editor...
+              </div>
+            )}>
+              <CodeEditor
+                code={editorCode}
+                onChange={handleEditorChange}
+                themeMode={themeMode}
+                environmentMode={environmentMode}
+                sessionId={sessionId}
+                activeFile={isTabbedMode ? selectedFile ?? undefined : undefined}
+                enableEmmet={enableEmmet}
+                readOnly={hasDomFixtures && selectedFile !== 'script.js'}
+              />
+            </React.Suspense>
           )}
         </div>
 

@@ -107,15 +107,103 @@ describe('CodingEnvironment routing', () => {
     expect(screen.queryByPlaceholderText('/api/inventory')).not.toBeInTheDocument();
   });
 
-  it('keeps plain DOM mode as one JavaScript editor without file tabs', () => {
+  it('keeps plain DOM mode as one JavaScript editor without file tabs', async () => {
     renderCodingEnvironment('dom', { code: 'console.log("plain")' });
 
     expect(getFileTabNames()).toEqual([]);
-    expect(screen.getByLabelText('Code editor')).toHaveValue('console.log("plain")');
+    expect(await screen.findByLabelText('Code editor')).toHaveValue('console.log("plain")');
     expect(screen.getByLabelText('Code editor')).not.toHaveAttribute('readonly');
   });
 
-  it('shows editable script.js and a read-only API Server panel in fetch mode', () => {
+  it('keeps prediction source static before and after Run and executes only the host code', () => {
+    const source = 'const saved = "Ada";\n\nconsole.log(saved);';
+    const onChange = vi.fn();
+    const onRun = vi.fn();
+    const rendered = renderCodingEnvironment('node-js', {
+      code: source,
+      onChange,
+      onRun,
+      predictionPrompt: 'What will this print?',
+    });
+
+    const runButton = screen.getByRole('button', { name: 'RUN CODE' });
+    const viewer = screen.getByLabelText('Read-only code: node-js.script');
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(viewer.querySelector('code')?.textContent).toBe(source);
+    expect(viewer).toHaveAttribute('data-language', 'javascript');
+    expect(runButton).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('What will happen when the code runs?'), {
+      target: { value: 'Ada' },
+    });
+    expect(runButton).toBeEnabled();
+    fireEvent.click(runButton);
+
+    expect(onRun).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Read-only code: node-js.script').querySelector('code')?.textContent)
+      .toBe(source);
+    expect(screen.getByPlaceholderText('What will happen when the code runs?')).toBeDisabled();
+
+    rendered.rerender(
+      <CodingEnvironment
+        code={source}
+        onChange={onChange}
+        onRun={onRun}
+        isRunning={false}
+        runTrigger={1}
+        themeMode="dark"
+        environmentMode="node-js"
+        sessionId={1}
+      />
+    );
+    expect(screen.queryByText('Knowledge Check')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Read-only code: node-js.script').querySelector('code')?.textContent)
+      .toBe(source);
+  });
+
+  it('switches immutable prediction source between bounded code-file tabs', () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'index.html': '<button id="save">Save</button><script src="script.js"></script>',
+      'script.js': 'console.log("saved")',
+    });
+    renderCodingEnvironment('html-js', {
+      code,
+      onChange,
+      predictionPrompt: 'What happens after Run?',
+    });
+
+    const htmlViewer = screen.getByLabelText('Read-only code: index.html');
+    expect(htmlViewer.querySelector('code')?.textContent)
+      .toBe('<button id="save">Save</button><script src="script.js"></script>');
+    expect(htmlViewer).toHaveAttribute('data-language', 'html');
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'script.js' }));
+    const scriptViewer = screen.getByLabelText('Read-only code: script.js');
+    expect(scriptViewer.querySelector('code')?.textContent).toBe('console.log("saved")');
+    expect(scriptViewer).toHaveAttribute('data-language', 'javascript');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('continues to mount editable Monaco for non-prediction activities', async () => {
+    const onChange = vi.fn();
+    renderCodingEnvironment('node-js', {
+      code: 'console.log("editable")',
+      onChange,
+    });
+
+    const editor = await screen.findByLabelText('Code editor');
+    expect(editor).not.toHaveAttribute('readonly');
+    fireEvent.change(editor, { target: { value: 'console.log("changed")' } });
+    expect(onChange).toHaveBeenCalledWith('console.log("changed")');
+    expect(screen.queryByLabelText(/Read-only code:/)).not.toBeInTheDocument();
+  });
+
+  it('shows editable script.js and a read-only API Server panel in fetch mode', async () => {
     const onChange = vi.fn();
     renderCodingEnvironment('fetch', {
       code: 'let response = await fetch("/api/readings");',
@@ -127,7 +215,7 @@ describe('CodingEnvironment routing', () => {
 
     expect(screen.getByRole('button', { name: 'script.js' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'API Server' })).toHaveAttribute('title', 'Read-only mock API');
-    expect(screen.getByLabelText('Code editor')).toHaveValue('let response = await fetch("/api/readings");');
+    expect(await screen.findByLabelText('Code editor')).toHaveValue('let response = await fetch("/api/readings");');
 
     fireEvent.click(screen.getByRole('button', { name: 'API Server' }));
     expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
@@ -146,7 +234,7 @@ describe('CodingEnvironment routing', () => {
     expect(onRun).toHaveBeenCalledTimes(1);
   });
 
-  it('shows editable HTML and JavaScript plus the locked API Server in html-js-fetch mode', () => {
+  it('shows editable HTML and JavaScript plus the locked API Server in html-js-fetch mode', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({
       'index.html': '<p id="status">Loading</p><script src="script.js"></script>',
@@ -163,7 +251,7 @@ describe('CodingEnvironment routing', () => {
       .filter((name) => ['index.html', 'script.js', 'API Server'].includes(name ?? ''));
     expect(workspaceTabNames).toEqual(['index.html', 'script.js', 'API Server']);
 
-    fireEvent.change(screen.getByLabelText('Code editor'), {
+    fireEvent.change(await screen.findByLabelText('Code editor'), {
       target: { value: '<p id="status">Waiting</p><script src="script.js"></script>' },
     });
     expect(parseFileBundle(onChange.mock.calls[0][0], HTML_JS_FILE_NAMES)['script.js'])
@@ -207,7 +295,7 @@ describe('CodingEnvironment routing', () => {
     expect(getFileTabNames()).toEqual(['script.js', 'index.html', 'style.css']);
   });
 
-  it('switches DOM fixture tabs between editable JavaScript and read-only host files', () => {
+  it('switches DOM fixture tabs between editable JavaScript and read-only host files', async () => {
     const onChange = vi.fn();
     renderCodingEnvironment('dom', {
       code: 'const status = document.getElementById("status");',
@@ -215,7 +303,7 @@ describe('CodingEnvironment routing', () => {
       fixtureCss: '#status { color: green; }',
       onChange,
     });
-    let editor = screen.getByLabelText('Code editor');
+    let editor = await screen.findByLabelText('Code editor');
 
     expect(editor).toHaveValue('const status = document.getElementById("status");');
     expect(editor).not.toHaveAttribute('readonly');
@@ -241,14 +329,14 @@ describe('CodingEnvironment routing', () => {
     expect(onChange).toHaveBeenCalledWith('console.log("edited")');
   });
 
-  it('preserves the two editable html-css files and serialized change envelope', () => {
+  it('preserves the two editable html-css files and serialized change envelope', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({
       'index.html': '<h1>Page</h1>',
       'style.css': 'h1 { color: blue; }',
     });
     renderCodingEnvironment('html-css', { code, onChange });
-    let editor = screen.getByLabelText('Code editor');
+    let editor = await screen.findByLabelText('Code editor');
 
     expect(getFileTabNames()).toEqual(['index.html', 'style.css']);
     expect(editor).toHaveValue('<h1>Page</h1>');
@@ -266,14 +354,14 @@ describe('CodingEnvironment routing', () => {
     });
   });
 
-  it('preserves two editable html-js files with filename-specific languages', () => {
+  it('preserves two editable html-js files with filename-specific languages', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({
       'index.html': '<button id="go">Go</button><script src="script.js"></script>',
       'script.js': 'document.getElementById("go").focus();',
     });
     renderCodingEnvironment('html-js', { code, onChange });
-    let editor = screen.getByLabelText('Code editor');
+    let editor = await screen.findByLabelText('Code editor');
 
     expect(getFileTabNames()).toEqual(['index.html', 'script.js']);
     expect(editor).toHaveValue('<button id="go">Go</button><script src="script.js"></script>');
@@ -296,7 +384,7 @@ describe('CodingEnvironment routing', () => {
     expect(jsEdit['script.js']).toBe('console.log("launched")');
   });
 
-  it('preserves three editable html-css-js files with filename-specific languages', () => {
+  it('preserves three editable html-css-js files with filename-specific languages', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({
       'index.html': '<button id="go">Go</button><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
@@ -304,7 +392,7 @@ describe('CodingEnvironment routing', () => {
       'script.js': 'document.getElementById("go").focus();',
     });
     renderCodingEnvironment('html-css-js', { code, onChange });
-    let editor = screen.getByLabelText('Code editor');
+    let editor = await screen.findByLabelText('Code editor');
 
     expect(getFileTabNames()).toEqual(['index.html', 'style.css', 'script.js']);
     expect(editor).toHaveAttribute('data-language', 'html');
@@ -333,7 +421,7 @@ describe('CodingEnvironment routing', () => {
     expect(jsEdit['script.js']).toBe('console.log("launched")');
   });
 
-  it('adds a fourth read-only Media tab without changing the three-file envelope', () => {
+  it('adds a fourth read-only Media tab without changing the three-file envelope', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({
       'index.html': '<main>Media lesson</main><link rel="stylesheet" href="style.css"><script src="script.js"></script>',
@@ -361,7 +449,7 @@ describe('CodingEnvironment routing', () => {
     expect(onChange).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'style.css' }));
-    const editor = screen.getByLabelText('Code editor');
+    const editor = await screen.findByLabelText('Code editor');
     expect(editor).toHaveValue('main { color: navy; }');
     fireEvent.change(editor, { target: { value: 'main { color: teal; }' } });
     expect(parseFileBundle(onChange.mock.calls[0][0], HTML_CSS_JS_FILE_NAMES)).toEqual({
