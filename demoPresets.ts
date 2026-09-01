@@ -59,7 +59,7 @@ export const FETCH_DEMO_API = {
     {
       method: 'POST',
       path: '/api/alerts',
-      requestHeaders: { 'x-api-key': 'air-demo-key' },
+      requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
       requestBody: { city: 'Portland', threshold: 50 },
       status: 201,
       body: { id: 1, message: 'Air-quality alert created' },
@@ -298,7 +298,7 @@ let alertResponse = await fetch("/api/alerts", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "X-API-Key": "air-demo-key"
+    "X-API-Key": "xyz-secret-key-lmnop"
   },
   body: JSON.stringify({ city: readings[0].city, threshold: 50 })
 });

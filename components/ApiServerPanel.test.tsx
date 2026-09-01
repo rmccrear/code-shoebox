@@ -14,7 +14,7 @@ describe('ApiServerPanel', () => {
             {
               method: 'POST',
               path: '/api/messages',
-              requestHeaders: { 'x-api-key': 'lesson-secret' },
+              requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
               requestBody: { text: 'Hello' },
               status: 201,
               delayMs: 250,
@@ -33,7 +33,7 @@ describe('ApiServerPanel', () => {
     expect(screen.getByText('Required request headers')).toBeInTheDocument();
     expect(screen.getByText('Required JSON request body')).toBeInTheDocument();
     expect(screen.getAllByText('Response JSON')).toHaveLength(2);
-    expect(screen.getByText(/"x-api-key": "lesson-secret"/)).toBeInTheDocument();
+    expect(screen.getByText(/"x-api-key": "xyz-secret-key-lmnop"/)).toBeInTheDocument();
     expect(screen.getByText(/"text": "Hello"/)).toBeInTheDocument();
     expect(screen.getByText('Connection lost')).toBeInTheDocument();
   });

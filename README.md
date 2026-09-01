@@ -211,7 +211,7 @@ const mockApi: MockApiConfig = {
     {
       method: 'POST',
       path: '/api/alerts',
-      requestHeaders: { 'x-api-key': 'lesson-key' },
+      requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
       requestBody: { city: 'Portland', threshold: 50 },
       status: 201,
       body: { id: 1, message: 'Alert created' },
@@ -242,7 +242,7 @@ let response = await fetch('/api/alerts', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'X-API-Key': 'lesson-key',
+    'X-API-Key': 'xyz-secret-key-lmnop',
   },
   body: JSON.stringify({ city: 'Portland', threshold: 50 }),
 });

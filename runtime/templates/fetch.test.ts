@@ -68,7 +68,7 @@ describe('fetch tutorial mock', () => {
         {
           method: 'POST',
           path: '/api/messages',
-          requestHeaders: { 'x-api-key': 'lesson-secret' },
+          requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
           requestBody: { text: 'Hello', metadata: { urgent: true } },
           status: 201,
           body: { accepted: true, id: 7 },
@@ -80,7 +80,7 @@ describe('fetch tutorial mock', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': 'lesson-secret',
+        'X-API-Key': 'xyz-secret-key-lmnop',
         'X-Unmatched-Extra': 'allowed',
       },
       body: JSON.stringify({ metadata: { urgent: true }, text: 'Hello' }),
@@ -100,7 +100,7 @@ describe('fetch tutorial mock', () => {
         {
           method: 'POST',
           path: '/api/messages',
-          requestHeaders: { 'x-api-key': 'lesson-secret' },
+          requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
           requestBody: { text: 'Hello' },
           body: { route: 'protected' },
         },
@@ -109,17 +109,17 @@ describe('fetch tutorial mock', () => {
 
     const wrongHeader = window.fetch('/api/messages', {
       method: 'POST',
-      headers: { 'x-api-key': 'wrong' },
+      headers: { 'x-api-key': 'xyz-wrong-key-lmnop' },
       body: JSON.stringify({ text: 'Hello' }),
     });
     const wrongBody = window.fetch('/api/messages', {
       method: 'POST',
-      headers: { 'x-api-key': 'lesson-secret' },
+      headers: { 'x-api-key': 'xyz-secret-key-lmnop' },
       body: JSON.stringify({ text: 'Goodbye' }),
     });
     const malformedBody = window.fetch('/api/messages', {
       method: 'POST',
-      headers: { 'x-api-key': 'lesson-secret' },
+      headers: { 'x-api-key': 'xyz-secret-key-lmnop' },
       body: 'not json',
     });
     await vi.runAllTimersAsync();
@@ -136,7 +136,7 @@ describe('fetch tutorial mock', () => {
         {
           method: 'POST',
           path: '/api/messages',
-          requestHeaders: { 'x-api-key': 'request-secret' },
+          requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
           requestBody: { text: 'From Request' },
           body: { matched: true },
         },
@@ -144,7 +144,7 @@ describe('fetch tutorial mock', () => {
     });
     const request = new Request(new URL('/api/messages', document.baseURI), {
       method: 'POST',
-      headers: { 'X-API-Key': 'request-secret', 'Content-Type': 'application/json' },
+      headers: { 'X-API-Key': 'xyz-secret-key-lmnop', 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: 'From Request' }),
     });
 
