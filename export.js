@@ -1,8 +1,8 @@
 // components/CodeShoebox.tsx
-import { useState as useState5, useMemo as useMemo5, useEffect as useEffect4, useRef as useRef4 } from "react";
+import { useState as useState5, useMemo as useMemo4, useEffect as useEffect4, useRef as useRef4 } from "react";
 
 // components/CodingEnvironment.tsx
-import { useState as useState4, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3, useMemo as useMemo4 } from "react";
+import React5, { useState as useState4, useEffect as useEffect3, useRef as useRef3, useCallback as useCallback3, useMemo as useMemo3 } from "react";
 import {
   Play,
   CheckCircle2,
@@ -14,337 +14,24 @@ import {
   GripHorizontal as GripHorizontal3
 } from "lucide-react";
 
-// components/CodeEditor.tsx
-import { useMemo } from "react";
-import Editor from "@monaco-editor/react";
-
-// components/emmet.ts
-var registerHtmlEmmetForModel = (monaco, enabledModel) => import("emmet-monaco-es").then(({ emmetHTML }) => {
-  const languagesProxy = new Proxy(monaco.languages, {
-    get(target, property) {
-      if (property !== "registerCompletionItemProvider") {
-        return Reflect.get(target, property, target);
-      }
-      return (languageSelector, provider) => target.registerCompletionItemProvider(languageSelector, {
-        ...provider,
-        provideCompletionItems(model, position, context, token) {
-          if (model !== enabledModel) return void 0;
-          return provider.provideCompletionItems(model, position, context, token);
-        }
-      });
-    }
-  });
-  const gatedMonaco = new Proxy(monaco, {
-    get(target, property) {
-      if (property === "languages") return languagesProxy;
-      return Reflect.get(target, property, target);
-    }
-  });
-  return emmetHTML(gatedMonaco, ["html"], { tokenizer: "standard" });
-});
-
-// components/CodeEditor.tsx
+// components/ReadOnlyCodeViewer.tsx
 import { jsx } from "react/jsx-runtime";
-var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
-var CONSOLE_ONLY_JS_MODES = ["node-js", "express", "hono"];
-var CONSOLE_SHIM = `
-declare var console: {
-  log(...data: any[]): void;
-  error(...data: any[]): void;
-  warn(...data: any[]): void;
-  info(...data: any[]): void;
-  debug(...data: any[]): void;
-  table(data: any, columns?: string[]): void;
-  dir(item?: any): void;
-  group(...data: any[]): void;
-  groupEnd(): void;
-  time(label?: string): void;
-  timeEnd(label?: string): void;
-  count(label?: string): void;
-  assert(condition?: boolean, ...data: any[]): void;
-  trace(...data: any[]): void;
-  clear(): void;
-};
-`;
-var applyJavaScriptLibs = (monaco, environmentMode) => {
-  const consoleOnly = CONSOLE_ONLY_JS_MODES.includes(environmentMode);
-  const ts = monaco.languages.typescript;
-  ts.javascriptDefaults.setCompilerOptions({
-    target: ts.ScriptTarget.ES2020,
-    allowNonTsExtensions: true,
-    allowJs: true,
-    lib: consoleOnly ? ["es2020"] : ["es2020", "dom"]
-  });
-  ts.javascriptDefaults.addExtraLib(
-    consoleOnly ? CONSOLE_SHIM : "",
-    "ts:code-shoebox-console.d.ts"
-  );
-};
-var CodeEditor = ({
+var ReadOnlyCodeViewer = ({
   code,
-  onChange,
-  themeMode,
-  environmentMode,
-  sessionId,
-  activeFile,
-  enableEmmet = false,
-  readOnly = false
-}) => {
-  const modelPath = useMemo(() => {
-    const basePath = `sandbox-${environmentMode}-${sessionId}`;
-    if (activeFile) return `${basePath}-${activeFile}`;
-    switch (environmentMode) {
-      case "typescript":
-      case "express-ts":
-      case "hono-ts":
-      case "p5-ts":
-      case "node-ts":
-        return `${basePath}.ts`;
-      case "react-ts":
-        return `${basePath}.tsx`;
-      case "html":
-        return `${basePath}.html`;
-      case "react":
-        return `${basePath}.jsx`;
-      case "p5":
-        return `${basePath}.js`;
-      default:
-        return `${basePath}.js`;
-    }
-  }, [sessionId, environmentMode, activeFile]);
-  const language = useMemo(() => {
-    if (activeFile?.endsWith(".html")) return "html";
-    if (activeFile?.endsWith(".css")) return "css";
-    if (activeFile?.endsWith(".js")) return "javascript";
-    if (environmentMode === "html") return "html";
-    const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
-    if (tsModes.includes(environmentMode)) return "typescript";
-    return "javascript";
-  }, [environmentMode, activeFile]);
-  const handleEditorDidMount = (editor, monaco) => {
-    editor.focus();
-    const refreshEditorMetrics = () => {
-      monaco.editor.remeasureFonts();
-      editor.layout();
-    };
-    refreshEditorMetrics();
-    window.requestAnimationFrame(refreshEditorMetrics);
-    window.setTimeout(refreshEditorMetrics, 250);
-    document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
-    if (enableEmmet && language === "html" && !readOnly) {
-      const model = editor.getModel();
-      if (model) {
-        let editorDisposed = false;
-        let disposeEmmet;
-        void registerHtmlEmmetForModel(monaco, model).then((dispose) => {
-          if (editorDisposed) dispose();
-          else disposeEmmet = dispose;
-        }).catch((error) => {
-          if (!editorDisposed) console.error("[CodeShoebox] Failed to enable Emmet.", error);
-        });
-        editor.onDidDispose(() => {
-          editorDisposed = true;
-          disposeEmmet?.();
-        });
-      }
-    }
-    if (language === "javascript") {
-      applyJavaScriptLibs(monaco, environmentMode);
-      editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
-    }
-    if (language === "typescript") {
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-        jsx: monaco.languages.typescript.JsxEmit.React,
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
-        allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        noLib: false,
-        esModuleInterop: true
-      });
-      if (environmentMode === "react-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
-                declare namespace React {
-                    type ReactNode = any;
-                    interface FC<P = {}> {
-                        (props: P): ReactNode;
-                    }
-                    interface Dispatch<A> {
-                        (value: A): void;
-                    }
-                    type SetStateAction<S> = S | ((prevState: S) => S);
-                }
-
-                declare module 'react' {
-                    export type ReactNode = any;
-                    export interface FC<P = {}> {
-                        (props: P): ReactNode;
-                    }
-                    export interface Dispatch<A> {
-                        (value: A): void;
-                    }
-                    export type SetStateAction<S> = S | ((prevState: S) => S);
-                    export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>];
-
-                    const React: {
-                        FC: FC<any>;
-                        useState: typeof useState;
-                    };
-                    export default React;
-                }
-
-                declare module 'react-dom/client' {
-                    export interface Root {
-                        render(children: any): void;
-                        unmount(): void;
-                    }
-                    export function createRoot(container: Element | DocumentFragment): Root;
-                }
-                `,
-          "react-shim.d.ts"
-        );
-      }
-      if (environmentMode === "express-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
-                declare module 'express' {
-                    export interface Request {
-                        params: any;
-                        query: any;
-                        body: any;
-                        method: string;
-                        url: string;
-                    }
-                    export interface Response {
-                        status(code: number): this;
-                        json(data: any): void;
-                        send(data: any): void;
-                    }
-                    export interface Application {
-                        get(path: string, handler: (req: Request, res: Response) => void): void;
-                        post(path: string, handler: (req: Request, res: Response) => void): void;
-                        listen(port: number, cb?: () => void): void;
-                    }
-                    function express(): Application;
-                    export default express;
-                }
-                `,
-          "express.d.ts"
-        );
-      }
-      if (environmentMode === "hono-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
-                declare module 'hono' {
-                    export interface Context {
-                        text(content: string): any;
-                        json(data: any): any;
-                        req: {
-                            param(name: string): string;
-                            query(name: string): string;
-                            query(): Record<string, string>;
-                        };
-                    }
-                    export class Hono {
-                        get(path: string, handler: (c: Context) => any): void;
-                        post(path: string, handler: (c: Context) => any): void;
-                        fire(): void;
-                    }
-                }
-                declare class Hono {
-                    get(path: string, handler: (c: any) => any): void;
-                    post(path: string, handler: (c: any) => any): void;
-                    fire(): void;
-                }
-                `,
-          "hono.d.ts"
-        );
-      }
-      if (environmentMode === "p5-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
-                declare function createCanvas(w: number, h: number): any;
-                declare function background(gray: number, alpha?: number): void;
-                declare function background(r: number, g: number, b: number, a?: number): void;
-                declare function background(color: string): void;
-                declare function stroke(gray: number, alpha?: number): void;
-                declare function stroke(r: number, g: number, b: number, a?: number): void;
-                declare function noStroke(): void;
-                declare function fill(gray: number, alpha?: number): void;
-                declare function fill(r: number, g: number, b: number, a?: number): void;
-                declare function fill(color: string): void;
-                declare function noFill(): void;
-                declare function circle(x: number, y: number, d: number): void;
-                declare function line(x1: number, y1: number, x2: number, y2: number): void;
-                declare function rect(x: number, y: number, w: number, h: number): void;
-                declare function ellipse(x: number, y: number, w: number, h: number): void;
-                declare function triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
-                declare function dist(x1: number, y1: number, x2: number, y2: number): number;
-                declare function random(max?: number): number;
-                declare function random(min: number, max: number): number;
-                declare function colorMode(mode: string, max?: number): void;
-                declare function angleMode(mode: string): void;
-                declare function translate(x: number, y: number): void;
-                declare function rotate(angle: number): void;
-                declare function push(): void;
-                declare function pop(): void;
-                declare function frameRate(fps: number): void;
-                declare function strokeWeight(weight: number): void;
-                declare var width: number;
-                declare var height: number;
-                declare var frameCount: number;
-                declare var mouseX: number;
-                declare var mouseY: number;
-                declare var mouseIsPressed: boolean;
-                declare var keyIsPressed: boolean;
-                declare const PI: number;
-                declare const TWO_PI: number;
-                declare const DEGREES: string;
-                declare const RADIANS: string;
-                declare const HSB: string;
-                declare const RGB: string;
-                
-                // Allow defining setup and draw on window for global mode
-                interface Window {
-                    setup?: () => void;
-                    draw?: () => void;
-                }
-                `,
-          "p5-shim.d.ts"
-        );
-      }
-    }
-  };
-  return /* @__PURE__ */ jsx("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ jsx(
-    Editor,
-    {
-      height: "100%",
-      path: modelPath,
-      language,
-      theme: themeMode === "dark" ? "vs-dark" : "light",
-      value: code,
-      onChange,
-      onMount: handleEditorDidMount,
-      loading: /* @__PURE__ */ jsx("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
-      options: {
-        readOnly,
-        minimap: { enabled: false },
-        fontSize: 14,
-        wordWrap: "on",
-        automaticLayout: true,
-        padding: { top: 16, bottom: 16 },
-        scrollBeyondLastLine: false,
-        fontFamily: EDITOR_FONT_FAMILY,
-        fontLigatures: false,
-        fixedOverflowWidgets: true,
-        renderValidationDecorations: "on",
-        lineHeight: 24,
-        letterSpacing: 0
-      }
-    },
-    `${modelPath}-${enableEmmet ? "emmet" : "plain"}`
-  ) });
-};
+  filename,
+  language,
+  themeMode
+}) => /* @__PURE__ */ jsx(
+  "pre",
+  {
+    "aria-label": `Read-only code: ${filename}`,
+    className: `m-0 h-full w-full overflow-auto select-text p-4 font-mono text-sm leading-6 whitespace-pre ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-100" : "bg-white text-gray-900"}`,
+    "data-filename": filename,
+    "data-language": language,
+    tabIndex: 0,
+    children: /* @__PURE__ */ jsx("code", { children: code })
+  }
+);
 
 // components/MediaPanel.tsx
 import { useId, useState } from "react";
@@ -509,7 +196,7 @@ var ApiServerPanel = ({ mockApi, themeMode }) => {
 };
 
 // components/OutputFrame.tsx
-import { useEffect, useRef, useState as useState2, useCallback, useMemo as useMemo2 } from "react";
+import { useEffect, useRef, useState as useState2, useCallback, useMemo } from "react";
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -1794,7 +1481,7 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
-import React3 from "react";
+import React2 from "react";
 import { Terminal, Ban } from "lucide-react";
 
 // components/Button.tsx
@@ -1827,7 +1514,7 @@ var Button = ({
 
 // components/Console.tsx
 import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
-var Console = React3.memo(function Console2({
+var Console = React2.memo(function Console2({
   logs,
   onClear,
   themeMode,
@@ -1901,7 +1588,7 @@ var OutputFrame = ({
       timestamp: Date.now()
     }));
   }, []);
-  const sandboxHtml = useMemo2(
+  const sandboxHtml = useMemo(
     () => getSandboxHtml(environmentMode, isPredictionMode),
     [environmentMode, isPredictionMode]
   );
@@ -2057,7 +1744,7 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-import { useEffect as useEffect2, useRef as useRef2, useState as useState3, useCallback as useCallback2, useMemo as useMemo3 } from "react";
+import { useEffect as useEffect2, useRef as useRef2, useState as useState3, useCallback as useCallback2, useMemo as useMemo2 } from "react";
 import { Server, Clock, AlertCircle, GripHorizontal as GripHorizontal2 } from "lucide-react";
 import { jsx as jsx8, jsxs as jsxs7 } from "react/jsx-runtime";
 var MAX_CONSOLE_LOGS2 = 500;
@@ -2161,7 +1848,7 @@ var ServerOutput = ({
     window.addEventListener("message", globalListener);
     return () => window.removeEventListener("message", globalListener);
   }, []);
-  const sandboxHtml = useMemo3(() => {
+  const sandboxHtml = useMemo2(() => {
     return getSandboxHtml(environmentMode);
   }, [environmentMode]);
   useEffect2(() => {
@@ -2370,6 +2057,19 @@ var BUNDLE_MODE_CONFIG = {
   "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
+var getCodeLanguage = (mode, filename) => {
+  if (filename?.endsWith(".html")) return "html";
+  if (filename?.endsWith(".css")) return "css";
+  if (filename?.endsWith(".js")) return "javascript";
+  if (mode === "html") return "html";
+  if (["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"].includes(mode)) {
+    return "typescript";
+  }
+  return "javascript";
+};
+var CodeEditor = React5.lazy(() => import("./CodeEditor-4XVTC4QA.js").then((module) => ({
+  default: module.CodeEditor
+})));
 var CodingEnvironment = ({
   code,
   onChange,
@@ -2395,12 +2095,13 @@ var CodingEnvironment = ({
   const [isDragging, setIsDragging] = useState4(false);
   const containerRef = useRef3(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
   const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
   const editableBundleFileNames = bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === "dom" && (fixtureHtml !== void 0 || fixtureCss !== void 0);
-  const visibleTabs = useMemo4(() => {
+  const visibleTabs = useMemo3(() => {
     if (editableBundleFileNames) {
       return [
         ...editableBundleFileNames,
@@ -2422,7 +2123,7 @@ var CodingEnvironment = ({
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
   const selectedFile = selectedTab === "media" || selectedTab === "api-server" ? null : selectedTab;
-  const files = useMemo4(
+  const files = useMemo3(
     () => editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null,
     [editableBundleFileNames, code]
   );
@@ -2430,6 +2131,11 @@ var CodingEnvironment = ({
     if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
   }, [activeTab, visibleTabs]);
   const editorCode = isEditableBundleMode && files && selectedFile ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
+  const displayedFilename = isTabbedMode && selectedFile ? selectedFile : getDisplayFilename(environmentMode);
+  const displayedLanguage = getCodeLanguage(
+    environmentMode,
+    isTabbedMode ? selectedFile ?? void 0 : void 0
+  );
   const handleEditorChange = (value) => {
     const next = value || "";
     if (isEditableBundleMode && files && selectedFile) {
@@ -2555,7 +2261,15 @@ var CodingEnvironment = ({
           mediaAssets: environmentMode === "html-js-css-media" ? mediaAssets ?? [] : [],
           themeMode
         }
-      ) : selectedTab === "api-server" ? /* @__PURE__ */ jsx9(ApiServerPanel, { mockApi, themeMode }) : /* @__PURE__ */ jsx9(
+      ) : selectedTab === "api-server" ? /* @__PURE__ */ jsx9(ApiServerPanel, { mockApi, themeMode }) : isPredictionSourceMode ? /* @__PURE__ */ jsx9(
+        ReadOnlyCodeViewer,
+        {
+          code: editorCode,
+          filename: displayedFilename,
+          language: displayedLanguage,
+          themeMode
+        }
+      ) : /* @__PURE__ */ jsx9(React5.Suspense, { fallback: /* @__PURE__ */ jsx9("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }), children: /* @__PURE__ */ jsx9(
         CodeEditor,
         {
           code: editorCode,
@@ -2565,9 +2279,9 @@ var CodingEnvironment = ({
           sessionId,
           activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
           enableEmmet,
-          readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
+          readOnly: hasDomFixtures && selectedFile !== "script.js"
         }
-      ) }),
+      ) }) }),
       /* @__PURE__ */ jsx9(
         "div",
         {
@@ -2649,7 +2363,7 @@ var CodeShoebox = ({
     runFallbackRef.current = null;
     setIsRunning(false);
   };
-  const themeStyles = useMemo5(() => {
+  const themeStyles = useMemo4(() => {
     const colors = themeMode === "dark" ? theme.dark : theme.light;
     const defaultBg = themeMode === "dark" ? "220 13% 18%" : "0 0% 98%";
     const defaultFg = themeMode === "dark" ? "0 0% 95%" : "220 13% 18%";
@@ -3501,9 +3215,9 @@ var useSandboxState = (persistenceKey, initialCodeOverride, defaultMode = "dom")
 };
 
 // hooks/useAutoKey.ts
-import { useMemo as useMemo6 } from "react";
+import { useMemo as useMemo5 } from "react";
 var useAutoKey = (identifier, initialCode = "", prefix = "auto") => {
-  const key = useMemo6(() => {
+  const key = useMemo5(() => {
     if (typeof window === "undefined") {
       return `${prefix}_server`;
     }

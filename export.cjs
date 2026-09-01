@@ -5,6 +5,9 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -27,60 +30,53 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// export.ts
-var export_exports = {};
-__export(export_exports, {
-  CodeShoebox: () => CodeShoebox,
-  baseTheme: () => baseTheme,
-  borisTheme: () => borisTheme,
-  modernLabTheme: () => modernLabTheme,
-  themes: () => themes,
-  useAutoKey: () => useAutoKey,
-  useSandboxState: () => useSandboxState
-});
-module.exports = __toCommonJS(export_exports);
-
-// components/CodeShoebox.tsx
-var import_react8 = require("react");
-
-// components/CodingEnvironment.tsx
-var import_react7 = require("react");
-var import_lucide_react6 = require("lucide-react");
-
-// components/CodeEditor.tsx
-var import_react = require("react");
-var import_react2 = __toESM(require("@monaco-editor/react"), 1);
-
 // components/emmet.ts
-var registerHtmlEmmetForModel = (monaco, enabledModel) => import("emmet-monaco-es").then(({ emmetHTML }) => {
-  const languagesProxy = new Proxy(monaco.languages, {
-    get(target, property) {
-      if (property !== "registerCompletionItemProvider") {
-        return Reflect.get(target, property, target);
-      }
-      return (languageSelector, provider) => target.registerCompletionItemProvider(languageSelector, {
-        ...provider,
-        provideCompletionItems(model, position, context, token) {
-          if (model !== enabledModel) return void 0;
-          return provider.provideCompletionItems(model, position, context, token);
+var registerHtmlEmmetForModel;
+var init_emmet = __esm({
+  "components/emmet.ts"() {
+    "use strict";
+    registerHtmlEmmetForModel = (monaco, enabledModel) => import("emmet-monaco-es").then(({ emmetHTML }) => {
+      const languagesProxy = new Proxy(monaco.languages, {
+        get(target, property) {
+          if (property !== "registerCompletionItemProvider") {
+            return Reflect.get(target, property, target);
+          }
+          return (languageSelector, provider) => target.registerCompletionItemProvider(languageSelector, {
+            ...provider,
+            provideCompletionItems(model, position, context, token) {
+              if (model !== enabledModel) return void 0;
+              return provider.provideCompletionItems(model, position, context, token);
+            }
+          });
         }
       });
-    }
-  });
-  const gatedMonaco = new Proxy(monaco, {
-    get(target, property) {
-      if (property === "languages") return languagesProxy;
-      return Reflect.get(target, property, target);
-    }
-  });
-  return emmetHTML(gatedMonaco, ["html"], { tokenizer: "standard" });
+      const gatedMonaco = new Proxy(monaco, {
+        get(target, property) {
+          if (property === "languages") return languagesProxy;
+          return Reflect.get(target, property, target);
+        }
+      });
+      return emmetHTML(gatedMonaco, ["html"], { tokenizer: "standard" });
+    });
+  }
 });
 
 // components/CodeEditor.tsx
-var import_jsx_runtime = require("react/jsx-runtime");
-var EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
-var CONSOLE_ONLY_JS_MODES = ["node-js", "express", "hono"];
-var CONSOLE_SHIM = `
+var CodeEditor_exports = {};
+__export(CodeEditor_exports, {
+  CodeEditor: () => CodeEditor
+});
+var import_react5, import_react6, import_jsx_runtime9, EDITOR_FONT_FAMILY, CONSOLE_ONLY_JS_MODES, CONSOLE_SHIM, applyJavaScriptLibs, CodeEditor;
+var init_CodeEditor = __esm({
+  "components/CodeEditor.tsx"() {
+    "use strict";
+    import_react5 = require("react");
+    import_react6 = __toESM(require("@monaco-editor/react"), 1);
+    init_emmet();
+    import_jsx_runtime9 = require("react/jsx-runtime");
+    EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+    CONSOLE_ONLY_JS_MODES = ["node-js", "express", "hono"];
+    CONSOLE_SHIM = `
 declare var console: {
   log(...data: any[]): void;
   error(...data: any[]): void;
@@ -99,104 +95,104 @@ declare var console: {
   clear(): void;
 };
 `;
-var applyJavaScriptLibs = (monaco, environmentMode) => {
-  const consoleOnly = CONSOLE_ONLY_JS_MODES.includes(environmentMode);
-  const ts = monaco.languages.typescript;
-  ts.javascriptDefaults.setCompilerOptions({
-    target: ts.ScriptTarget.ES2020,
-    allowNonTsExtensions: true,
-    allowJs: true,
-    lib: consoleOnly ? ["es2020"] : ["es2020", "dom"]
-  });
-  ts.javascriptDefaults.addExtraLib(
-    consoleOnly ? CONSOLE_SHIM : "",
-    "ts:code-shoebox-console.d.ts"
-  );
-};
-var CodeEditor = ({
-  code,
-  onChange,
-  themeMode,
-  environmentMode,
-  sessionId,
-  activeFile,
-  enableEmmet = false,
-  readOnly = false
-}) => {
-  const modelPath = (0, import_react.useMemo)(() => {
-    const basePath = `sandbox-${environmentMode}-${sessionId}`;
-    if (activeFile) return `${basePath}-${activeFile}`;
-    switch (environmentMode) {
-      case "typescript":
-      case "express-ts":
-      case "hono-ts":
-      case "p5-ts":
-      case "node-ts":
-        return `${basePath}.ts`;
-      case "react-ts":
-        return `${basePath}.tsx`;
-      case "html":
-        return `${basePath}.html`;
-      case "react":
-        return `${basePath}.jsx`;
-      case "p5":
-        return `${basePath}.js`;
-      default:
-        return `${basePath}.js`;
-    }
-  }, [sessionId, environmentMode, activeFile]);
-  const language = (0, import_react.useMemo)(() => {
-    if (activeFile?.endsWith(".html")) return "html";
-    if (activeFile?.endsWith(".css")) return "css";
-    if (activeFile?.endsWith(".js")) return "javascript";
-    if (environmentMode === "html") return "html";
-    const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
-    if (tsModes.includes(environmentMode)) return "typescript";
-    return "javascript";
-  }, [environmentMode, activeFile]);
-  const handleEditorDidMount = (editor, monaco) => {
-    editor.focus();
-    const refreshEditorMetrics = () => {
-      monaco.editor.remeasureFonts();
-      editor.layout();
-    };
-    refreshEditorMetrics();
-    window.requestAnimationFrame(refreshEditorMetrics);
-    window.setTimeout(refreshEditorMetrics, 250);
-    document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
-    if (enableEmmet && language === "html" && !readOnly) {
-      const model = editor.getModel();
-      if (model) {
-        let editorDisposed = false;
-        let disposeEmmet;
-        void registerHtmlEmmetForModel(monaco, model).then((dispose) => {
-          if (editorDisposed) dispose();
-          else disposeEmmet = dispose;
-        }).catch((error) => {
-          if (!editorDisposed) console.error("[CodeShoebox] Failed to enable Emmet.", error);
-        });
-        editor.onDidDispose(() => {
-          editorDisposed = true;
-          disposeEmmet?.();
-        });
-      }
-    }
-    if (language === "javascript") {
-      applyJavaScriptLibs(monaco, environmentMode);
-      editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
-    }
-    if (language === "typescript") {
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-        jsx: monaco.languages.typescript.JsxEmit.React,
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
+    applyJavaScriptLibs = (monaco, environmentMode) => {
+      const consoleOnly = CONSOLE_ONLY_JS_MODES.includes(environmentMode);
+      const ts = monaco.languages.typescript;
+      ts.javascriptDefaults.setCompilerOptions({
+        target: ts.ScriptTarget.ES2020,
         allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        noLib: false,
-        esModuleInterop: true
+        allowJs: true,
+        lib: consoleOnly ? ["es2020"] : ["es2020", "dom"]
       });
-      if (environmentMode === "react-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
+      ts.javascriptDefaults.addExtraLib(
+        consoleOnly ? CONSOLE_SHIM : "",
+        "ts:code-shoebox-console.d.ts"
+      );
+    };
+    CodeEditor = ({
+      code,
+      onChange,
+      themeMode,
+      environmentMode,
+      sessionId,
+      activeFile,
+      enableEmmet = false,
+      readOnly = false
+    }) => {
+      const modelPath = (0, import_react5.useMemo)(() => {
+        const basePath = `sandbox-${environmentMode}-${sessionId}`;
+        if (activeFile) return `${basePath}-${activeFile}`;
+        switch (environmentMode) {
+          case "typescript":
+          case "express-ts":
+          case "hono-ts":
+          case "p5-ts":
+          case "node-ts":
+            return `${basePath}.ts`;
+          case "react-ts":
+            return `${basePath}.tsx`;
+          case "html":
+            return `${basePath}.html`;
+          case "react":
+            return `${basePath}.jsx`;
+          case "p5":
+            return `${basePath}.js`;
+          default:
+            return `${basePath}.js`;
+        }
+      }, [sessionId, environmentMode, activeFile]);
+      const language = (0, import_react5.useMemo)(() => {
+        if (activeFile?.endsWith(".html")) return "html";
+        if (activeFile?.endsWith(".css")) return "css";
+        if (activeFile?.endsWith(".js")) return "javascript";
+        if (environmentMode === "html") return "html";
+        const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
+        if (tsModes.includes(environmentMode)) return "typescript";
+        return "javascript";
+      }, [environmentMode, activeFile]);
+      const handleEditorDidMount = (editor, monaco) => {
+        editor.focus();
+        const refreshEditorMetrics = () => {
+          monaco.editor.remeasureFonts();
+          editor.layout();
+        };
+        refreshEditorMetrics();
+        window.requestAnimationFrame(refreshEditorMetrics);
+        window.setTimeout(refreshEditorMetrics, 250);
+        document.fonts?.ready.then(refreshEditorMetrics).catch(() => void 0);
+        if (enableEmmet && language === "html" && !readOnly) {
+          const model = editor.getModel();
+          if (model) {
+            let editorDisposed = false;
+            let disposeEmmet;
+            void registerHtmlEmmetForModel(monaco, model).then((dispose) => {
+              if (editorDisposed) dispose();
+              else disposeEmmet = dispose;
+            }).catch((error) => {
+              if (!editorDisposed) console.error("[CodeShoebox] Failed to enable Emmet.", error);
+            });
+            editor.onDidDispose(() => {
+              editorDisposed = true;
+              disposeEmmet?.();
+            });
+          }
+        }
+        if (language === "javascript") {
+          applyJavaScriptLibs(monaco, environmentMode);
+          editor.onDidFocusEditorText(() => applyJavaScriptLibs(monaco, environmentMode));
+        }
+        if (language === "typescript") {
+          monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+            jsx: monaco.languages.typescript.JsxEmit.React,
+            target: monaco.languages.typescript.ScriptTarget.ES2020,
+            allowNonTsExtensions: true,
+            moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+            noLib: false,
+            esModuleInterop: true
+          });
+          if (environmentMode === "react-ts") {
+            monaco.languages.typescript.typescriptDefaults.addExtraLib(
+              `
                 declare namespace React {
                     type ReactNode = any;
                     interface FC<P = {}> {
@@ -234,12 +230,12 @@ var CodeEditor = ({
                     export function createRoot(container: Element | DocumentFragment): Root;
                 }
                 `,
-          "react-shim.d.ts"
-        );
-      }
-      if (environmentMode === "express-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
+              "react-shim.d.ts"
+            );
+          }
+          if (environmentMode === "express-ts") {
+            monaco.languages.typescript.typescriptDefaults.addExtraLib(
+              `
                 declare module 'express' {
                     export interface Request {
                         params: any;
@@ -262,12 +258,12 @@ var CodeEditor = ({
                     export default express;
                 }
                 `,
-          "express.d.ts"
-        );
-      }
-      if (environmentMode === "hono-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
+              "express.d.ts"
+            );
+          }
+          if (environmentMode === "hono-ts") {
+            monaco.languages.typescript.typescriptDefaults.addExtraLib(
+              `
                 declare module 'hono' {
                     export interface Context {
                         text(content: string): any;
@@ -290,12 +286,12 @@ var CodeEditor = ({
                     fire(): void;
                 }
                 `,
-          "hono.d.ts"
-        );
-      }
-      if (environmentMode === "p5-ts") {
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(
-          `
+              "hono.d.ts"
+            );
+          }
+          if (environmentMode === "p5-ts") {
+            monaco.languages.typescript.typescriptDefaults.addExtraLib(
+              `
                 declare function createCanvas(w: number, h: number): any;
                 declare function background(gray: number, alpha?: number): void;
                 declare function background(r: number, g: number, b: number, a?: number): void;
@@ -343,44 +339,85 @@ var CodeEditor = ({
                     draw?: () => void;
                 }
                 `,
-          "p5-shim.d.ts"
-        );
-      }
-    }
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-    import_react2.default,
-    {
-      height: "100%",
-      path: modelPath,
-      language,
-      theme: themeMode === "dark" ? "vs-dark" : "light",
-      value: code,
-      onChange,
-      onMount: handleEditorDidMount,
-      loading: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
-      options: {
-        readOnly,
-        minimap: { enabled: false },
-        fontSize: 14,
-        wordWrap: "on",
-        automaticLayout: true,
-        padding: { top: 16, bottom: 16 },
-        scrollBeyondLastLine: false,
-        fontFamily: EDITOR_FONT_FAMILY,
-        fontLigatures: false,
-        fixedOverflowWidgets: true,
-        renderValidationDecorations: "on",
-        lineHeight: 24,
-        letterSpacing: 0
-      }
-    },
-    `${modelPath}-${enableEmmet ? "emmet" : "plain"}`
-  ) });
-};
+              "p5-shim.d.ts"
+            );
+          }
+        }
+      };
+      return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "monaco-editor-container h-full w-full overflow-hidden", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        import_react6.default,
+        {
+          height: "100%",
+          path: modelPath,
+          language,
+          theme: themeMode === "dark" ? "vs-dark" : "light",
+          value: code,
+          onChange,
+          onMount: handleEditorDidMount,
+          loading: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
+          options: {
+            readOnly,
+            minimap: { enabled: false },
+            fontSize: 14,
+            wordWrap: "on",
+            automaticLayout: true,
+            padding: { top: 16, bottom: 16 },
+            scrollBeyondLastLine: false,
+            fontFamily: EDITOR_FONT_FAMILY,
+            fontLigatures: false,
+            fixedOverflowWidgets: true,
+            renderValidationDecorations: "on",
+            lineHeight: 24,
+            letterSpacing: 0
+          }
+        },
+        `${modelPath}-${enableEmmet ? "emmet" : "plain"}`
+      ) });
+    };
+  }
+});
+
+// export.ts
+var export_exports = {};
+__export(export_exports, {
+  CodeShoebox: () => CodeShoebox,
+  baseTheme: () => baseTheme,
+  borisTheme: () => borisTheme,
+  modernLabTheme: () => modernLabTheme,
+  themes: () => themes,
+  useAutoKey: () => useAutoKey,
+  useSandboxState: () => useSandboxState
+});
+module.exports = __toCommonJS(export_exports);
+
+// components/CodeShoebox.tsx
+var import_react8 = require("react");
+
+// components/CodingEnvironment.tsx
+var import_react7 = __toESM(require("react"), 1);
+var import_lucide_react6 = require("lucide-react");
+
+// components/ReadOnlyCodeViewer.tsx
+var import_jsx_runtime = require("react/jsx-runtime");
+var ReadOnlyCodeViewer = ({
+  code,
+  filename,
+  language,
+  themeMode
+}) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+  "pre",
+  {
+    "aria-label": `Read-only code: ${filename}`,
+    className: `m-0 h-full w-full overflow-auto select-text p-4 font-mono text-sm leading-6 whitespace-pre ${themeMode === "dark" ? "bg-[#1e1e1e] text-gray-100" : "bg-white text-gray-900"}`,
+    "data-filename": filename,
+    "data-language": language,
+    tabIndex: 0,
+    children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("code", { children: code })
+  }
+);
 
 // components/MediaPanel.tsx
-var import_react3 = require("react");
+var import_react = require("react");
 var import_lucide_react = require("lucide-react");
 var import_jsx_runtime2 = require("react/jsx-runtime");
 var escapeHtmlAttribute = (value) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;").replace(/\n/g, "&#10;");
@@ -411,10 +448,10 @@ var SnippetBlock = ({ language, code }) => /* @__PURE__ */ (0, import_jsx_runtim
 ] });
 var getAssetKey = (asset, index) => `${index}:${asset.kind}:${asset.name}:${asset.src}`;
 var MediaPanel = ({ mediaAssets, themeMode }) => {
-  const panelId = (0, import_react3.useId)();
+  const panelId = (0, import_react.useId)();
   const visibleAssets = mediaAssets.slice(0, 3);
-  const [selectedAssetKey, setSelectedAssetKey] = (0, import_react3.useState)(null);
-  const [failedAssetKey, setFailedAssetKey] = (0, import_react3.useState)(null);
+  const [selectedAssetKey, setSelectedAssetKey] = (0, import_react.useState)(null);
+  const [failedAssetKey, setFailedAssetKey] = (0, import_react.useState)(null);
   const selectedIndex = visibleAssets.findIndex((item, index) => getAssetKey(item, index) === selectedAssetKey);
   const effectiveSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
   const asset = visibleAssets[effectiveSelectedIndex];
@@ -542,7 +579,7 @@ var ApiServerPanel = ({ mockApi, themeMode }) => {
 };
 
 // components/OutputFrame.tsx
-var import_react5 = require("react");
+var import_react3 = require("react");
 
 // runtime/templates/common.ts
 var BASE_STYLES = `
@@ -1827,7 +1864,7 @@ var PreviewContainer = ({
 };
 
 // components/Console.tsx
-var import_react4 = __toESM(require("react"), 1);
+var import_react2 = __toESM(require("react"), 1);
 var import_lucide_react3 = require("lucide-react");
 
 // components/Button.tsx
@@ -1860,7 +1897,7 @@ var Button = ({
 
 // components/Console.tsx
 var import_jsx_runtime6 = require("react/jsx-runtime");
-var Console = import_react4.default.memo(function Console2({
+var Console = import_react2.default.memo(function Console2({
   logs,
   onClear,
   themeMode,
@@ -1916,32 +1953,32 @@ var OutputFrame = ({
   debugMode = false,
   onExecutionComplete
 }) => {
-  const iframeRef = (0, import_react5.useRef)(null);
-  const containerRef = (0, import_react5.useRef)(null);
-  const channelRef = (0, import_react5.useRef)(null);
-  const executionRef = (0, import_react5.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
-  const latestExecutionIdRef = (0, import_react5.useRef)(null);
-  const [logs, setLogs] = (0, import_react5.useState)([]);
-  const [consoleHeight, setConsoleHeight] = (0, import_react5.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react5.useState)(false);
+  const iframeRef = (0, import_react3.useRef)(null);
+  const containerRef = (0, import_react3.useRef)(null);
+  const channelRef = (0, import_react3.useRef)(null);
+  const executionRef = (0, import_react3.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
+  const latestExecutionIdRef = (0, import_react3.useRef)(null);
+  const [logs, setLogs] = (0, import_react3.useState)([]);
+  const [consoleHeight, setConsoleHeight] = (0, import_react3.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react3.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
   const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const isStaticHtmlMode = environmentMode === "html" || environmentMode === "html-css";
-  const addSystemLog = (0, import_react5.useCallback)((msg, type = "log") => {
+  const addSystemLog = (0, import_react3.useCallback)((msg, type = "log") => {
     setLogs((prev) => appendLog(prev, {
       type,
       content: `[System] ${msg}`,
       timestamp: Date.now()
     }));
   }, []);
-  const sandboxHtml = (0, import_react5.useMemo)(
+  const sandboxHtml = (0, import_react3.useMemo)(
     () => getSandboxHtml(environmentMode, isPredictionMode),
     [environmentMode, isPredictionMode]
   );
-  (0, import_react5.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode };
   }, [code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode]);
-  const handleKernelMessage = (0, import_react5.useCallback)((data) => {
+  const handleKernelMessage = (0, import_react3.useCallback)((data) => {
     if (!data || typeof data !== "object") return;
     const { type, payload } = data;
     if (type === "CONSOLE_LOG" || type === "RUNTIME_ERROR" || type === "CONSOLE_WARN") {
@@ -1956,15 +1993,15 @@ var OutputFrame = ({
       onExecutionComplete?.();
     }
   }, [debugMode, addSystemLog, isFetchMode, onExecutionComplete]);
-  const kernelMessageRef = (0, import_react5.useRef)(handleKernelMessage);
-  (0, import_react5.useEffect)(() => {
+  const kernelMessageRef = (0, import_react3.useRef)(handleKernelMessage);
+  (0, import_react3.useEffect)(() => {
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
-  (0, import_react5.useEffect)(() => () => {
+  (0, import_react3.useEffect)(() => () => {
     channelRef.current?.port1.close();
     channelRef.current = null;
   }, []);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (runTrigger > 0) {
       const execution = executionRef.current;
       setLogs([]);
@@ -1991,12 +2028,12 @@ var OutputFrame = ({
       }
     }
   }, [runTrigger, addSystemLog]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
   }, [themeMode]);
-  (0, import_react5.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!isStaticHtmlMode) return;
     const timer = setTimeout(() => {
       if (iframeRef.current?.contentWindow) {
@@ -2021,15 +2058,15 @@ var OutputFrame = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react5.useCallback)((e) => {
+  const handleMouseMove = (0, import_react3.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
     const newHeight = containerRect.height - relativeY;
     setConsoleHeight(Math.max(30, Math.min(containerRect.height * 0.8, newHeight)));
   }, [isDragging]);
-  const handleMouseUp = (0, import_react5.useCallback)(() => setIsDragging(false), []);
-  (0, import_react5.useEffect)(() => {
+  const handleMouseUp = (0, import_react3.useCallback)(() => setIsDragging(false), []);
+  (0, import_react3.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -2090,7 +2127,7 @@ var OutputFrame = ({
 };
 
 // components/ServerOutput.tsx
-var import_react6 = require("react");
+var import_react4 = require("react");
 var import_lucide_react5 = require("lucide-react");
 var import_jsx_runtime8 = require("react/jsx-runtime");
 var MAX_CONSOLE_LOGS2 = 500;
@@ -2104,26 +2141,26 @@ var ServerOutput = ({
   debugMode = false,
   onTriggerRun
 }) => {
-  const iframeRef = (0, import_react6.useRef)(null);
-  const containerRef = (0, import_react6.useRef)(null);
-  const channelRef = (0, import_react6.useRef)(null);
-  const [logs, setLogs] = (0, import_react6.useState)([]);
-  const [route, setRoute] = (0, import_react6.useState)("/");
-  const [method] = (0, import_react6.useState)("GET");
-  const [response, setResponse] = (0, import_react6.useState)(null);
-  const [pendingRequest, setPendingRequest] = (0, import_react6.useState)(null);
-  const [isLoading, setIsLoading] = (0, import_react6.useState)(false);
-  const [serverReady, setServerReady] = (0, import_react6.useState)(false);
-  const [runtimeError, setRuntimeError] = (0, import_react6.useState)(null);
-  const startupTimeoutRef = (0, import_react6.useRef)(null);
-  const requestTimeoutRef = (0, import_react6.useRef)(null);
-  const [consoleHeight, setConsoleHeight] = (0, import_react6.useState)(150);
-  const [isDragging, setIsDragging] = (0, import_react6.useState)(false);
-  const addSystemLog = (0, import_react6.useCallback)((msg) => {
+  const iframeRef = (0, import_react4.useRef)(null);
+  const containerRef = (0, import_react4.useRef)(null);
+  const channelRef = (0, import_react4.useRef)(null);
+  const [logs, setLogs] = (0, import_react4.useState)([]);
+  const [route, setRoute] = (0, import_react4.useState)("/");
+  const [method] = (0, import_react4.useState)("GET");
+  const [response, setResponse] = (0, import_react4.useState)(null);
+  const [pendingRequest, setPendingRequest] = (0, import_react4.useState)(null);
+  const [isLoading, setIsLoading] = (0, import_react4.useState)(false);
+  const [serverReady, setServerReady] = (0, import_react4.useState)(false);
+  const [runtimeError, setRuntimeError] = (0, import_react4.useState)(null);
+  const startupTimeoutRef = (0, import_react4.useRef)(null);
+  const requestTimeoutRef = (0, import_react4.useRef)(null);
+  const [consoleHeight, setConsoleHeight] = (0, import_react4.useState)(150);
+  const [isDragging, setIsDragging] = (0, import_react4.useState)(false);
+  const addSystemLog = (0, import_react4.useCallback)((msg) => {
     setLogs((prev) => appendLog2(prev, { type: "log", content: `[System] ${msg}`, timestamp: Date.now() }));
   }, []);
-  const clearConsole = (0, import_react6.useCallback)(() => setLogs([]), []);
-  const sendSimulatedRequest = (0, import_react6.useCallback)((reqMethod, reqUrl) => {
+  const clearConsole = (0, import_react4.useCallback)(() => setLogs([]), []);
+  const sendSimulatedRequest = (0, import_react4.useCallback)((reqMethod, reqUrl) => {
     if (!channelRef.current) return;
     const requestPayload = {
       type: "SIMULATE_REQUEST",
@@ -2132,7 +2169,7 @@ var ServerOutput = ({
     if (debugMode) addSystemLog(`Sending Request: ${reqMethod} ${reqUrl}`);
     channelRef.current.port1.postMessage(requestPayload);
   }, [debugMode, addSystemLog]);
-  const handleSandboxMessage = (0, import_react6.useCallback)((data) => {
+  const handleSandboxMessage = (0, import_react4.useCallback)((data) => {
     if (!data || typeof data !== "object") return;
     const { type, payload } = data;
     switch (type) {
@@ -2176,15 +2213,15 @@ var ServerOutput = ({
         break;
     }
   }, [debugMode, addSystemLog, clearConsole, sendSimulatedRequest]);
-  const sandboxMessageRef = (0, import_react6.useRef)(handleSandboxMessage);
-  (0, import_react6.useEffect)(() => {
+  const sandboxMessageRef = (0, import_react4.useRef)(handleSandboxMessage);
+  (0, import_react4.useEffect)(() => {
     sandboxMessageRef.current = handleSandboxMessage;
   }, [handleSandboxMessage]);
-  (0, import_react6.useEffect)(() => () => {
+  (0, import_react4.useEffect)(() => () => {
     channelRef.current?.port1.close();
     channelRef.current = null;
   }, []);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     const globalListener = (event) => {
       if (event.source !== iframeRef.current?.contentWindow) return;
       if (event.data && typeof event.data === "object" && event.data.type) {
@@ -2194,10 +2231,10 @@ var ServerOutput = ({
     window.addEventListener("message", globalListener);
     return () => window.removeEventListener("message", globalListener);
   }, []);
-  const sandboxHtml = (0, import_react6.useMemo)(() => {
+  const sandboxHtml = (0, import_react4.useMemo)(() => {
     return getSandboxHtml(environmentMode);
   }, [environmentMode]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (runTrigger > 0 && iframeRef.current?.contentWindow) {
       setServerReady(false);
       setResponse(null);
@@ -2214,7 +2251,7 @@ var ServerOutput = ({
       executeCodeInSandbox(iframeRef.current.contentWindow, code);
     }
   }, [runTrigger, code, debugMode, addSystemLog, method, route]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
     }
@@ -2240,7 +2277,7 @@ var ServerOutput = ({
       console.warn("ServerOutput: onTriggerRun prop missing");
     }
   };
-  (0, import_react6.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!isLoading || !pendingRequest || serverReady || runtimeError) {
       if (startupTimeoutRef.current) {
         window.clearTimeout(startupTimeoutRef.current);
@@ -2262,7 +2299,7 @@ var ServerOutput = ({
       }
     };
   }, [isLoading, pendingRequest, serverReady, runtimeError, addSystemLog]);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react4.useEffect)(() => {
     if (!isLoading || pendingRequest || runtimeError) {
       if (requestTimeoutRef.current) {
         window.clearTimeout(requestTimeoutRef.current);
@@ -2286,15 +2323,15 @@ var ServerOutput = ({
     e.preventDefault();
     setIsDragging(true);
   };
-  const handleMouseMove = (0, import_react6.useCallback)((e) => {
+  const handleMouseMove = (0, import_react4.useCallback)((e) => {
     if (!isDragging || !containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const relativeY = e.clientY - containerRect.top;
     const newHeight = containerRect.height - relativeY;
     setConsoleHeight(Math.max(30, Math.min(containerRect.height * 0.8, newHeight)));
   }, [isDragging]);
-  const handleMouseUp = (0, import_react6.useCallback)(() => setIsDragging(false), []);
-  (0, import_react6.useEffect)(() => {
+  const handleMouseUp = (0, import_react4.useCallback)(() => setIsDragging(false), []);
+  (0, import_react4.useEffect)(() => {
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
@@ -2394,7 +2431,7 @@ function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
 }
 
 // components/CodingEnvironment.tsx
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 var BUNDLE_MODE_CONFIG = {
   "html-css": { files: HTML_CSS_FILE_NAMES, hasMediaTab: false },
   "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
@@ -2403,6 +2440,19 @@ var BUNDLE_MODE_CONFIG = {
   "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
+var getCodeLanguage = (mode, filename) => {
+  if (filename?.endsWith(".html")) return "html";
+  if (filename?.endsWith(".css")) return "css";
+  if (filename?.endsWith(".js")) return "javascript";
+  if (mode === "html") return "html";
+  if (["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"].includes(mode)) {
+    return "typescript";
+  }
+  return "javascript";
+};
+var CodeEditor2 = import_react7.default.lazy(() => Promise.resolve().then(() => (init_CodeEditor(), CodeEditor_exports)).then((module2) => ({
+  default: module2.CodeEditor
+})));
 var CodingEnvironment = ({
   code,
   onChange,
@@ -2428,6 +2478,7 @@ var CodingEnvironment = ({
   const [isDragging, setIsDragging] = (0, import_react7.useState)(false);
   const containerRef = (0, import_react7.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
+  const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
   const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
   const editableBundleFileNames = bundleModeConfig?.files ?? null;
@@ -2463,6 +2514,11 @@ var CodingEnvironment = ({
     if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
   }, [activeTab, visibleTabs]);
   const editorCode = isEditableBundleMode && files && selectedFile ? files[selectedFile] : hasDomFixtures && selectedFile === "index.html" ? fixtureHtml ?? "" : hasDomFixtures && selectedFile === "style.css" ? fixtureCss ?? "" : code;
+  const displayedFilename = isTabbedMode && selectedFile ? selectedFile : getDisplayFilename(environmentMode);
+  const displayedLanguage = getCodeLanguage(
+    environmentMode,
+    isTabbedMode ? selectedFile ?? void 0 : void 0
+  );
   const handleEditorChange = (value) => {
     const next = value || "";
     if (isEditableBundleMode && files && selectedFile) {
@@ -2500,11 +2556,11 @@ var CodingEnvironment = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isServerMode = environmentMode.startsWith("express") || environmentMode.startsWith("hono");
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
-    predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex-1", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
+    predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex-1", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "text-sm opacity-80 mb-3", children: predictionPrompt }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "textarea",
         {
           value: predictionAnswer,
@@ -2515,16 +2571,16 @@ var CodingEnvironment = ({
         }
       )
     ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex min-w-0 items-center gap-2 overflow-hidden", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.FileCode, { className: "h-4 w-4 shrink-0 text-blue-500" }),
-        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap", children: visibleTabs.map((tab) => {
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: `h-12 px-4 border-b flex items-center justify-between ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10 text-gray-400" : "bg-white border-gray-100"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex min-w-0 items-center gap-2 overflow-hidden", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.FileCode, { className: "h-4 w-4 shrink-0 text-blue-500" }),
+        isTabbedMode ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "flex min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap", children: visibleTabs.map((tab) => {
           const isMediaTab = tab === "media";
           const isApiServerTab = tab === "api-server";
           const isFixtureFile = hasDomFixtures && tab !== "script.js";
           const isReadOnlyTab = isMediaTab || isApiServerTab || isFixtureFile;
           const tabLabel = isMediaTab ? "Media" : isApiServerTab ? "API Server" : tab;
-          return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
             "button",
             {
               type: "button",
@@ -2534,62 +2590,70 @@ var CodingEnvironment = ({
               className: `px-2 py-1 rounded text-xs font-mono font-medium transition-colors ${selectedTab === tab ? themeMode === "dark" ? "bg-white/10 text-blue-400" : "bg-blue-50 text-blue-600" : "opacity-50 hover:opacity-80"}`,
               children: [
                 tabLabel,
-                isReadOnlyTab && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
+                isReadOnlyTab && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.Lock, { "aria-hidden": "true", className: "ml-1 inline h-3 w-3" })
               ]
             },
             tab
           );
-        }) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
+        }) }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "text-xs font-mono font-medium hidden sm:inline", children: getDisplayFilename(environmentMode) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex items-center gap-4", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "flex bg-black/5 dark:bg-white/5 p-0.5 rounded-lg border border-black/5 dark:border-white/5", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
             "button",
             {
               onClick: () => setLayout("horizontal"),
               title: "Split View (Side by Side)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "horizontal" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Columns, { size: 12 }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "hidden md:inline", children: "Split" })
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.Columns, { size: 12 }),
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "hidden md:inline", children: "Split" })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
             "button",
             {
               onClick: () => setLayout("vertical"),
               title: "Vertical View (Stacked)",
               className: `flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight transition-all ${layout === "vertical" ? "bg-white dark:bg-gray-700 shadow-sm text-blue-500" : "opacity-40 hover:opacity-60"}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Rows, { size: 12 }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "hidden md:inline", children: "Stacked" })
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.Rows, { size: 12 }),
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "hidden md:inline", children: "Stacked" })
               ]
             }
           )
         ] }),
-        !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           Button,
           {
             onClick: handleRunClick,
             disabled: isRunning && !isFetchMode || !isPredictionFulfilled,
             variant: "primary",
             className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
-            icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.Play, { size: 14 }),
+            icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.Play, { size: 14 }),
             children: isRunning ? isFetchMode ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         MediaPanel,
         {
           mediaAssets: environmentMode === "html-js-css-media" ? mediaAssets ?? [] : [],
           themeMode
         }
-      ) : selectedTab === "api-server" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ApiServerPanel, { mockApi, themeMode }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-        CodeEditor,
+      ) : selectedTab === "api-server" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(ApiServerPanel, { mockApi, themeMode }) : isPredictionSourceMode ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        ReadOnlyCodeViewer,
+        {
+          code: editorCode,
+          filename: displayedFilename,
+          language: displayedLanguage,
+          themeMode
+        }
+      ) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_react7.default.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }), children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        CodeEditor2,
         {
           code: editorCode,
           onChange: handleEditorChange,
@@ -2598,18 +2662,18 @@ var CodingEnvironment = ({
           sessionId,
           activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
           enableEmmet,
-          readOnly: !!predictionPrompt && isPredictionLocked || hasDomFixtures && selectedFile !== "script.js"
+          readOnly: hasDomFixtures && selectedFile !== "script.js"
         }
-      ) }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      ) }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "div",
         {
           onMouseDown: handleMouseDown,
           className: `flex items-center justify-center shrink-0 hover:bg-blue-500/50 transition-colors z-10 ${layout === "horizontal" ? "w-1.5 cursor-col-resize" : "h-1.5 cursor-row-resize"} ${themeMode === "dark" ? "bg-black/40" : "bg-gray-100"}`,
-          children: layout === "horizontal" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_lucide_react6.GripHorizontal, { size: 10, className: "opacity-20" })
+          children: layout === "horizontal" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.GripVertical, { size: 10, className: "opacity-20" }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.GripHorizontal, { size: 10, className: "opacity-20" })
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${(1 - editorRatio) * 100}%` }, className: `relative flex flex-col min-w-0 min-h-0 ${isDragging ? "pointer-events-none" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "flex-1 p-2 md:p-3 overflow-hidden", children: isServerMode ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         ServerOutput,
         {
           runTrigger,
@@ -2620,7 +2684,7 @@ var CodingEnvironment = ({
           debugMode,
           onTriggerRun: handleRunClick
         }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      ) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         OutputFrame,
         {
           runTrigger,
@@ -2641,7 +2705,7 @@ var CodingEnvironment = ({
 };
 
 // components/CodeShoebox.tsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 var CodeShoebox = ({
   code,
   onCodeChange,
@@ -2697,12 +2761,12 @@ var CodeShoebox = ({
       "--foreground": colors.foreground || defaultFg
     };
   }, [themeMode, theme]);
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
     "div",
     {
       className: "flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
       style: themeStyles,
-      children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         CodingEnvironment,
         {
           sessionId,
