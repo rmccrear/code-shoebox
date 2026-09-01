@@ -326,7 +326,7 @@ CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passi
 This prop accepts **strings** or **JSX (React Nodes)**, allowing you to pass rich content like bullet lists, bold text, or code snippets within the question.
 
 **Behavior:**
-1.  **Locked Editor**: The code becomes Read-Only.
+1.  **Static Source Viewer**: The host-provided code is shown in a lightweight, selectable, read-only viewer; Monaco is not mounted for prediction source.
 2.  **Hidden Output**: The output frame is blurred/hidden.
 3.  **Prediction Input**: A text area appears above the editor.
 4.  **Unlock Trigger**: The "Run Code" button is disabled until the student enters a prediction.
@@ -400,7 +400,7 @@ const ExerciseComponent = () => {
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |
-| `prediction_prompt` | `string \| React.ReactNode` | No | If provided, locks the editor in "Read Only" mode for prediction exercises. |
+| `prediction_prompt` | `string \| React.ReactNode` | No | If provided, shows immutable source in a static viewer for prediction exercises. |
 | `debugMode` | `boolean` | No | Enables verbose `[System]` logs in the console to help debug setup issues. |
 
 ## Contributing
