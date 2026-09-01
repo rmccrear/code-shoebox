@@ -127,15 +127,17 @@ change runtime behavior.
 *   **Capabilities:**
     *   Relative `fetch()` calls resolve to genuine `Response` objects with JSON bodies and `Content-Type: application/json` by default.
     *   The default 1000 ms latency occurs before `fetch()` resolves. Routes can override it with `delayMs`, including `0` for tests.
-    *   Matching uses the request method and pathname. A route with `query` requires the exact query key/value set and takes precedence; a route without `query` ignores the request query string.
+    *   Matching uses the request method and pathname plus optional `query`, `requestHeaders`, and `requestBody` constraints. Queries are exact, header names are case-insensitive with extra headers allowed, and request bodies are deep-equal JSON values.
+    *   The matching route with the most declared constraints wins; equal-specificity matches keep declaration order. This supports generic fallbacks alongside API-key or POST-data-specific responses.
     *   HTTP error responses such as 404 and 500 resolve normally. A route with `networkError: true`, or an aborted request, rejects.
     *   A new Run aborts pending mock requests from the previous run. Completion messages carry an execution ID so stale runs cannot finish the current Run state.
 *   **Containment:**
     *   Absolute URL strings and URL/Request objects for other origins are rejected with a learner-facing disabled-network error.
     *   The mode adds `Content-Security-Policy: connect-src 'none'`; the iframe keeps its existing sandbox flags and does not gain `allow-same-origin`.
 *   **Limitations:**
-    *   Routes are stateless exact fixtures. There are no dynamic handlers, path parameters, response templates, request validation, or persistent CRUD state.
-    *   POST bodies and headers can be authored for practice but are not inspected; the declared response is canned.
+    *   Routes are stateless exact fixtures. Request matching selects a canned response; there are no dynamic handlers, path parameters, response templates, or persistent CRUD state.
+    *   Only JSON request bodies can be matched. Missing or malformed JSON does not match a `requestBody` constraint. Array order is significant; object key order is not.
+    *   Mock header values such as API keys are visible teaching fixtures, not secrets. Never use real credentials.
     *   Response bodies are JSON values. Malformed raw response bodies are not part of v1.
 
 ### `typescript` (TypeScript)

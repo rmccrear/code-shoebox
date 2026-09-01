@@ -86,8 +86,10 @@ describe('getSandboxHtml', () => {
     expect(html).toContain('window.__installFetchMock');
     expect(html).toContain("new AsyncFunction('root', code)");
     expect(html).toContain('await new AsyncFunction');
-    expect(html).toContain('candidate.query !== undefined');
-    expect(html).toContain('candidate.query === undefined');
+    expect(html).toContain('candidate.requestHeaders === undefined || headersMatch');
+    expect(html).toContain('candidate.requestBody === undefined ||');
+    expect(html).toContain('requestBody.hasJson && jsonEquals');
+    expect(html).toContain('routeSpecificity(right.candidate)');
     expect(html).toContain('new Response(body, { status, headers })');
     expect(html).toContain('activeRunController.abort()');
     expect(html).not.toContain('allow-same-origin');

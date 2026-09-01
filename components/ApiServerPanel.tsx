@@ -54,18 +54,34 @@ export const ApiServerPanel: React.FC<ApiServerPanelProps> = ({ mockApi, themeMo
                 <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-70">
                   <div><dt className="inline font-semibold">Status: </dt><dd className="inline">{status}</dd></div>
                   <div><dt className="inline font-semibold">Delay: </dt><dd className="inline">{delayMs} ms</dd></div>
-                  {route.method === 'POST' && (
-                    <div><dt className="inline font-semibold">Request body: </dt><dd className="inline">accepted, not inspected</dd></div>
-                  )}
                 </dl>
+                {route.requestHeaders !== undefined && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-xs font-semibold opacity-70">Required request headers</p>
+                    <pre className={`overflow-auto rounded p-3 text-xs ${dark ? 'bg-black/30' : 'bg-slate-100'}`}>
+                      {JSON.stringify(route.requestHeaders, null, 2)}
+                    </pre>
+                  </div>
+                )}
+                {route.requestBody !== undefined && (
+                  <div className="mt-3">
+                    <p className="mb-1 text-xs font-semibold opacity-70">Required JSON request body</p>
+                    <pre className={`overflow-auto rounded p-3 text-xs ${dark ? 'bg-black/30' : 'bg-slate-100'}`}>
+                      {JSON.stringify(route.requestBody, null, 2)}
+                    </pre>
+                  </div>
+                )}
                 {route.networkError ? (
                   <p className="mt-3 font-mono text-xs text-red-400">
                     {route.errorMessage ?? 'Simulated network error'}
                   </p>
                 ) : (
-                  <pre className={`mt-3 overflow-auto rounded p-3 text-xs ${dark ? 'bg-black/30' : 'bg-slate-100'}`}>
-                    {JSON.stringify(route.body, null, 2)}
-                  </pre>
+                  <div className="mt-3">
+                    <p className="mb-1 text-xs font-semibold opacity-70">Response JSON</p>
+                    <pre className={`overflow-auto rounded p-3 text-xs ${dark ? 'bg-black/30' : 'bg-slate-100'}`}>
+                      {JSON.stringify(route.body, null, 2)}
+                    </pre>
+                  </div>
                 )}
               </article>
             );

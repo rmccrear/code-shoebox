@@ -53,6 +53,14 @@ export const FETCH_DEMO_API = {
     {
       method: 'POST',
       path: '/api/alerts',
+      status: 401,
+      body: { error: 'Valid API key and alert data required' },
+    },
+    {
+      method: 'POST',
+      path: '/api/alerts',
+      requestHeaders: { 'x-api-key': 'xyz-secret-key-lmnop' },
+      requestBody: { city: 'Portland', threshold: 50 },
       status: 201,
       body: { id: 1, message: 'Air-quality alert created' },
     },
@@ -284,7 +292,18 @@ playButton.addEventListener('click', async () => {
     code: `let response = await fetch("/api/air-quality?limit=4");
 let readings = await response.json();
 console.log("The first city is " + readings[0].city);
-console.log(readings);`
+console.log(readings);
+
+let alertResponse = await fetch("/api/alerts", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": "xyz-secret-key-lmnop"
+  },
+  body: JSON.stringify({ city: readings[0].city, threshold: 50 })
+});
+let alert = await alertResponse.json();
+console.log(alert);`
   },
   {
     id: 'html-js-fetch-air-quality-demo',

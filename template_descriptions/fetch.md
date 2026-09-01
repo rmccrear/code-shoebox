@@ -6,4 +6,6 @@
 - **Latency:** Responses wait 1000 ms by default so learners can observe asynchronous execution. Authors can override latency per route.
 - **Responses:** Mocked HTTP errors such as 404 and 500 resolve to real `Response` objects. Declared network errors and aborted requests reject.
 - **Queries:** Routes match by method and pathname. A route can optionally require an exact query-string map; otherwise its match ignores the query string.
-- **POST:** Request options and bodies can be written by learners, but v1 responses are canned and request bodies are not inspected.
+- **Request matching:** Routes can require a deep-equal JSON `requestBody` and a case-insensitive subset of `requestHeaders`, such as `x-api-key`. Extra headers are allowed. The most specific route wins, with author order breaking ties.
+- **POST:** Request matching selects a canned response. It does not execute callbacks, echo arbitrary data, or create persistent state.
+- **Credentials:** Mock API keys are visible teaching fixtures. Never use real secrets.

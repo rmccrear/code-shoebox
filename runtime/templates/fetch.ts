@@ -54,6 +54,40 @@ export const FETCH_MOCK_SETUP = `
             ));
         };
 
+        const jsonEquals = (actual, expected) => {
+            if (actual === expected) return true;
+            if (Array.isArray(actual) || Array.isArray(expected)) {
+                return Array.isArray(actual)
+                    && Array.isArray(expected)
+                    && actual.length === expected.length
+                    && actual.every((value, index) => jsonEquals(value, expected[index]));
+            }
+            if (!actual || !expected || typeof actual !== 'object' || typeof expected !== 'object') {
+                return false;
+            }
+            const actualKeys = Object.keys(actual);
+            const expectedKeys = Object.keys(expected);
+            return actualKeys.length === expectedKeys.length
+                && expectedKeys.every((key) => (
+                    Object.prototype.hasOwnProperty.call(actual, key)
+                    && jsonEquals(actual[key], expected[key])
+                ));
+        };
+
+        const headersMatch = (headers, expected) => {
+            const expectedHeaders = new Headers(expected || {});
+            return Array.from(expectedHeaders.entries()).every(([name, value]) => headers.get(name) === value);
+        };
+
+        const routeSpecificity = (route) => {
+            const queryScore = route.query === undefined ? 0 : Math.max(1, Object.keys(route.query || {}).length);
+            const headerScore = route.requestHeaders === undefined
+                ? 0
+                : Math.max(1, Object.keys(route.requestHeaders || {}).length);
+            const bodyScore = route.requestBody === undefined ? 0 : 1;
+            return queryScore + headerScore + bodyScore;
+        };
+
         const parseInput = (input, init) => {
             const isRequest = typeof Request !== 'undefined' && input instanceof Request;
             const isUrl = typeof URL !== 'undefined' && input instanceof URL;
@@ -73,10 +107,35 @@ export const FETCH_MOCK_SETUP = `
                 url = new URL(rawUrl, baseUrl);
             }
 
+            const hasInitHeaders = init && init.headers !== undefined;
+            const headers = new Headers(hasInitHeaders ? init.headers : isRequest ? input.headers : undefined);
+            const hasInitBody = !!init && Object.prototype.hasOwnProperty.call(init, 'body');
+            let bodyPromise;
+            const readJsonBody = () => {
+                if (bodyPromise) return bodyPromise;
+                bodyPromise = (async () => {
+                    let text;
+                    if (hasInitBody) {
+                        if (init.body === undefined || init.body === null) return { hasJson: false };
+                        text = await new Response(init.body).text();
+                    } else if (isRequest) {
+                        text = await input.clone().text();
+                    } else {
+                        return { hasJson: false };
+                    }
+                    if (!text) return { hasJson: false };
+                    try { return { hasJson: true, value: JSON.parse(text) }; }
+                    catch (e) { return { hasJson: false }; }
+                })();
+                return bodyPromise;
+            };
+
             return {
                 url,
                 method: String((init && init.method) || (isRequest && input.method) || 'GET').toUpperCase(),
-                signal: (init && init.signal) || (isRequest && input.signal) || null
+                signal: (init && init.signal) || (isRequest && input.signal) || null,
+                headers,
+                readJsonBody
             };
         };
 
@@ -102,9 +161,22 @@ export const FETCH_MOCK_SETUP = `
                     && String(route.method || 'GET').toUpperCase() === request.method
                     && route.path === request.url.pathname
                 ));
-                const route = candidates.find((candidate) => (
-                    candidate.query !== undefined && queryMatches(request.url.searchParams, candidate.query)
-                )) || candidates.find((candidate) => candidate.query === undefined);
+                const requestBody = candidates.some((candidate) => candidate.requestBody !== undefined)
+                    ? await request.readJsonBody()
+                    : { hasJson: false };
+                const route = candidates
+                    .map((candidate, index) => ({ candidate, index }))
+                    .filter(({ candidate }) => (
+                        (candidate.query === undefined || queryMatches(request.url.searchParams, candidate.query))
+                        && (candidate.requestHeaders === undefined || headersMatch(request.headers, candidate.requestHeaders))
+                        && (candidate.requestBody === undefined || (
+                            requestBody.hasJson && jsonEquals(requestBody.value, candidate.requestBody)
+                        ))
+                    ))
+                    .sort((left, right) => (
+                        routeSpecificity(right.candidate) - routeSpecificity(left.candidate)
+                        || left.index - right.index
+                    ))[0]?.candidate;
 
                 if (!route) {
                     await delay(defaultDelayMs, [runSignal, request.signal]);
