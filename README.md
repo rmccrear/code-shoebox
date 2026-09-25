@@ -17,6 +17,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
+  - `react-app`: Vite-style `App.jsx` authoring with ES module exports and automatic default-export rendering.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
@@ -31,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.24**:
+To install version **v1.0.30**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.24
+npm install github:rmccrear/code-shoebox#v1.0.30
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.24
+yarn add github:rmccrear/code-shoebox#v1.0.30
 ```
 
 ## Maintenance & Releases
@@ -391,7 +392,7 @@ const ExerciseComponent = () => {
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-js-fetch' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-js-fetch' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-app' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |

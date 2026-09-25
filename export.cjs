@@ -134,6 +134,7 @@ declare var console: {
           case "html":
             return `${basePath}.html`;
           case "react":
+          case "react-app":
             return `${basePath}.jsx`;
           case "p5":
             return `${basePath}.js`;
@@ -1643,6 +1644,37 @@ var ENV_RECIPES = {
       };
     `
   },
+  "react-app": {
+    name: "React App (Vite-style)",
+    cdns: REACT_CDNS,
+    babelPresets: ["react", "env"],
+    logic: `
+      let rootInstance = null;
+      window.__RUN_MODE__ = (code, root) => {
+        if (rootInstance) {
+          try { rootInstance.unmount(); } catch (e) {}
+          rootInstance = null;
+        }
+        root.replaceChildren();
+        try {
+          const compiled = Babel.transform(code, {
+            presets: ['react', ['env', { modules: 'commonjs' }]],
+            filename: 'App.jsx',
+            sourceType: 'module'
+          }).code;
+          const module = { exports: {} };
+          const exports = module.exports;
+          new Function('module', 'exports', 'require', compiled)(module, exports, window.require);
+          const App = module.exports.default;
+          if (!App) {
+            throw new Error('React App mode requires a default export. Add \`export default App\`.');
+          }
+          rootInstance = window.ReactDOM.createRoot(root);
+          rootInstance.render(window.React.createElement(App));
+        } catch (e) { console.error(e); }
+      };
+    `
+  },
   "react-ts": {
     name: "React TS",
     cdns: REACT_CDNS,
@@ -2439,7 +2471,7 @@ var BUNDLE_MODE_CONFIG = {
   "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
-var getDisplayFilename = (mode) => mode === "html" ? "index.html" : `${mode}.script`;
+var getDisplayFilename = (mode) => mode === "html" ? "index.html" : mode === "react-app" ? "App.jsx" : `${mode}.script`;
 var getCodeLanguage = (mode, filename) => {
   if (filename?.endsWith(".html")) return "html";
   if (filename?.endsWith(".css")) return "css";
@@ -3237,6 +3269,26 @@ function Counter() {
 const root = createRoot(document.getElementById('root'));
 root.render(<Counter />);
 `;
+var REACT_APP_STARTER_CODE = `import { useState } from 'react';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <main style={{ fontFamily: 'sans-serif', textAlign: 'center', padding: 20 }}>
+      <h2>React App Counter</h2>
+      <p style={{ fontSize: '2rem', margin: '10px 0' }}>{count}</p>
+      <button
+        type="button"
+        style={{ padding: '8px 16px', cursor: 'pointer', fontSize: '1rem' }}
+        onClick={() => setCount((current) => current + 1)}
+      >
+        Increment
+      </button>
+    </main>
+  );
+}
+`;
 var REACT_TS_STARTER_CODE = `import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -3486,6 +3538,7 @@ var VALID_MODES = [
   "p5",
   "p5-ts",
   "react",
+  "react-app",
   "react-ts",
   "express",
   "express-ts",
@@ -3516,6 +3569,8 @@ var getStarterCode = (mode) => {
       return P5_TS_STARTER_CODE;
     case "react":
       return REACT_STARTER_CODE;
+    case "react-app":
+      return REACT_APP_STARTER_CODE;
     case "typescript":
       return TYPESCRIPT_STARTER_CODE;
     case "react-ts":

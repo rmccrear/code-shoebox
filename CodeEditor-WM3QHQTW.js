@@ -89,6 +89,7 @@ var CodeEditor = ({
       case "html":
         return `${basePath}.html`;
       case "react":
+      case "react-app":
         return `${basePath}.jsx`;
       case "p5":
         return `${basePath}.js`;
