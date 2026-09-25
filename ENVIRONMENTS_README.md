@@ -193,14 +193,15 @@ Environments for building UI components.
 
 ### `react-app` (React App, Vite-style)
 *   **Engine:** Babel (Presets: `react`, `env`; ES modules compiled to CommonJS).
-*   **Displayed File:** `App.jsx`.
+*   **Workspace:** Two fixed editable files, `App.jsx` and `App.css`, stored in the version-1 code envelope. A plain legacy string becomes `App.jsx` with an empty `App.css`.
 *   **Capabilities:**
     *   Accepts normal ES module exports, including named exports.
     *   Requires a default React component export and renders it to `#root` automatically.
     *   Supports shimmed imports from `react` and `react-dom/client`.
+    *   Applies `App.css` when `App.jsx` contains the exact import `import './App.css'`.
     *   Unmounts the previous root before each manual run.
 *   **Limitations:**
-    *   This mode models a single Vite `App.jsx`, not the Vite bundler. Relative modules, CSS imports, arbitrary npm packages, `import.meta`, and hot-module replacement are unavailable.
+    *   This mode models the bounded `App.jsx`/`App.css` portion of a Vite app, not the Vite bundler. Other relative modules or stylesheets, arbitrary npm packages, `import.meta`, and hot-module replacement are unavailable.
     *   Named exports are not rendered; only `export default` supplies the app component.
 
 ### `react-ts` (React + TypeScript)

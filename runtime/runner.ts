@@ -485,28 +485,63 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     babelPresets: ['react', 'env'],
     logic: `
       let rootInstance = null;
+      let learnerStyle = null;
       window.__RUN_MODE__ = (code, root) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
           rootInstance = null;
         }
+        if (learnerStyle) {
+          learnerStyle.remove();
+          learnerStyle = null;
+        }
         root.replaceChildren();
         try {
-          const compiled = Babel.transform(code, {
+          let files = { jsx: code, css: '' };
+          try {
+            const parsed = JSON.parse(code);
+            if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
+              files = {
+                jsx: String(parsed.files['App.jsx'] ?? ''),
+                css: String(parsed.files['App.css'] ?? '')
+              };
+            }
+          } catch (e) {}
+          const compiled = Babel.transform(files.jsx, {
             presets: ['react', ['env', { modules: 'commonjs' }]],
             filename: 'App.jsx',
             sourceType: 'module'
           }).code;
           const module = { exports: {} };
           const exports = module.exports;
-          new Function('module', 'exports', 'require', compiled)(module, exports, window.require);
+          let shouldInstallCss = false;
+          const localRequire = (specifier) => {
+            if (specifier === './App.css') {
+              shouldInstallCss = true;
+              return {};
+            }
+            return window.require(specifier);
+          };
+          new Function('module', 'exports', 'require', compiled)(module, exports, localRequire);
           const App = module.exports.default;
           if (!App) {
             throw new Error('React App mode requires a default export. Add \`export default App\`.');
           }
+          if (shouldInstallCss) {
+            learnerStyle = document.createElement('style');
+            learnerStyle.setAttribute('data-code-shoebox-react-app', '');
+            learnerStyle.textContent = files.css;
+            document.head.appendChild(learnerStyle);
+          }
           rootInstance = window.ReactDOM.createRoot(root);
           rootInstance.render(window.React.createElement(App));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          if (learnerStyle) {
+            learnerStyle.remove();
+            learnerStyle = null;
+          }
+          console.error(e);
+        }
       };
     `
   },

@@ -42,6 +42,17 @@ describe('getSandboxHtml', () => {
     expect(html).toContain("presets: ['react', ['env', { modules: 'commonjs' }]]");
     expect(html).toContain("filename: 'App.jsx'");
     expect(html).toContain("sourceType: 'module'");
+    expect(html).toContain("parsed.files['App.jsx']");
+    expect(html).toContain("parsed.files['App.css']");
+    expect(html).toContain("specifier === './App.css'");
+    expect(html).toContain('shouldInstallCss = true');
+    expect(html).toContain("learnerStyle.textContent = files.css");
+    expect(html.indexOf("new Function('module', 'exports', 'require', compiled)")).toBeLessThan(
+      html.indexOf("learnerStyle.textContent = files.css")
+    );
+    expect(html).toContain("data-code-shoebox-react-app");
+    expect(html).toContain('learnerStyle.remove()');
+    expect(html).toContain('return window.require(specifier)');
     expect(html).toContain('const module = { exports: {} }');
     expect(html).toContain("new Function('module', 'exports', 'require', compiled)");
     expect(html).toContain('module.exports.default');

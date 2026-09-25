@@ -6,7 +6,12 @@ import {
   getPresetMediaAssetsForMode,
   getPresetMockApiForMode,
 } from './demoPresets';
-import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from './runtime/fileBundle';
+import {
+  HTML_CSS_JS_FILE_NAMES,
+  HTML_JS_FILE_NAMES,
+  REACT_APP_FILE_NAMES,
+  parseFileBundle,
+} from './runtime/fileBundle';
 
 describe('demoPresets', () => {
   it('resolves a preset by its id', () => {
@@ -93,9 +98,12 @@ describe('demoPresets', () => {
 
     expect(preset?.mode).toBe('react-app');
     expect(getPresetHashForMode('react-app')).toBe('react-app-counter-demo');
-    expect(preset?.code).toContain('export default function App()');
-    expect(preset?.code).toContain('export const step');
-    expect(preset?.code).not.toContain('createRoot');
+    const files = parseFileBundle(preset!.code, REACT_APP_FILE_NAMES);
+    expect(files['App.jsx']).toContain('export default function App()');
+    expect(files['App.jsx']).toContain('export const step');
+    expect(files['App.jsx']).toContain("import './App.css'");
+    expect(files['App.jsx']).not.toContain('createRoot');
+    expect(files['App.css']).toContain('.counter-demo');
   });
 
   it('provides fetch fixtures outside learner code', () => {

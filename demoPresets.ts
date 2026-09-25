@@ -385,7 +385,9 @@ export default app;`
   {
     id: 'react-app-counter-demo',
     mode: 'react-app',
-    code: `import { useState } from 'react';
+    code: serializeFileBundle({
+      'App.jsx': `import { useState } from 'react';
+import './App.css';
 
 export const step = 1;
 
@@ -393,7 +395,7 @@ export default function App() {
   const [count, setCount] = useState(0);
 
   return (
-    <main style={{ fontFamily: 'sans-serif', textAlign: 'center', padding: 24 }}>
+    <main className="counter-demo">
       <h1>Vite-style App.jsx</h1>
       <p>Count: {count}</p>
       <button type="button" onClick={() => setCount((current) => current + step)}>
@@ -401,7 +403,18 @@ export default function App() {
       </button>
     </main>
   );
+}`,
+      'App.css': `.counter-demo {
+  padding: 1.5rem;
+  text-align: center;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.counter-demo button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
 }`
+    })
   },
   {
     id: 'ts-logic-demo',
