@@ -81,4 +81,15 @@ describe('CodeEditor Emmet opt-in', () => {
     expect(editor).toHaveAttribute('data-language', 'javascript');
     expect(editor).toHaveAttribute('data-path', 'sandbox-react-app-7.jsx');
   });
+
+  it('uses separate JSX and CSS models for react-app files', () => {
+    const jsx = renderEditor({ environmentMode: 'react-app', sessionId: 8, activeFile: 'App.jsx' });
+    expect(jsx.getByLabelText('Code editor')).toHaveAttribute('data-language', 'javascript');
+    expect(jsx.getByLabelText('Code editor')).toHaveAttribute('data-path', 'sandbox-react-app-8-App.jsx');
+    jsx.unmount();
+
+    const css = renderEditor({ environmentMode: 'react-app', sessionId: 8, activeFile: 'App.css' });
+    expect(css.getByLabelText('Code editor')).toHaveAttribute('data-language', 'css');
+    expect(css.getByLabelText('Code editor')).toHaveAttribute('data-path', 'sandbox-react-app-8-App.css');
+  });
 });

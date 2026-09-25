@@ -20,11 +20,12 @@ import {
   HTML_CSS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
   HTML_CSS_JS_FILE_NAMES,
+  REACT_APP_FILE_NAMES,
   parseFileBundle,
   serializeFileBundle,
 } from '../runtime/fileBundle';
 
-type EditorFileName = 'script.js' | 'index.html' | 'style.css';
+type EditorFileName = 'script.js' | 'index.html' | 'style.css' | 'App.jsx' | 'App.css';
 type WorkspaceTab = EditorFileName | 'media' | 'api-server';
 
 const BUNDLE_MODE_CONFIG = {
@@ -33,6 +34,7 @@ const BUNDLE_MODE_CONFIG = {
   'html-js-fetch': { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   'html-css-js': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   'html-js-css-media': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
+  'react-app': { files: REACT_APP_FILE_NAMES, hasMediaTab: false },
 } as const satisfies Partial<Record<EnvironmentMode, {
   files: readonly EditorFileName[];
   hasMediaTab: boolean;
@@ -129,7 +131,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(
-    isEditableBundleMode ? 'index.html' : 'script.js'
+    editableBundleFileNames?.[0] ?? 'script.js'
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
   const selectedFile = selectedTab === 'media' || selectedTab === 'api-server' ? null : selectedTab;

@@ -376,18 +376,19 @@ const root = createRoot(document.getElementById('root'));
 root.render(<Counter />);
 `;
 
-export const REACT_APP_STARTER_CODE = `import { useState } from 'react';
+export const REACT_APP_STARTER_CODE = serializeFileBundle({
+  'App.jsx': `import { useState } from 'react';
+import './App.css';
 
 export default function App() {
   const [count, setCount] = useState(0);
 
   return (
-    <main style={{ fontFamily: 'sans-serif', textAlign: 'center', padding: 20 }}>
+    <main className="counter-app">
       <h2>React App Counter</h2>
-      <p style={{ fontSize: '2rem', margin: '10px 0' }}>{count}</p>
+      <p className="count">{count}</p>
       <button
         type="button"
-        style={{ padding: '8px 16px', cursor: 'pointer', fontSize: '1rem' }}
         onClick={() => setCount((current) => current + 1)}
       >
         Increment
@@ -395,7 +396,25 @@ export default function App() {
     </main>
   );
 }
-`;
+`,
+  'App.css': `.counter-app {
+  padding: 1.25rem;
+  text-align: center;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.count {
+  margin: 0.625rem 0;
+  font-size: 2rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+`
+});
 
 export const REACT_TS_STARTER_CODE = `import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';

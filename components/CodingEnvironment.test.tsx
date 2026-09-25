@@ -6,6 +6,7 @@ import type { EnvironmentMode } from '../types';
 import {
   HTML_CSS_JS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
+  REACT_APP_FILE_NAMES,
   parseFileBundle,
   serializeFileBundle,
 } from '../runtime/fileBundle';
@@ -73,7 +74,7 @@ const renderCodingEnvironment = (
 
 const getFileTabNames = () => screen.queryAllByRole('button')
   .map((button) => button.textContent?.trim())
-  .filter((name): name is string => !!name && /\.(?:js|html|css)$/.test(name));
+  .filter((name): name is string => !!name && /\.(?:jsx?|html|css)$/.test(name));
 
 describe('CodingEnvironment routing', () => {
   beforeEach(() => {
@@ -203,16 +204,45 @@ describe('CodingEnvironment routing', () => {
     expect(screen.queryByLabelText(/Read-only code:/)).not.toBeInTheDocument();
   });
 
-  it('labels react-app source as App.jsx', () => {
+  it('shows App.jsx and App.css in fixed order for react-app prediction source', () => {
     renderCodingEnvironment('react-app', {
       code: 'export default function App() { return <h1>Hello</h1>; }',
       predictionPrompt: 'What renders?',
     });
 
+    expect(getFileTabNames()).toEqual(['App.jsx', 'App.css']);
     expect(screen.getByLabelText('Read-only code: App.jsx')).toHaveAttribute(
       'data-language',
       'javascript'
     );
+    fireEvent.click(screen.getByRole('button', { name: 'App.css' }));
+    expect(screen.getByLabelText('Read-only code: App.css')).toHaveTextContent('');
+    expect(screen.getByLabelText('Read-only code: App.css')).toHaveAttribute('data-language', 'css');
+  });
+
+  it('preserves both editable react-app files in the serialized change envelope', async () => {
+    const onChange = vi.fn();
+    const code = serializeFileBundle({
+      'App.jsx': "import './App.css';\nexport default function App() { return <h1>Hello</h1>; }",
+      'App.css': 'h1 { color: blue; }',
+    });
+    renderCodingEnvironment('react-app', { code, onChange });
+    let editor = await screen.findByLabelText('Code editor');
+
+    expect(getFileTabNames()).toEqual(['App.jsx', 'App.css']);
+    expect(editor).toHaveValue("import './App.css';\nexport default function App() { return <h1>Hello</h1>; }");
+    expect(editor).toHaveAttribute('data-language', 'javascript');
+
+    fireEvent.click(screen.getByRole('button', { name: 'App.css' }));
+    editor = screen.getByLabelText('Code editor');
+    expect(editor).toHaveValue('h1 { color: blue; }');
+    expect(editor).toHaveAttribute('data-language', 'css');
+    fireEvent.change(editor, { target: { value: 'h1 { color: green; }' } });
+
+    expect(parseFileBundle(onChange.mock.calls[0][0], REACT_APP_FILE_NAMES)).toEqual({
+      'App.jsx': expect.stringContaining("import './App.css'"),
+      'App.css': 'h1 { color: green; }',
+    });
   });
 
   it('shows editable script.js and a read-only API Server panel in fetch mode', async () => {

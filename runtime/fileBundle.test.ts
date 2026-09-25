@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   HTML_CSS_JS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
+  REACT_APP_FILE_NAMES,
   serializeFileBundle,
   parseFileBundle,
 } from './fileBundle';
@@ -93,6 +94,44 @@ describe('fileBundle', () => {
     const raw = JSON.stringify({ __csFiles__: 1, files: { 'index.html': '<p>only html</p>' } });
     expect(parseFileBundle(raw, HTML_CSS_JS_FILE_NAMES)).toEqual({
       'index.html': '<p>only html</p>',
+      'style.css': '',
+      'script.js': '',
+    });
+  });
+
+  it('round-trips a React App bundle', () => {
+    const files = {
+      'App.jsx': "import './App.css';\nexport default function App() { return <h1>Hello</h1>; }",
+      'App.css': 'h1::after { content: "</style><script>not code</script>"; color: rebeccapurple; }',
+    };
+
+    expect(parseFileBundle(serializeFileBundle(files), REACT_APP_FILE_NAMES)).toEqual(files);
+  });
+
+  it('defaults a missing App.css entry to an empty string', () => {
+    const raw = JSON.stringify({
+      __csFiles__: 1,
+      files: { 'App.jsx': 'export default function App() { return null; }' },
+    });
+
+    expect(parseFileBundle(raw, REACT_APP_FILE_NAMES)).toEqual({
+      'App.jsx': 'export default function App() { return null; }',
+      'App.css': '',
+    });
+  });
+
+  it('treats legacy plain React source as App.jsx with empty App.css', () => {
+    const source = 'export default function App() { return <h1>Legacy</h1>; }';
+
+    expect(parseFileBundle(source, REACT_APP_FILE_NAMES)).toEqual({
+      'App.jsx': source,
+      'App.css': '',
+    });
+  });
+
+  it('uses the first requested filename as fallback without changing HTML behavior', () => {
+    expect(parseFileBundle('<h1>bare</h1>', HTML_CSS_JS_FILE_NAMES)).toEqual({
+      'index.html': '<h1>bare</h1>',
       'style.css': '',
       'script.js': '',
     });
