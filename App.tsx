@@ -127,6 +127,7 @@ const App: React.FC = () => {
                     <option value="p5-ts">p5.js (TS)</option>
                     <option value="p5play">p5.js + p5.play</option>
                     <option value="react">React (JS)</option>
+                    <option value="react-app">React App (Vite-style)</option>
                     <option value="react-ts">React (TS)</option>
                   </optgroup>
                   <optgroup label="Logic & Console" className="text-black">

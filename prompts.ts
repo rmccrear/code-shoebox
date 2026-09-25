@@ -22,6 +22,8 @@ export const getPredictionPrompt = (mode: EnvironmentMode): string => {
       return "Look at how the sprite's properties change inside the draw loop. Where will the sprite be after the program runs for a few seconds?";
     case 'react':
       return "What is the starting value of the 'count' state variable rendered on the screen?";
+    case 'react-app':
+      return "What is the starting value rendered by the default App export?";
     case 'react-ts':
       return "If you click the '+' button twice, what will the final number displayed be?";
     case 'typescript':

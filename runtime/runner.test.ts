@@ -3,7 +3,7 @@ import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runn
 import { EnvironmentMode } from '../types';
 
 const ALL_MODES: EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-app', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -24,7 +24,7 @@ describe('getSandboxHtml', () => {
   });
 
   it('embeds React + Babel CDNs only for React modes', () => {
-    for (const mode of ['react', 'react-ts'] as EnvironmentMode[]) {
+    for (const mode of ['react', 'react-app', 'react-ts'] as EnvironmentMode[]) {
       const html = getSandboxHtml(mode);
       expect(html, mode).toContain('react@18.3.1/umd/react.development.js');
       expect(html, mode).toContain('react-dom@18.3.1');
@@ -33,8 +33,27 @@ describe('getSandboxHtml', () => {
     expect(getSandboxHtml('dom')).not.toContain('react@18');
   });
 
+  it('builds react-app around a captured default ES module export and automatic mounting', () => {
+    const html = getSandboxHtml('react-app');
+
+    expect(html).toContain('react@18.3.1/umd/react.development.js');
+    expect(html).toContain('react-dom@18.3.1/umd/react-dom.development.js');
+    expect(html).toContain('@babel/standalone@7.26.4/babel.min.js');
+    expect(html).toContain("presets: ['react', ['env', { modules: 'commonjs' }]]");
+    expect(html).toContain("filename: 'App.jsx'");
+    expect(html).toContain("sourceType: 'module'");
+    expect(html).toContain('const module = { exports: {} }');
+    expect(html).toContain("new Function('module', 'exports', 'require', compiled)");
+    expect(html).toContain('module.exports.default');
+    expect(html).toContain("module === 'react-dom/client'");
+    expect(html).toContain('rootInstance.unmount()');
+    expect(html).toContain('window.ReactDOM.createRoot(root)');
+    expect(html).toContain('window.React.createElement(App)');
+    expect(html).toContain('React App mode requires a default export. Add `export default App`.');
+  });
+
   it('uses pinned CDN versions for all transpiled modes', () => {
-    // react and react-ts get both React UMD and Babel pinned
+    // React modes get both React UMD and Babel pinned
     expect(getSandboxHtml('react')).toContain('react@18.3.1');
     expect(getSandboxHtml('react')).toContain('@babel/standalone@7.26.4');
     // typescript mode only needs Babel

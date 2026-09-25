@@ -383,6 +383,27 @@ export default app;`
 };`
   },
   {
+    id: 'react-app-counter-demo',
+    mode: 'react-app',
+    code: `import { useState } from 'react';
+
+export const step = 1;
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <main style={{ fontFamily: 'sans-serif', textAlign: 'center', padding: 24 }}>
+      <h1>Vite-style App.jsx</h1>
+      <p>Count: {count}</p>
+      <button type="button" onClick={() => setCount((current) => current + step)}>
+        Increment
+      </button>
+    </main>
+  );
+}`
+  },
+  {
     id: 'ts-logic-demo',
     mode: 'node-ts',
     code: `interface Task { id: number; title: string; }
