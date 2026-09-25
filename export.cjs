@@ -1650,28 +1650,63 @@ var ENV_RECIPES = {
     babelPresets: ["react", "env"],
     logic: `
       let rootInstance = null;
+      let learnerStyle = null;
       window.__RUN_MODE__ = (code, root) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
           rootInstance = null;
         }
+        if (learnerStyle) {
+          learnerStyle.remove();
+          learnerStyle = null;
+        }
         root.replaceChildren();
         try {
-          const compiled = Babel.transform(code, {
+          let files = { jsx: code, css: '' };
+          try {
+            const parsed = JSON.parse(code);
+            if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
+              files = {
+                jsx: String(parsed.files['App.jsx'] ?? ''),
+                css: String(parsed.files['App.css'] ?? '')
+              };
+            }
+          } catch (e) {}
+          const compiled = Babel.transform(files.jsx, {
             presets: ['react', ['env', { modules: 'commonjs' }]],
             filename: 'App.jsx',
             sourceType: 'module'
           }).code;
           const module = { exports: {} };
           const exports = module.exports;
-          new Function('module', 'exports', 'require', compiled)(module, exports, window.require);
+          let shouldInstallCss = false;
+          const localRequire = (specifier) => {
+            if (specifier === './App.css') {
+              shouldInstallCss = true;
+              return {};
+            }
+            return window.require(specifier);
+          };
+          new Function('module', 'exports', 'require', compiled)(module, exports, localRequire);
           const App = module.exports.default;
           if (!App) {
             throw new Error('React App mode requires a default export. Add \`export default App\`.');
           }
+          if (shouldInstallCss) {
+            learnerStyle = document.createElement('style');
+            learnerStyle.setAttribute('data-code-shoebox-react-app', '');
+            learnerStyle.textContent = files.css;
+            document.head.appendChild(learnerStyle);
+          }
           rootInstance = window.ReactDOM.createRoot(root);
           rootInstance.render(window.React.createElement(App));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          if (learnerStyle) {
+            learnerStyle.remove();
+            learnerStyle = null;
+          }
+          console.error(e);
+        }
       };
     `
   },
@@ -2446,6 +2481,7 @@ var ServerOutput = ({
 var HTML_CSS_FILE_NAMES = ["index.html", "style.css"];
 var HTML_JS_FILE_NAMES = ["index.html", "script.js"];
 var HTML_CSS_JS_FILE_NAMES = ["index.html", "style.css", "script.js"];
+var REACT_APP_FILE_NAMES = ["App.jsx", "App.css"];
 var serializeFileBundle = (files) => JSON.stringify({ __csFiles__: 1, files });
 function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
   try {
@@ -2457,8 +2493,9 @@ function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
     }
   } catch {
   }
+  const fallbackFileName = fileNames[0];
   return Object.fromEntries(
-    fileNames.map((fileName) => [fileName, fileName === "index.html" ? code : ""])
+    fileNames.map((fileName) => [fileName, fileName === fallbackFileName ? code : ""])
   );
 }
 
@@ -2469,7 +2506,8 @@ var BUNDLE_MODE_CONFIG = {
   "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   "html-js-fetch": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
-  "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
+  "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
+  "react-app": { files: REACT_APP_FILE_NAMES, hasMediaTab: false }
 };
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : mode === "react-app" ? "App.jsx" : `${mode}.script`;
 var getCodeLanguage = (mode, filename) => {
@@ -2534,7 +2572,7 @@ var CodingEnvironment = ({
   }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = (0, import_react7.useState)(
-    isEditableBundleMode ? "index.html" : "script.js"
+    editableBundleFileNames?.[0] ?? "script.js"
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
   const selectedFile = selectedTab === "media" || selectedTab === "api-server" ? null : selectedTab;
@@ -3269,18 +3307,19 @@ function Counter() {
 const root = createRoot(document.getElementById('root'));
 root.render(<Counter />);
 `;
-var REACT_APP_STARTER_CODE = `import { useState } from 'react';
+var REACT_APP_STARTER_CODE = serializeFileBundle({
+  "App.jsx": `import { useState } from 'react';
+import './App.css';
 
 export default function App() {
   const [count, setCount] = useState(0);
 
   return (
-    <main style={{ fontFamily: 'sans-serif', textAlign: 'center', padding: 20 }}>
+    <main className="counter-app">
       <h2>React App Counter</h2>
-      <p style={{ fontSize: '2rem', margin: '10px 0' }}>{count}</p>
+      <p className="count">{count}</p>
       <button
         type="button"
-        style={{ padding: '8px 16px', cursor: 'pointer', fontSize: '1rem' }}
         onClick={() => setCount((current) => current + 1)}
       >
         Increment
@@ -3288,7 +3327,25 @@ export default function App() {
     </main>
   );
 }
-`;
+`,
+  "App.css": `.counter-app {
+  padding: 1.25rem;
+  text-align: center;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.count {
+  margin: 0.625rem 0;
+  font-size: 2rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+`
+});
 var REACT_TS_STARTER_CODE = `import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 

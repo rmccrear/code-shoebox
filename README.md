@@ -17,7 +17,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
-  - `react-app`: Vite-style `App.jsx` authoring with ES module exports and automatic default-export rendering.
+  - `react-app`: Vite-style `App.jsx` + `App.css` authoring with ES module exports, explicit CSS importing, and automatic default-export rendering.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.30**:
+To install version **v1.0.31**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.30
+npm install github:rmccrear/code-shoebox#v1.0.31
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.30
+yarn add github:rmccrear/code-shoebox#v1.0.31
 ```
 
 ## Maintenance & Releases
