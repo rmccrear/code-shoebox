@@ -191,6 +191,18 @@ Environments for building UI components.
     *   Cannot import other hooks libraries (e.g., `react-router`, `framer-motion`) unless you manually inject their UMD scripts via a custom modification to the runner.
     *   CSS-in-JS libraries (like styled-components) are not pre-loaded.
 
+### `react-app` (React App, Vite-style)
+*   **Engine:** Babel (Presets: `react`, `env`; ES modules compiled to CommonJS).
+*   **Displayed File:** `App.jsx`.
+*   **Capabilities:**
+    *   Accepts normal ES module exports, including named exports.
+    *   Requires a default React component export and renders it to `#root` automatically.
+    *   Supports shimmed imports from `react` and `react-dom/client`.
+    *   Unmounts the previous root before each manual run.
+*   **Limitations:**
+    *   This mode models a single Vite `App.jsx`, not the Vite bundler. Relative modules, CSS imports, arbitrary npm packages, `import.meta`, and hot-module replacement are unavailable.
+    *   Named exports are not rendered; only `export default` supplies the app component.
+
 ### `react-ts` (React + TypeScript)
 *   **Engine:** Babel (Presets: `react`, `typescript`, `env`).
 *   **Capabilities:**
@@ -254,7 +266,7 @@ Environments optimized for teaching pure logic without DOM distractions.
         the runner nulls out — and `let name = "Ada"` merges with the
         deprecated `window.name`, striking through the learner's own variable.
         `express` and `hono` get the same treatment; `dom`, `p5`, `p5play`,
-        and `react` keep the DOM lib, where flagging `name` is correct.
+        `react`, and `react-app` keep the DOM lib, where flagging `name` is correct.
     *   Monaco's language defaults are global to the runtime, so a page with
         both a `node-js` and a `dom` sandbox can hold only one lib set at a
         time. The config is re-applied on editor focus, so the editor the

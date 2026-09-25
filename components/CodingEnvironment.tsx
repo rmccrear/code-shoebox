@@ -39,7 +39,7 @@ const BUNDLE_MODE_CONFIG = {
 }>>;
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
-  mode === 'html' ? 'index.html' : `${mode}.script`;
+  mode === 'html' ? 'index.html' : mode === 'react-app' ? 'App.jsx' : `${mode}.script`;
 
 const getCodeLanguage = (mode: EnvironmentMode, filename?: string): string => {
   if (filename?.endsWith('.html')) return 'html';

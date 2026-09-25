@@ -9,6 +9,7 @@ import {
   HTML_CSS_JS_STARTER_CODE,
   HTML_JS_CSS_MEDIA_STARTER_CODE,
   FETCH_STARTER_CODE,
+  REACT_APP_STARTER_CODE,
 } from '../constants';
 import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle } from '../runtime/fileBundle';
 
@@ -108,6 +109,16 @@ describe('useSandboxState', () => {
     expect(localStorage.getItem('cs_lesson-1_code_fetch')).toBe(FETCH_STARTER_CODE);
   });
 
+  it('switching to react-app loads and persists an App.jsx-style default export', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('react-app'));
+
+    expect(result.current.code).toBe(REACT_APP_STARTER_CODE);
+    expect(result.current.code).toContain('export default function App()');
+    expect(result.current.code).not.toContain('createRoot');
+    expect(localStorage.getItem('cs_lesson-1_code_react-app')).toBe(REACT_APP_STARTER_CODE);
+  });
+
   it('switching to html-js-fetch loads a linked two-file fetch starter', () => {
     const { result } = renderHook(() => useSandboxState('lesson-1'));
     act(() => result.current.setEnvironmentMode('html-js-fetch'));
@@ -155,5 +166,13 @@ describe('useSandboxState', () => {
     localStorage.setItem('cs_lesson-y_env_mode', 'p5');
     const { result } = renderHook(() => useSandboxState('lesson-y'));
     expect(result.current.environmentMode).toBe('p5');
+  });
+
+  it('restores react-app as a valid persisted mode', () => {
+    localStorage.setItem('cs_lesson-react-app_env_mode', 'react-app');
+    const { result } = renderHook(() => useSandboxState('lesson-react-app'));
+
+    expect(result.current.environmentMode).toBe('react-app');
+    expect(result.current.code).toBe(REACT_APP_STARTER_CODE);
   });
 });

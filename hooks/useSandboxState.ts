@@ -12,7 +12,8 @@ import {
   HTML_JS_CSS_MEDIA_STARTER_CODE,
   P5_STARTER_CODE, 
   P5_TS_STARTER_CODE,
-  REACT_STARTER_CODE, 
+  REACT_STARTER_CODE,
+  REACT_APP_STARTER_CODE,
   TYPESCRIPT_STARTER_CODE,
   REACT_TS_STARTER_CODE,
   EXPRESS_STARTER_CODE,
@@ -24,7 +25,7 @@ import {
 } from '../constants';
 
 const VALID_MODES: readonly EnvironmentMode[] = [
-  'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'react', 'react-ts',
+  'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'react', 'react-app', 'react-ts',
   'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
 ];
 
@@ -40,6 +41,7 @@ const getStarterCode = (mode: EnvironmentMode): string => {
     case 'p5': return P5_STARTER_CODE;
     case 'p5-ts': return P5_TS_STARTER_CODE;
     case 'react': return REACT_STARTER_CODE;
+    case 'react-app': return REACT_APP_STARTER_CODE;
     case 'typescript': return TYPESCRIPT_STARTER_CODE;
     case 'react-ts': return REACT_TS_STARTER_CODE;
     case 'express': return EXPRESS_STARTER_CODE;

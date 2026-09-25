@@ -203,6 +203,18 @@ describe('CodingEnvironment routing', () => {
     expect(screen.queryByLabelText(/Read-only code:/)).not.toBeInTheDocument();
   });
 
+  it('labels react-app source as App.jsx', () => {
+    renderCodingEnvironment('react-app', {
+      code: 'export default function App() { return <h1>Hello</h1>; }',
+      predictionPrompt: 'What renders?',
+    });
+
+    expect(screen.getByLabelText('Read-only code: App.jsx')).toHaveAttribute(
+      'data-language',
+      'javascript'
+    );
+  });
+
   it('shows editable script.js and a read-only API Server panel in fetch mode', async () => {
     const onChange = vi.fn();
     renderCodingEnvironment('fetch', {

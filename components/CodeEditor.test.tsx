@@ -28,9 +28,9 @@ const fakeMonaco = {
 
 vi.mock('@monaco-editor/react', () => ({
   __esModule: true,
-  default: ({ onMount, language }: any) => {
+  default: ({ onMount, language, path }: any) => {
     onMount(fakeEditor, fakeMonaco);
-    return <textarea aria-label="Code editor" data-language={language} />;
+    return <textarea aria-label="Code editor" data-language={language} data-path={path} />;
   },
 }));
 
@@ -72,5 +72,13 @@ describe('CodeEditor Emmet opt-in', () => {
     renderEditor({ enableEmmet: true, readOnly: true });
 
     expect(registerHtmlEmmetForModel).not.toHaveBeenCalled();
+  });
+
+  it('uses a JSX JavaScript model for react-app', () => {
+    const { getByLabelText } = renderEditor({ environmentMode: 'react-app', sessionId: 7 });
+    const editor = getByLabelText('Code editor');
+
+    expect(editor).toHaveAttribute('data-language', 'javascript');
+    expect(editor).toHaveAttribute('data-path', 'sandbox-react-app-7.jsx');
   });
 });

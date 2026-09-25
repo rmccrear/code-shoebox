@@ -479,6 +479,37 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
       };
     `
   },
+  'react-app': {
+    name: "React App (Vite-style)",
+    cdns: REACT_CDNS,
+    babelPresets: ['react', 'env'],
+    logic: `
+      let rootInstance = null;
+      window.__RUN_MODE__ = (code, root) => {
+        if (rootInstance) {
+          try { rootInstance.unmount(); } catch (e) {}
+          rootInstance = null;
+        }
+        root.replaceChildren();
+        try {
+          const compiled = Babel.transform(code, {
+            presets: ['react', ['env', { modules: 'commonjs' }]],
+            filename: 'App.jsx',
+            sourceType: 'module'
+          }).code;
+          const module = { exports: {} };
+          const exports = module.exports;
+          new Function('module', 'exports', 'require', compiled)(module, exports, window.require);
+          const App = module.exports.default;
+          if (!App) {
+            throw new Error('React App mode requires a default export. Add \`export default App\`.');
+          }
+          rootInstance = window.ReactDOM.createRoot(root);
+          rootInstance.render(window.React.createElement(App));
+        } catch (e) { console.error(e); }
+      };
+    `
+  },
   'react-ts': {
     name: "React TS",
     cdns: REACT_CDNS,

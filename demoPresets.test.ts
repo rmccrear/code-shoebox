@@ -88,6 +88,16 @@ describe('demoPresets', () => {
     expect(resolvePresetFromHash(hash!)?.mode).toBe('hono');
   });
 
+  it('provides a react-app preset with a default export and no mount tail', () => {
+    const preset = resolvePresetFromHash('react-app-counter-demo');
+
+    expect(preset?.mode).toBe('react-app');
+    expect(getPresetHashForMode('react-app')).toBe('react-app-counter-demo');
+    expect(preset?.code).toContain('export default function App()');
+    expect(preset?.code).toContain('export const step');
+    expect(preset?.code).not.toContain('createRoot');
+  });
+
   it('provides fetch fixtures outside learner code', () => {
     const preset = resolvePresetFromHash('fetch-air-quality-demo');
     const mockApi = getPresetMockApiForMode('fetch');
