@@ -17,7 +17,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
-  - `react-app`: Vite-style `App.jsx` + `App.css` authoring with ES module exports, explicit CSS importing, and automatic default-export rendering.
+  - `react-app`: Vite-style `App.jsx`, up to two imported component JSX files, and `App.css`, with ES module exports and automatic default-export rendering.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
@@ -387,6 +387,18 @@ const ExerciseComponent = () => {
 ```
 
 ## Props
+
+For a lesson-defined multi-component `react-app` workspace, build the `code` string with the exported helper. Filenames are fixed for the learner and component files are limited to two:
+
+```tsx
+import { serializeReactAppBundle } from 'code-shoebox';
+
+const code = serializeReactAppBundle({
+  'App.jsx': `import Counter from './Counter';\nexport default function App() { return <Counter />; }`,
+  'Counter.jsx': `export default function Counter() { return <button>Count</button>; }`,
+  'App.css': `button { font: inherit; }`,
+});
+```
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|

@@ -1267,6 +1267,43 @@ var ENV_RECIPES = {
     logic: `
       let rootInstance = null;
       let learnerStyle = null;
+      const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
+
+      const parseReactAppFiles = (code) => {
+        let sourceFiles = { 'App.jsx': code, 'App.css': '' };
+        try {
+          const parsed = JSON.parse(code);
+          if (parsed && parsed.__csFiles__ === 1) {
+            if (!parsed.files || typeof parsed.files !== 'object' || Array.isArray(parsed.files)) {
+              throw new Error('React App bundle files must be an object.');
+            }
+            sourceFiles = parsed.files;
+          }
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(sourceFiles, 'App.jsx')) {
+          throw new Error('React App bundle requires an App.jsx entry file.');
+        }
+
+        const jsxNames = [];
+        for (const fileName of Object.keys(sourceFiles)) {
+          if (fileName === 'App.css') continue;
+          if (fileName !== 'App.jsx' && !reactComponentFileName.test(fileName)) {
+            throw new Error('Unsupported React App file "' + fileName + '". Component files must be top-level, begin with an uppercase letter, and end in .jsx.');
+          }
+          if (fileName.endsWith('.jsx')) jsxNames.push(fileName);
+        }
+        if (jsxNames.length > 3) {
+          throw new Error('React App mode supports App.jsx plus at most two component JSX files.');
+        }
+
+        const files = { 'App.css': String(sourceFiles['App.css'] ?? '') };
+        for (const fileName of jsxNames) files[fileName] = String(sourceFiles[fileName] ?? '');
+        return files;
+      };
+
       window.__RUN_MODE__ = (code, root) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
@@ -1278,40 +1315,60 @@ var ENV_RECIPES = {
         }
         root.replaceChildren();
         try {
-          let files = { jsx: code, css: '' };
-          try {
-            const parsed = JSON.parse(code);
-            if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
-              files = {
-                jsx: String(parsed.files['App.jsx'] ?? ''),
-                css: String(parsed.files['App.css'] ?? '')
-              };
-            }
-          } catch (e) {}
-          const compiled = Babel.transform(files.jsx, {
-            presets: ['react', ['env', { modules: 'commonjs' }]],
-            filename: 'App.jsx',
-            sourceType: 'module'
-          }).code;
-          const module = { exports: {} };
-          const exports = module.exports;
+          const files = parseReactAppFiles(code);
+          const moduleCache = Object.create(null);
           let shouldInstallCss = false;
-          const localRequire = (specifier) => {
-            if (specifier === './App.css') {
-              shouldInstallCss = true;
-              return {};
+
+          const executeModule = (fileName) => {
+            if (moduleCache[fileName]) return moduleCache[fileName].exports;
+            const module = { exports: {} };
+            moduleCache[fileName] = module;
+
+            try {
+              const compiled = Babel.transform(files[fileName], {
+                presets: ['react', ['env', { modules: 'commonjs' }]],
+                filename: fileName,
+                sourceType: 'module'
+              }).code;
+
+              const localRequire = (specifier) => {
+                if (specifier === 'react' || specifier === 'react-dom/client') {
+                  return window.require(specifier);
+                }
+                if (specifier === './App.css') {
+                  shouldInstallCss = true;
+                  return {};
+                }
+
+                const localMatch = /^\\.\\/([A-Z][A-Za-z0-9_-]*)(?:\\.jsx)?$/.exec(specifier);
+                if (localMatch) {
+                  const resolvedName = localMatch[1] + '.jsx';
+                  if (Object.prototype.hasOwnProperty.call(files, resolvedName)) {
+                    return executeModule(resolvedName);
+                  }
+                }
+                throw new Error('Cannot resolve "' + specifier + '" imported from "' + fileName + '".');
+              };
+
+              new Function('module', 'exports', 'require', compiled)(module, module.exports, localRequire);
+              return module.exports;
+            } catch (error) {
+              delete moduleCache[fileName];
+              if (error && error.__codeShoeboxReactFile) throw error;
+              const described = new Error('Error in "' + fileName + '": ' + (error && error.message ? error.message : String(error)));
+              described.__codeShoeboxReactFile = true;
+              throw described;
             }
-            return window.require(specifier);
           };
-          new Function('module', 'exports', 'require', compiled)(module, exports, localRequire);
-          const App = module.exports.default;
+
+          const App = executeModule('App.jsx').default;
           if (!App) {
             throw new Error('React App mode requires a default export. Add \`export default App\`.');
           }
           if (shouldInstallCss) {
             learnerStyle = document.createElement('style');
             learnerStyle.setAttribute('data-code-shoebox-react-app', '');
-            learnerStyle.textContent = files.css;
+            learnerStyle.textContent = files['App.css'];
             document.head.appendChild(learnerStyle);
           }
           rootInstance = window.ReactDOM.createRoot(root);
@@ -2098,7 +2155,55 @@ var HTML_CSS_FILE_NAMES = ["index.html", "style.css"];
 var HTML_JS_FILE_NAMES = ["index.html", "script.js"];
 var HTML_CSS_JS_FILE_NAMES = ["index.html", "style.css", "script.js"];
 var REACT_APP_FILE_NAMES = ["App.jsx", "App.css"];
+var REACT_COMPONENT_FILE_NAME = /^[A-Z][A-Za-z0-9_-]*\.jsx$/;
+var REACT_APP_MAX_JSX_FILES = 3;
 var serializeFileBundle = (files) => JSON.stringify({ __csFiles__: 1, files });
+var validateReactAppFiles = (candidate) => {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+    throw new Error("React App bundle files must be an object.");
+  }
+  const source = candidate;
+  if (!Object.prototype.hasOwnProperty.call(source, "App.jsx")) {
+    throw new Error("React App bundle requires an App.jsx entry file.");
+  }
+  const componentNames = [];
+  for (const fileName of Object.keys(source)) {
+    if (fileName === "App.jsx" || fileName === "App.css") continue;
+    if (!REACT_COMPONENT_FILE_NAME.test(fileName)) {
+      throw new Error(
+        `Unsupported React App file "${fileName}". Component files must be top-level, begin with an uppercase letter, and end in .jsx.`
+      );
+    }
+    componentNames.push(fileName);
+  }
+  if (componentNames.length + 1 > REACT_APP_MAX_JSX_FILES) {
+    throw new Error("React App mode supports App.jsx plus at most two component JSX files.");
+  }
+  componentNames.sort((left, right) => left.localeCompare(right));
+  const fileNames = ["App.jsx", ...componentNames, "App.css"];
+  const files = Object.fromEntries(
+    fileNames.map((fileName) => [fileName, String(source[fileName] ?? "")])
+  );
+  return { files, fileNames };
+};
+var serializeReactAppBundle = (files) => {
+  const validated = validateReactAppFiles(files);
+  return JSON.stringify({ __csFiles__: 1, files: validated.files });
+};
+var parseReactAppBundle = (code) => {
+  try {
+    const parsed = JSON.parse(code);
+    if (parsed && parsed.__csFiles__ === 1) {
+      return validateReactAppFiles(parsed.files);
+    }
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+    } else {
+      throw error;
+    }
+  }
+  return validateReactAppFiles({ "App.jsx": code, "App.css": "" });
+};
 function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
   try {
     const parsed = JSON.parse(code);
@@ -2122,8 +2227,7 @@ var BUNDLE_MODE_CONFIG = {
   "html-js": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   "html-js-fetch": { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
-  "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
-  "react-app": { files: REACT_APP_FILE_NAMES, hasMediaTab: false }
+  "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
 var getDisplayFilename = (mode) => mode === "html" ? "index.html" : mode === "react-app" ? "App.jsx" : `${mode}.script`;
 var getCodeLanguage = (mode, filename) => {
@@ -2167,7 +2271,23 @@ var CodingEnvironment = ({
   const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
   const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
-  const editableBundleFileNames = bundleModeConfig?.files ?? null;
+  const reactAppParse = useMemo3(
+    () => {
+      if (environmentMode !== "react-app") return { bundle: null, error: null };
+      try {
+        return { bundle: parseReactAppBundle(code), error: null };
+      } catch (error) {
+        return {
+          bundle: null,
+          error: error instanceof Error ? error.message : String(error)
+        };
+      }
+    },
+    [environmentMode, code]
+  );
+  const reactAppBundle = reactAppParse.bundle;
+  const reactAppBundleError = reactAppParse.error;
+  const editableBundleFileNames = environmentMode === "react-app" ? reactAppBundle?.fileNames ?? REACT_APP_FILE_NAMES : bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === "dom" && (fixtureHtml !== void 0 || fixtureCss !== void 0);
   const visibleTabs = useMemo3(() => {
@@ -2192,10 +2312,11 @@ var CodingEnvironment = ({
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
   const selectedFile = selectedTab === "media" || selectedTab === "api-server" ? null : selectedTab;
-  const files = useMemo3(
-    () => editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null,
-    [editableBundleFileNames, code]
-  );
+  const files = useMemo3(() => {
+    if (reactAppBundle) return reactAppBundle.files;
+    if (environmentMode === "react-app") return null;
+    return bundleModeConfig ? parseFileBundle(code, bundleModeConfig.files) : null;
+  }, [reactAppBundle, environmentMode, bundleModeConfig, code]);
   useEffect3(() => {
     if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
   }, [activeTab, visibleTabs]);
@@ -2208,7 +2329,8 @@ var CodingEnvironment = ({
   const handleEditorChange = (value) => {
     const next = value || "";
     if (isEditableBundleMode && files && selectedFile) {
-      onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
+      const nextFiles = { ...files, [selectedFile]: next };
+      onChange(environmentMode === "react-app" ? serializeReactAppBundle(nextFiles) : serializeFileBundle(nextFiles));
     } else if (!hasDomFixtures || selectedFile === "script.js") {
       onChange(next);
     }
@@ -2324,7 +2446,18 @@ var CodingEnvironment = ({
       ] })
     ] }),
     /* @__PURE__ */ jsxs8("div", { ref: containerRef, className: `flex-1 flex overflow-hidden ${layout === "horizontal" ? "flex-row" : "flex-col"}`, children: [
-      /* @__PURE__ */ jsx9("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: selectedTab === "media" ? /* @__PURE__ */ jsx9(
+      /* @__PURE__ */ jsx9("div", { style: { [layout === "horizontal" ? "width" : "height"]: `${editorRatio * 100}%` }, className: "relative flex flex-col min-w-0 min-h-0", children: reactAppBundleError ? /* @__PURE__ */ jsxs8(
+        "div",
+        {
+          role: "alert",
+          className: `m-4 rounded border p-4 text-sm ${themeMode === "dark" ? "border-red-400/30 bg-red-950/30 text-red-200" : "border-red-200 bg-red-50 text-red-800"}`,
+          children: [
+            /* @__PURE__ */ jsx9("strong", { children: "Invalid React App workspace:" }),
+            " ",
+            reactAppBundleError
+          ]
+        }
+      ) : selectedTab === "media" ? /* @__PURE__ */ jsx9(
         MediaPanel,
         {
           mediaAssets: environmentMode === "html-js-css-media" ? mediaAssets ?? [] : [],
@@ -2923,16 +3056,26 @@ function Counter() {
 const root = createRoot(document.getElementById('root'));
 root.render(<Counter />);
 `;
-var REACT_APP_STARTER_CODE = serializeFileBundle({
-  "App.jsx": `import { useState } from 'react';
+var REACT_APP_STARTER_CODE = serializeReactAppBundle({
+  "App.jsx": `import Counter from './Counter.jsx';
 import './App.css';
 
 export default function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <main className="counter-app">
       <h2>React App Counter</h2>
+      <Counter />
+    </main>
+  );
+}
+`,
+  "Counter.jsx": `import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
       <p className="count">{count}</p>
       <button
         type="button"
@@ -2940,7 +3083,7 @@ export default function App() {
       >
         Increment
       </button>
-    </main>
+    </>
   );
 }
 `,
@@ -3351,6 +3494,7 @@ export {
   baseTheme,
   borisTheme,
   modernLabTheme,
+  serializeReactAppBundle,
   themes,
   useAutoKey,
   useSandboxState

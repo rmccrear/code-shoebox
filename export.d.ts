@@ -130,4 +130,13 @@ declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: s
  */
 declare const useAutoKey: (identifier: string, initialCode?: string, prefix?: string) => string;
 
-export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type JsonValue, type MediaAsset, type MockApiConfig, type MockApiMethod, type MockApiRoute, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, themes, useAutoKey, useSandboxState };
+/** A bounded React App workspace. `App.jsx` is required; `App.css` is optional. */
+type ReactAppBundleInput = {
+    'App.jsx': string;
+    'App.css'?: string;
+    [fileName: string]: string | undefined;
+};
+/** Serialize and validate the public, bounded `react-app` workspace format. */
+declare const serializeReactAppBundle: (files: Readonly<ReactAppBundleInput>) => string;
+
+export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type JsonValue, type MediaAsset, type MockApiConfig, type MockApiMethod, type MockApiRoute, type ReactAppBundleInput, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, serializeReactAppBundle, themes, useAutoKey, useSandboxState };
