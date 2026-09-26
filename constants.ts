@@ -1,5 +1,5 @@
 
-import { serializeFileBundle } from './runtime/fileBundle';
+import { serializeFileBundle, serializeReactAppBundle } from './runtime/fileBundle';
 
 export const APP_NAME = "CodeShoebox";
 
@@ -376,16 +376,26 @@ const root = createRoot(document.getElementById('root'));
 root.render(<Counter />);
 `;
 
-export const REACT_APP_STARTER_CODE = serializeFileBundle({
-  'App.jsx': `import { useState } from 'react';
+export const REACT_APP_STARTER_CODE = serializeReactAppBundle({
+  'App.jsx': `import Counter from './Counter.jsx';
 import './App.css';
 
 export default function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <main className="counter-app">
       <h2>React App Counter</h2>
+      <Counter />
+    </main>
+  );
+}
+`,
+  'Counter.jsx': `import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
       <p className="count">{count}</p>
       <button
         type="button"
@@ -393,7 +403,7 @@ export default function App() {
       >
         Increment
       </button>
-    </main>
+    </>
   );
 }
 `,

@@ -193,15 +193,17 @@ Environments for building UI components.
 
 ### `react-app` (React App, Vite-style)
 *   **Engine:** Babel (Presets: `react`, `env`; ES modules compiled to CommonJS).
-*   **Workspace:** Two fixed editable files, `App.jsx` and `App.css`, stored in the version-1 code envelope. A plain legacy string becomes `App.jsx` with an empty `App.css`.
+*   **Workspace:** Required `App.jsx`, optional lesson-defined component files (two maximum), and `App.css`, stored in the version-1 code envelope. A plain legacy string becomes `App.jsx` with an empty `App.css`. Learners can edit the supplied files but cannot create, delete, or rename them.
 *   **Capabilities:**
     *   Accepts normal ES module exports, including named exports.
     *   Requires a default React component export and renders it to `#root` automatically.
     *   Supports shimmed imports from `react` and `react-dom/client`.
-    *   Applies `App.css` when `App.jsx` contains the exact import `import './App.css'`.
+    *   Resolves top-level component imports as either `./Counter` or `./Counter.jsx`, including named and default exports.
+    *   Applies `App.css` when a JSX module contains the exact import `import './App.css'`.
+    *   Lesson authors can create validated workspaces with the public `serializeReactAppBundle` helper.
     *   Unmounts the previous root before each manual run.
 *   **Limitations:**
-    *   This mode models the bounded `App.jsx`/`App.css` portion of a Vite app, not the Vite bundler. Other relative modules or stylesheets, arbitrary npm packages, `import.meta`, and hot-module replacement are unavailable.
+    *   This mode models a bounded portion of a Vite app, not the Vite bundler. More than two component files, nested paths, other extensions or stylesheets, arbitrary npm packages, `import.meta`, dynamic imports, and hot-module replacement are unavailable.
     *   Named exports are not rendered; only `export default` supplies the app component.
 
 ### `react-ts` (React + TypeScript)

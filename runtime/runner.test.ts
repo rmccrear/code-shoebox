@@ -40,22 +40,28 @@ describe('getSandboxHtml', () => {
     expect(html).toContain('react-dom@18.3.1/umd/react-dom.development.js');
     expect(html).toContain('@babel/standalone@7.26.4/babel.min.js');
     expect(html).toContain("presets: ['react', ['env', { modules: 'commonjs' }]]");
-    expect(html).toContain("filename: 'App.jsx'");
+    expect(html).toContain('filename: fileName');
     expect(html).toContain("sourceType: 'module'");
-    expect(html).toContain("parsed.files['App.jsx']");
-    expect(html).toContain("parsed.files['App.css']");
+    expect(html).toContain("sourceFiles['App.css']");
     expect(html).toContain("specifier === './App.css'");
     expect(html).toContain('shouldInstallCss = true');
-    expect(html).toContain("learnerStyle.textContent = files.css");
+    expect(html).toContain("learnerStyle.textContent = files['App.css']");
     expect(html.indexOf("new Function('module', 'exports', 'require', compiled)")).toBeLessThan(
-      html.indexOf("learnerStyle.textContent = files.css")
+      html.indexOf("learnerStyle.textContent = files['App.css']")
     );
     expect(html).toContain("data-code-shoebox-react-app");
     expect(html).toContain('learnerStyle.remove()');
-    expect(html).toContain('return window.require(specifier)');
+    expect(html).toContain("specifier === 'react' || specifier === 'react-dom/client'");
     expect(html).toContain('const module = { exports: {} }');
     expect(html).toContain("new Function('module', 'exports', 'require', compiled)");
-    expect(html).toContain('module.exports.default');
+    expect(html).toContain("executeModule('App.jsx').default");
+    expect(html).toContain('moduleCache[fileName] = module');
+    expect(html).toContain('delete moduleCache[fileName]');
+    expect(html).toContain("const resolvedName = localMatch[1] + '.jsx'");
+    expect(html).toContain('return executeModule(resolvedName)');
+    expect(html).toContain('Cannot resolve "');
+    expect(html).toContain('imported from "');
+    expect(html).toContain('at most two component JSX files');
     expect(html).toContain("module === 'react-dom/client'");
     expect(html).toContain('rootInstance.unmount()');
     expect(html).toContain('window.ReactDOM.createRoot(root)');

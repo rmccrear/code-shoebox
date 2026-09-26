@@ -1,5 +1,5 @@
 import { EnvironmentMode, MediaAsset, MockApiConfig } from './types';
-import { serializeFileBundle } from './runtime/fileBundle';
+import { serializeFileBundle, serializeReactAppBundle } from './runtime/fileBundle';
 
 export const HTML_JS_CSS_MEDIA_DEMO_ASSETS = [
   {
@@ -385,23 +385,32 @@ export default app;`
   {
     id: 'react-app-counter-demo',
     mode: 'react-app',
-    code: serializeFileBundle({
-      'App.jsx': `import { useState } from 'react';
+    code: serializeReactAppBundle({
+      'App.jsx': `import Counter from './Counter';
 import './App.css';
 
 export const step = 1;
 
 export default function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <main className="counter-demo">
       <h1>Vite-style App.jsx</h1>
+      <Counter step={step} />
+    </main>
+  );
+}`,
+      'Counter.jsx': `import { useState } from 'react';
+
+export default function Counter({ step }) {
+  const [count, setCount] = useState(0);
+
+  return (
+    <>
       <p>Count: {count}</p>
       <button type="button" onClick={() => setCount((current) => current + step)}>
         Increment
       </button>
-    </main>
+    </>
   );
 }`,
       'App.css': `.counter-demo {
