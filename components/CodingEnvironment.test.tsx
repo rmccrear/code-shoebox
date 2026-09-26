@@ -231,7 +231,7 @@ describe('CodingEnvironment routing', () => {
 
     expect(getFileTabNames()).toEqual(['App.jsx', 'App.css']);
     expect(editor).toHaveValue("import './App.css';\nexport default function App() { return <h1>Hello</h1>; }");
-    expect(editor).toHaveAttribute('data-language', 'javascript');
+    expect(editor).toHaveAttribute('data-language', 'jsx');
 
     fireEvent.click(screen.getByRole('button', { name: 'App.css' }));
     editor = screen.getByLabelText('Code editor');
