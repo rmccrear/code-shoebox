@@ -3,7 +3,9 @@ import {
   HTML_CSS_JS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
   REACT_APP_FILE_NAMES,
+  parseReactAppBundle,
   serializeFileBundle,
+  serializeReactAppBundle,
   parseFileBundle,
 } from './fileBundle';
 
@@ -134,6 +136,57 @@ describe('fileBundle', () => {
       'index.html': '<h1>bare</h1>',
       'style.css': '',
       'script.js': '',
+    });
+  });
+
+  it('serializes zero, one, or two bounded React component files in canonical order', () => {
+    const zero = parseReactAppBundle(serializeReactAppBundle({
+      'App.jsx': 'export default function App() { return null; }',
+    }));
+    expect(zero.fileNames).toEqual(['App.jsx', 'App.css']);
+
+    const two = parseReactAppBundle(serializeReactAppBundle({
+      'App.jsx': "import Zebra from './Zebra';",
+      'Zebra.jsx': 'export default function Zebra() { return null; }',
+      'Button_2.jsx': 'export const Button = () => null;',
+      'App.css': 'body {}',
+    }));
+    expect(two.fileNames).toEqual(['App.jsx', 'Button_2.jsx', 'Zebra.jsx', 'App.css']);
+    expect(two.files['Zebra.jsx']).toContain('function Zebra');
+  });
+
+  it('rejects too many, nested, lowercase, and unsupported React App files', () => {
+    const app = 'export default function App() { return null; }';
+    expect(() => serializeReactAppBundle({
+      'App.jsx': app,
+      'One.jsx': '',
+      'Two.jsx': '',
+      'Three.jsx': '',
+    })).toThrow('at most two component JSX files');
+    expect(() => serializeReactAppBundle({ 'App.jsx': app, 'components/Card.jsx': '' }))
+      .toThrow('Unsupported React App file');
+    expect(() => serializeReactAppBundle({ 'App.jsx': app, 'counter.jsx': '' }))
+      .toThrow('Unsupported React App file');
+    expect(() => serializeReactAppBundle({ 'App.jsx': app, 'Data.js': '' }))
+      .toThrow('Unsupported React App file');
+  });
+
+  it('rejects envelopes without App.jsx instead of silently discarding their files', () => {
+    const raw = JSON.stringify({ __csFiles__: 1, files: { 'Counter.jsx': 'export default 1;' } });
+    expect(() => parseReactAppBundle(raw)).toThrow('requires an App.jsx entry file');
+  });
+
+  it('keeps current two-file envelopes and legacy plain source backward compatible', () => {
+    const app = 'export default function App() { return <h1>Legacy</h1>; }';
+    expect(parseReactAppBundle(app)).toEqual({
+      fileNames: ['App.jsx', 'App.css'],
+      files: { 'App.jsx': app, 'App.css': '' },
+    });
+
+    const existing = serializeFileBundle({ 'App.jsx': app, 'App.css': 'h1 {}' });
+    expect(parseReactAppBundle(existing).files).toEqual({
+      'App.jsx': app,
+      'App.css': 'h1 {}',
     });
   });
 });

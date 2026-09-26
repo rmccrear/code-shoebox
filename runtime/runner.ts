@@ -486,6 +486,43 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     logic: `
       let rootInstance = null;
       let learnerStyle = null;
+      const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
+
+      const parseReactAppFiles = (code) => {
+        let sourceFiles = { 'App.jsx': code, 'App.css': '' };
+        try {
+          const parsed = JSON.parse(code);
+          if (parsed && parsed.__csFiles__ === 1) {
+            if (!parsed.files || typeof parsed.files !== 'object' || Array.isArray(parsed.files)) {
+              throw new Error('React App bundle files must be an object.');
+            }
+            sourceFiles = parsed.files;
+          }
+        } catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(sourceFiles, 'App.jsx')) {
+          throw new Error('React App bundle requires an App.jsx entry file.');
+        }
+
+        const jsxNames = [];
+        for (const fileName of Object.keys(sourceFiles)) {
+          if (fileName === 'App.css') continue;
+          if (fileName !== 'App.jsx' && !reactComponentFileName.test(fileName)) {
+            throw new Error('Unsupported React App file "' + fileName + '". Component files must be top-level, begin with an uppercase letter, and end in .jsx.');
+          }
+          if (fileName.endsWith('.jsx')) jsxNames.push(fileName);
+        }
+        if (jsxNames.length > 3) {
+          throw new Error('React App mode supports App.jsx plus at most two component JSX files.');
+        }
+
+        const files = { 'App.css': String(sourceFiles['App.css'] ?? '') };
+        for (const fileName of jsxNames) files[fileName] = String(sourceFiles[fileName] ?? '');
+        return files;
+      };
+
       window.__RUN_MODE__ = (code, root) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
@@ -497,40 +534,60 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         }
         root.replaceChildren();
         try {
-          let files = { jsx: code, css: '' };
-          try {
-            const parsed = JSON.parse(code);
-            if (parsed && parsed.__csFiles__ === 1 && parsed.files) {
-              files = {
-                jsx: String(parsed.files['App.jsx'] ?? ''),
-                css: String(parsed.files['App.css'] ?? '')
-              };
-            }
-          } catch (e) {}
-          const compiled = Babel.transform(files.jsx, {
-            presets: ['react', ['env', { modules: 'commonjs' }]],
-            filename: 'App.jsx',
-            sourceType: 'module'
-          }).code;
-          const module = { exports: {} };
-          const exports = module.exports;
+          const files = parseReactAppFiles(code);
+          const moduleCache = Object.create(null);
           let shouldInstallCss = false;
-          const localRequire = (specifier) => {
-            if (specifier === './App.css') {
-              shouldInstallCss = true;
-              return {};
+
+          const executeModule = (fileName) => {
+            if (moduleCache[fileName]) return moduleCache[fileName].exports;
+            const module = { exports: {} };
+            moduleCache[fileName] = module;
+
+            try {
+              const compiled = Babel.transform(files[fileName], {
+                presets: ['react', ['env', { modules: 'commonjs' }]],
+                filename: fileName,
+                sourceType: 'module'
+              }).code;
+
+              const localRequire = (specifier) => {
+                if (specifier === 'react' || specifier === 'react-dom/client') {
+                  return window.require(specifier);
+                }
+                if (specifier === './App.css') {
+                  shouldInstallCss = true;
+                  return {};
+                }
+
+                const localMatch = /^\\.\\/([A-Z][A-Za-z0-9_-]*)(?:\\.jsx)?$/.exec(specifier);
+                if (localMatch) {
+                  const resolvedName = localMatch[1] + '.jsx';
+                  if (Object.prototype.hasOwnProperty.call(files, resolvedName)) {
+                    return executeModule(resolvedName);
+                  }
+                }
+                throw new Error('Cannot resolve "' + specifier + '" imported from "' + fileName + '".');
+              };
+
+              new Function('module', 'exports', 'require', compiled)(module, module.exports, localRequire);
+              return module.exports;
+            } catch (error) {
+              delete moduleCache[fileName];
+              if (error && error.__codeShoeboxReactFile) throw error;
+              const described = new Error('Error in "' + fileName + '": ' + (error && error.message ? error.message : String(error)));
+              described.__codeShoeboxReactFile = true;
+              throw described;
             }
-            return window.require(specifier);
           };
-          new Function('module', 'exports', 'require', compiled)(module, exports, localRequire);
-          const App = module.exports.default;
+
+          const App = executeModule('App.jsx').default;
           if (!App) {
             throw new Error('React App mode requires a default export. Add \`export default App\`.');
           }
           if (shouldInstallCss) {
             learnerStyle = document.createElement('style');
             learnerStyle.setAttribute('data-code-shoebox-react-app', '');
-            learnerStyle.textContent = files.css;
+            learnerStyle.textContent = files['App.css'];
             document.head.appendChild(learnerStyle);
           }
           rootInstance = window.ReactDOM.createRoot(root);

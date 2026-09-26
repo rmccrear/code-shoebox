@@ -11,7 +11,7 @@ import {
   FETCH_STARTER_CODE,
   REACT_APP_STARTER_CODE,
 } from '../constants';
-import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, REACT_APP_FILE_NAMES, parseFileBundle } from '../runtime/fileBundle';
+import { HTML_CSS_JS_FILE_NAMES, HTML_JS_FILE_NAMES, parseFileBundle, parseReactAppBundle } from '../runtime/fileBundle';
 
 describe('useSandboxState', () => {
   it('defaults to dom mode with the dom starter code', () => {
@@ -114,10 +114,11 @@ describe('useSandboxState', () => {
     act(() => result.current.setEnvironmentMode('react-app'));
 
     expect(result.current.code).toBe(REACT_APP_STARTER_CODE);
-    const files = parseFileBundle(result.current.code, REACT_APP_FILE_NAMES);
+    const files = parseReactAppBundle(result.current.code).files;
     expect(files['App.jsx']).toContain('export default function App()');
     expect(files['App.jsx']).toContain("import './App.css'");
     expect(files['App.jsx']).not.toContain('createRoot');
+    expect(files['Counter.jsx']).toContain('useState');
     expect(files['App.css'].trim().length).toBeGreaterThan(0);
     expect(localStorage.getItem('cs_lesson-1_code_react-app')).toBe(REACT_APP_STARTER_CODE);
   });

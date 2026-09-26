@@ -21,11 +21,13 @@ import {
   HTML_JS_FILE_NAMES,
   HTML_CSS_JS_FILE_NAMES,
   REACT_APP_FILE_NAMES,
+  parseReactAppBundle,
   parseFileBundle,
+  serializeReactAppBundle,
   serializeFileBundle,
 } from '../runtime/fileBundle';
 
-type EditorFileName = 'script.js' | 'index.html' | 'style.css' | 'App.jsx' | 'App.css';
+type EditorFileName = string;
 type WorkspaceTab = EditorFileName | 'media' | 'api-server';
 
 const BUNDLE_MODE_CONFIG = {
@@ -34,7 +36,6 @@ const BUNDLE_MODE_CONFIG = {
   'html-js-fetch': { files: HTML_JS_FILE_NAMES, hasMediaTab: false },
   'html-css-js': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   'html-js-css-media': { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true },
-  'react-app': { files: REACT_APP_FILE_NAMES, hasMediaTab: false },
 } as const satisfies Partial<Record<EnvironmentMode, {
   files: readonly EditorFileName[];
   hasMediaTab: boolean;
@@ -109,7 +110,25 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG
     ? BUNDLE_MODE_CONFIG[environmentMode as keyof typeof BUNDLE_MODE_CONFIG]
     : null;
-  const editableBundleFileNames = bundleModeConfig?.files ?? null;
+  const reactAppParse = useMemo(
+    () => {
+      if (environmentMode !== 'react-app') return { bundle: null, error: null };
+      try {
+        return { bundle: parseReactAppBundle(code), error: null };
+      } catch (error) {
+        return {
+          bundle: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+    [environmentMode, code]
+  );
+  const reactAppBundle = reactAppParse.bundle;
+  const reactAppBundleError = reactAppParse.error;
+  const editableBundleFileNames = environmentMode === 'react-app'
+    ? reactAppBundle?.fileNames ?? REACT_APP_FILE_NAMES
+    : bundleModeConfig?.files ?? null;
   const isEditableBundleMode = editableBundleFileNames !== null;
   const hasDomFixtures = environmentMode === 'dom'
     && (fixtureHtml !== undefined || fixtureCss !== undefined);
@@ -135,10 +154,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   );
   const selectedTab = visibleTabs.includes(activeTab) ? activeTab : visibleTabs[0];
   const selectedFile = selectedTab === 'media' || selectedTab === 'api-server' ? null : selectedTab;
-  const files = useMemo(
-    () => (editableBundleFileNames ? parseFileBundle(code, editableBundleFileNames) : null),
-    [editableBundleFileNames, code]
-  );
+  const files = useMemo<Record<string, string> | null>(() => {
+    if (reactAppBundle) return reactAppBundle.files;
+    if (environmentMode === 'react-app') return null;
+    return bundleModeConfig ? parseFileBundle(code, bundleModeConfig.files) : null;
+  }, [reactAppBundle, environmentMode, bundleModeConfig, code]);
 
   useEffect(() => {
     if (!visibleTabs.includes(activeTab)) setActiveTab(visibleTabs[0]);
@@ -161,7 +181,10 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const handleEditorChange = (value: string | undefined) => {
     const next = value || '';
     if (isEditableBundleMode && files && selectedFile) {
-      onChange(serializeFileBundle({ ...files, [selectedFile]: next }));
+      const nextFiles = { ...files, [selectedFile]: next };
+      onChange(environmentMode === 'react-app'
+        ? serializeReactAppBundle(nextFiles as { 'App.jsx': string })
+        : serializeFileBundle(nextFiles as Parameters<typeof serializeFileBundle>[0]));
     } else if (!hasDomFixtures || selectedFile === 'script.js') {
       onChange(next);
     }
@@ -297,7 +320,14 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       {/* Editor & Output Workspace */}
       <div ref={containerRef} className={`flex-1 flex overflow-hidden ${layout === 'horizontal' ? 'flex-row' : 'flex-col'}`}>
         <div style={{ [layout === 'horizontal' ? 'width' : 'height']: `${editorRatio * 100}%` }} className="relative flex flex-col min-w-0 min-h-0">
-          {selectedTab === 'media' ? (
+          {reactAppBundleError ? (
+            <div
+              role="alert"
+              className={`m-4 rounded border p-4 text-sm ${themeMode === 'dark' ? 'border-red-400/30 bg-red-950/30 text-red-200' : 'border-red-200 bg-red-50 text-red-800'}`}
+            >
+              <strong>Invalid React App workspace:</strong> {reactAppBundleError}
+            </div>
+          ) : selectedTab === 'media' ? (
             <MediaPanel
               mediaAssets={environmentMode === 'html-js-css-media' ? mediaAssets ?? [] : []}
               themeMode={themeMode}

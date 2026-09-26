@@ -9,7 +9,7 @@ import {
 import {
   HTML_CSS_JS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
-  REACT_APP_FILE_NAMES,
+  parseReactAppBundle,
   parseFileBundle,
 } from './runtime/fileBundle';
 
@@ -98,11 +98,12 @@ describe('demoPresets', () => {
 
     expect(preset?.mode).toBe('react-app');
     expect(getPresetHashForMode('react-app')).toBe('react-app-counter-demo');
-    const files = parseFileBundle(preset!.code, REACT_APP_FILE_NAMES);
+    const files = parseReactAppBundle(preset!.code).files;
     expect(files['App.jsx']).toContain('export default function App()');
     expect(files['App.jsx']).toContain('export const step');
     expect(files['App.jsx']).toContain("import './App.css'");
     expect(files['App.jsx']).not.toContain('createRoot');
+    expect(files['Counter.jsx']).toContain('useState');
     expect(files['App.css']).toContain('.counter-demo');
   });
 

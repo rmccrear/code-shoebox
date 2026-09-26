@@ -7,7 +7,9 @@ import {
   HTML_CSS_JS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
   REACT_APP_FILE_NAMES,
+  parseReactAppBundle,
   parseFileBundle,
+  serializeReactAppBundle,
   serializeFileBundle,
 } from '../runtime/fileBundle';
 
@@ -204,13 +206,18 @@ describe('CodingEnvironment routing', () => {
     expect(screen.queryByLabelText(/Read-only code:/)).not.toBeInTheDocument();
   });
 
-  it('shows App.jsx and App.css in fixed order for react-app prediction source', () => {
+  it('shows React App files in canonical order for immutable prediction source', () => {
     renderCodingEnvironment('react-app', {
-      code: 'export default function App() { return <h1>Hello</h1>; }',
+      code: serializeReactAppBundle({
+        'App.jsx': 'export default function App() { return <h1>Hello</h1>; }',
+        'Zebra.jsx': 'export default function Zebra() { return null; }',
+        'Button.jsx': 'export default function Button() { return null; }',
+        'App.css': '',
+      }),
       predictionPrompt: 'What renders?',
     });
 
-    expect(getFileTabNames()).toEqual(['App.jsx', 'App.css']);
+    expect(getFileTabNames()).toEqual(['App.jsx', 'Button.jsx', 'Zebra.jsx', 'App.css']);
     expect(screen.getByLabelText('Read-only code: App.jsx')).toHaveAttribute(
       'data-language',
       'javascript'
@@ -243,6 +250,46 @@ describe('CodingEnvironment routing', () => {
       'App.jsx': expect.stringContaining("import './App.css'"),
       'App.css': 'h1 { color: green; }',
     });
+  });
+
+  it('preserves every React App module when a component tab is edited', async () => {
+    const onChange = vi.fn();
+    const code = serializeReactAppBundle({
+      'App.jsx': "import Counter from './Counter';\nexport default function App() { return <Counter />; }",
+      'Counter.jsx': 'export default function Counter() { return <p>0</p>; }',
+      'Label.jsx': 'export const Label = () => <span>Count</span>;',
+      'App.css': 'p { color: blue; }',
+    });
+    renderCodingEnvironment('react-app', { code, onChange });
+
+    expect(getFileTabNames()).toEqual(['App.jsx', 'Counter.jsx', 'Label.jsx', 'App.css']);
+    expect((await screen.findByLabelText('Code editor') as HTMLTextAreaElement).value).toContain('./Counter');
+    fireEvent.click(screen.getByRole('button', { name: 'Counter.jsx' }));
+    const editor = screen.getByLabelText('Code editor');
+    expect(editor).toHaveAttribute('data-language', 'jsx');
+    expect(editor).toHaveAttribute('data-path', 'sandbox-react-app-1-Counter.jsx');
+    fireEvent.change(editor, {
+      target: { value: 'export default function Counter() { return <p>1</p>; }' },
+    });
+
+    const changed = parseReactAppBundle(onChange.mock.calls[0][0]);
+    expect(changed.files['Counter.jsx']).toContain('<p>1</p>');
+    expect(changed.files['Label.jsx']).toContain('Count');
+    expect(changed.files['App.css']).toBe('p { color: blue; }');
+  });
+
+  it('surfaces an invalid React App envelope without crashing the host editor', () => {
+    const invalid = JSON.stringify({
+      __csFiles__: 1,
+      files: { 'App.jsx': 'export default function App() {}', 'lowercase.jsx': '' },
+    });
+
+    renderCodingEnvironment('react-app', { code: invalid });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid React App workspace');
+    expect(screen.getByRole('alert')).toHaveTextContent('Unsupported React App file "lowercase.jsx"');
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /run code/i })).toBeInTheDocument();
   });
 
   it('shows editable script.js and a read-only API Server panel in fetch mode', async () => {
