@@ -1,8 +1,9 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CodeEditor } from './CodeEditor';
 import { registerHtmlEmmetForModel } from './emmet';
+import { prepareJsxHighlighting } from './jsxHighlighting';
 
 const model = { uri: { path: '/sandbox.html' } };
 const onDidDispose = vi.fn();
@@ -14,7 +15,7 @@ const fakeEditor = {
   onDidFocusEditorText: vi.fn(),
 };
 const fakeMonaco = {
-  editor: { remeasureFonts: vi.fn() },
+  editor: { remeasureFonts: vi.fn(), setTheme: vi.fn() },
   languages: {
     typescript: {
       javascriptDefaults: {
@@ -28,7 +29,8 @@ const fakeMonaco = {
 
 vi.mock('@monaco-editor/react', () => ({
   __esModule: true,
-  default: ({ onMount, language, path }: any) => {
+  default: ({ beforeMount, onMount, language, path }: any) => {
+    beforeMount?.(fakeMonaco);
     onMount(fakeEditor, fakeMonaco);
     return <textarea aria-label="Code editor" data-language={language} data-path={path} />;
   },
@@ -36,6 +38,10 @@ vi.mock('@monaco-editor/react', () => ({
 
 vi.mock('./emmet', () => ({
   registerHtmlEmmetForModel: vi.fn(() => Promise.resolve(vi.fn())),
+}));
+
+vi.mock('./jsxHighlighting', () => ({
+  prepareJsxHighlighting: vi.fn(() => Promise.resolve()),
 }));
 
 const renderEditor = (props: Partial<ComponentProps<typeof CodeEditor>> = {}) => render(
@@ -78,18 +84,25 @@ describe('CodeEditor Emmet opt-in', () => {
     const { getByLabelText } = renderEditor({ environmentMode: 'react-app', sessionId: 7 });
     const editor = getByLabelText('Code editor');
 
-    expect(editor).toHaveAttribute('data-language', 'javascript');
+    expect(editor).toHaveAttribute('data-language', 'jsx');
     expect(editor).toHaveAttribute('data-path', 'sandbox-react-app-7.jsx');
+    expect(prepareJsxHighlighting).toHaveBeenCalledWith(fakeMonaco);
   });
 
   it('uses separate JSX and CSS models for react-app files', () => {
     const jsx = renderEditor({ environmentMode: 'react-app', sessionId: 8, activeFile: 'App.jsx' });
-    expect(jsx.getByLabelText('Code editor')).toHaveAttribute('data-language', 'javascript');
+    expect(jsx.getByLabelText('Code editor')).toHaveAttribute('data-language', 'jsx');
     expect(jsx.getByLabelText('Code editor')).toHaveAttribute('data-path', 'sandbox-react-app-8-App.jsx');
     jsx.unmount();
 
     const css = renderEditor({ environmentMode: 'react-app', sessionId: 8, activeFile: 'App.css' });
     expect(css.getByLabelText('Code editor')).toHaveAttribute('data-language', 'css');
     expect(css.getByLabelText('Code editor')).toHaveAttribute('data-path', 'sandbox-react-app-8-App.css');
+  });
+
+  it('re-applies the current theme after the lazy JSX highlighter loads', async () => {
+    renderEditor({ environmentMode: 'react-app', themeMode: 'light' });
+
+    await waitFor(() => expect(fakeMonaco.editor.setTheme).toHaveBeenCalledWith('light'));
   });
 });
