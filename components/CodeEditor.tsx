@@ -1,8 +1,9 @@
 
-import React, { useMemo } from 'react';
-import Editor, { OnMount } from "@monaco-editor/react";
+import React, { useEffect, useMemo, useRef } from 'react';
+import Editor, { BeforeMount, OnMount } from "@monaco-editor/react";
 import { ThemeMode, EnvironmentMode } from '../types';
 import { registerHtmlEmmetForModel } from './emmet';
+import { prepareJsxHighlighting } from './jsxHighlighting';
 
 const EDITOR_FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
@@ -91,6 +92,12 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   enableEmmet = false,
   readOnly = false
 }) => {
+  const editorTheme = themeMode === 'dark' ? 'vs-dark' : 'light';
+  const editorThemeRef = useRef(editorTheme);
+  useEffect(() => {
+    editorThemeRef.current = editorTheme;
+  }, [editorTheme]);
+
   // Construct a deterministic path.
   const modelPath = useMemo(() => {
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
@@ -122,11 +129,23 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     if (activeFile?.endsWith('.html')) return 'html';
     if (activeFile?.endsWith('.css')) return 'css';
     if (activeFile?.endsWith('.js')) return 'javascript';
+    if (activeFile?.endsWith('.jsx')) return 'jsx';
     if (environmentMode === 'html') return 'html';
+    if (environmentMode === 'react-app') return 'jsx';
     const tsModes: EnvironmentMode[] = ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'];
     if (tsModes.includes(environmentMode)) return 'typescript';
     return 'javascript';
   }, [environmentMode, activeFile]);
+
+  const handleBeforeMount: BeforeMount = (monaco) => {
+    if (language !== 'jsx') return;
+
+    void prepareJsxHighlighting(monaco)
+      .then(() => monaco.editor.setTheme(editorThemeRef.current))
+      .catch((error) => {
+        console.error('[CodeShoebox] Failed to enable JSX syntax highlighting.', error);
+      });
+  };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editor.focus();
@@ -351,9 +370,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         height="100%"
         path={modelPath}
         language={language}
-        theme={themeMode === 'dark' ? 'vs-dark' : 'light'}
+        theme={editorTheme}
         value={code}
         onChange={onChange}
+        beforeMount={handleBeforeMount}
         onMount={handleEditorDidMount}
         loading={<div className="h-full w-full flex items-center justify-center text-sm opacity-50">Loading Editor...</div>}
         options={{
