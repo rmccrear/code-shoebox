@@ -266,7 +266,7 @@ describe('CodingEnvironment routing', () => {
     expect((await screen.findByLabelText('Code editor') as HTMLTextAreaElement).value).toContain('./Counter');
     fireEvent.click(screen.getByRole('button', { name: 'Counter.jsx' }));
     const editor = screen.getByLabelText('Code editor');
-    expect(editor).toHaveAttribute('data-language', 'javascript');
+    expect(editor).toHaveAttribute('data-language', 'jsx');
     expect(editor).toHaveAttribute('data-path', 'sandbox-react-app-1-Counter.jsx');
     fireEvent.change(editor, {
       target: { value: 'export default function Counter() { return <p>1</p>; }' },
