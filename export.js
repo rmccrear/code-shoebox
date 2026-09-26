@@ -2136,7 +2136,7 @@ var getCodeLanguage = (mode, filename) => {
   }
   return "javascript";
 };
-var CodeEditor = React5.lazy(() => import("./CodeEditor-WM3QHQTW.js").then((module) => ({
+var CodeEditor = React5.lazy(() => import("./CodeEditor-35X52EKZ.js").then((module) => ({
   default: module.CodeEditor
 })));
 var CodingEnvironment = ({

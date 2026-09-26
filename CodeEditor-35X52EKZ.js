@@ -1,5 +1,5 @@
 // components/CodeEditor.tsx
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Editor from "@monaco-editor/react";
 
 // components/emmet.ts
@@ -26,6 +26,54 @@ var registerHtmlEmmetForModel = (monaco, enabledModel) => import("emmet-monaco-e
   });
   return emmetHTML(gatedMonaco, ["html"], { tokenizer: "standard" });
 });
+
+// components/jsxHighlighting.ts
+var JSX_LANGUAGE_ID = "jsx";
+var setupByMonaco = /* @__PURE__ */ new WeakMap();
+var prepareJsxHighlighting = (monaco) => {
+  if (!monaco.languages.getLanguages().some(({ id }) => id === JSX_LANGUAGE_ID)) {
+    monaco.languages.register({
+      id: JSX_LANGUAGE_ID,
+      extensions: [".jsx"],
+      aliases: ["JSX"]
+    });
+  }
+  const existingSetup = setupByMonaco.get(monaco);
+  if (existingSetup) return existingSetup;
+  const setup = Promise.all([
+    import("@shikijs/core"),
+    import("@shikijs/engine-javascript"),
+    import("@shikijs/langs/jsx"),
+    import("@shikijs/themes/dark-plus"),
+    import("@shikijs/themes/light-plus"),
+    import("@shikijs/monaco")
+  ]).then(async ([
+    { createHighlighterCore },
+    { createJavaScriptRegexEngine },
+    { default: jsx2 },
+    { default: darkPlus },
+    { default: lightPlus },
+    { shikiToMonaco }
+  ]) => {
+    const highlighter = await createHighlighterCore({
+      langs: [jsx2],
+      themes: [
+        { ...darkPlus, name: "vs-dark" },
+        { ...lightPlus, name: "light" }
+      ],
+      engine: createJavaScriptRegexEngine()
+    });
+    shikiToMonaco(
+      highlighter,
+      monaco
+    );
+  }).catch((error) => {
+    setupByMonaco.delete(monaco);
+    throw error;
+  });
+  setupByMonaco.set(monaco, setup);
+  return setup;
+};
 
 // components/CodeEditor.tsx
 import { jsx } from "react/jsx-runtime";
@@ -74,6 +122,11 @@ var CodeEditor = ({
   enableEmmet = false,
   readOnly = false
 }) => {
+  const editorTheme = themeMode === "dark" ? "vs-dark" : "light";
+  const editorThemeRef = useRef(editorTheme);
+  useEffect(() => {
+    editorThemeRef.current = editorTheme;
+  }, [editorTheme]);
   const modelPath = useMemo(() => {
     const basePath = `sandbox-${environmentMode}-${sessionId}`;
     if (activeFile) return `${basePath}-${activeFile}`;
@@ -101,11 +154,19 @@ var CodeEditor = ({
     if (activeFile?.endsWith(".html")) return "html";
     if (activeFile?.endsWith(".css")) return "css";
     if (activeFile?.endsWith(".js")) return "javascript";
+    if (activeFile?.endsWith(".jsx")) return "jsx";
     if (environmentMode === "html") return "html";
+    if (environmentMode === "react-app") return "jsx";
     const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
     if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";
   }, [environmentMode, activeFile]);
+  const handleBeforeMount = (monaco) => {
+    if (language !== "jsx") return;
+    void prepareJsxHighlighting(monaco).then(() => monaco.editor.setTheme(editorThemeRef.current)).catch((error) => {
+      console.error("[CodeShoebox] Failed to enable JSX syntax highlighting.", error);
+    });
+  };
   const handleEditorDidMount = (editor, monaco) => {
     editor.focus();
     const refreshEditorMetrics = () => {
@@ -306,9 +367,10 @@ var CodeEditor = ({
       height: "100%",
       path: modelPath,
       language,
-      theme: themeMode === "dark" ? "vs-dark" : "light",
+      theme: editorTheme,
       value: code,
       onChange,
+      beforeMount: handleBeforeMount,
       onMount: handleEditorDidMount,
       loading: /* @__PURE__ */ jsx("div", { className: "h-full w-full flex items-center justify-center text-sm opacity-50", children: "Loading Editor..." }),
       options: {
