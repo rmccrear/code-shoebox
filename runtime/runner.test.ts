@@ -310,6 +310,14 @@ describe('getSandboxHtml', () => {
     expect(html).toContain("formatRuntimeValue(event.reason)");
     expect(html).toContain('original.apply(console, args)');
   });
+
+  it('does not forward the EXECUTE lifecycle message to the learner console', () => {
+    for (const mode of ALL_MODES) {
+      expect(getSandboxHtml(mode), `mode=${mode}`).not.toContain(
+        'console.log("[Kernel] Received EXECUTE signal.")'
+      );
+    }
+  });
 });
 
 describe('executeCodeInSandbox', () => {
