@@ -118,7 +118,6 @@ export const KERNEL_SCRIPTS = `
         }
         if (type === 'THEME') document.body.className = mode === 'dark' ? 'dark' : '';
         if (type === 'EXECUTE' && window.__RUN_MODE__) {
-            console.log("[Kernel] Received EXECUTE signal.");
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
             if (placeholder) placeholder.style.display = 'none';
