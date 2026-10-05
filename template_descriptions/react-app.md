@@ -2,7 +2,7 @@
 **ID:** `react-app`
 
 ## Overview
-Bounded React 18 environment that treats learner code like a small Vite workspace: `App.jsx`, up to two lesson-defined component JSX files, and `App.css`.
+Bounded React 18 environment that treats learner code like a small Vite workspace: `App.jsx`, up to two lesson-defined component JSX files, and optional `App.css` and `index.html`.
 
 ## Features
 - **Libraries:** React 18 and ReactDOM 18 are pre-loaded.
@@ -11,7 +11,7 @@ Bounded React 18 environment that treats learner code like a small Vite workspac
 - **Imports:** Imports from `react` and `react-dom/client` use the sandbox's bundled shims.
 - **Components:** `./Counter` and `./Counter.jsx` resolve bounded top-level component files with named or default exports.
 - **Styles:** The exact `import './App.css'` applies the editable `App.css` file.
-- **Storage:** Files use the version-1 file envelope. Lesson authors can call `serializeReactAppBundle`; plain legacy code becomes `App.jsx` with an empty `App.css`.
+- **Storage:** Files use the version-1 file envelope. Lesson authors can call `serializeReactAppBundle`; plain legacy code becomes `App.jsx` alone.
 - **Cleanup:** The previous React root is unmounted before every manual run.
 
 ## Limitations
@@ -41,3 +41,14 @@ export default function App() {
   );
 }
 ```
+
+React App workspaces may optionally include `App.css` and `index.html`.
+Only explicitly supplied files get tabs; an empty supplied `App.css` still
+shows its tab. Existing two-file bundles retain both tabs. Plain JSX source
+shows only `App.jsx`. Editing preserves which optional files are present.
+
+The optional `index.html` supports external HTTP(S) stylesheet links in
+`<head>`. Links are installed in document order before imported `App.css`
+and removed on the next Run. Load failures are reported in the console.
+HTML body markup and scripts are not executed; React mounts automatically.
+This does not add npm package imports or a Vite build pipeline.

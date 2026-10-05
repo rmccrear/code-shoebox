@@ -143,7 +143,7 @@ describe('fileBundle', () => {
     const zero = parseReactAppBundle(serializeReactAppBundle({
       'App.jsx': 'export default function App() { return null; }',
     }));
-    expect(zero.fileNames).toEqual(['App.jsx', 'App.css']);
+    expect(zero.fileNames).toEqual(['App.jsx']);
 
     const two = parseReactAppBundle(serializeReactAppBundle({
       'App.jsx': "import Zebra from './Zebra';",
@@ -153,6 +153,15 @@ describe('fileBundle', () => {
     }));
     expect(two.fileNames).toEqual(['App.jsx', 'Button_2.jsx', 'Zebra.jsx', 'App.css']);
     expect(two.files['Zebra.jsx']).toContain('function Zebra');
+  });
+
+  it('preserves optional file presence, including explicitly empty CSS', () => {
+    for (const optional of [{}, { 'App.css': '' }, { 'index.html': '' }, { 'App.css': '', 'index.html': '' }]) {
+      const files = { 'App.jsx': 'export default () => null;', ...optional };
+      const parsed = parseReactAppBundle(serializeReactAppBundle(files));
+      expect(parsed.files).toEqual(files);
+      expect(parsed.fileNames).toEqual(Object.keys(files));
+    }
   });
 
   it('rejects too many, nested, lowercase, and unsupported React App files', () => {
@@ -179,8 +188,8 @@ describe('fileBundle', () => {
   it('keeps current two-file envelopes and legacy plain source backward compatible', () => {
     const app = 'export default function App() { return <h1>Legacy</h1>; }';
     expect(parseReactAppBundle(app)).toEqual({
-      fileNames: ['App.jsx', 'App.css'],
-      files: { 'App.jsx': app, 'App.css': '' },
+      fileNames: ['App.jsx'],
+      files: { 'App.jsx': app },
     });
 
     const existing = serializeFileBundle({ 'App.jsx': app, 'App.css': 'h1 {}' });

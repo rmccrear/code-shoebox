@@ -35,16 +35,17 @@ export type HtmlJsFileBundle = FileBundleFor<typeof HTML_JS_FILE_NAMES>;
 export type HtmlCssJsFileBundle = FileBundleFor<typeof HTML_CSS_JS_FILE_NAMES>;
 export type ReactAppFileBundle = FileBundleFor<typeof REACT_APP_FILE_NAMES>;
 
-/** A bounded React App workspace. `App.jsx` is required; `App.css` is optional. */
+/** A bounded React App workspace. `App.jsx` is required; `App.css` and `index.html` are optional. */
 export type ReactAppBundleInput = {
   'App.jsx': string;
   'App.css'?: string;
+  'index.html'?: string;
   [fileName: string]: string | undefined;
 };
 
 export interface ParsedReactAppBundle {
-  files: Record<string, string> & { 'App.jsx': string; 'App.css': string };
-  /** Canonical editor order: entry, alphabetical components, stylesheet. */
+  files: Record<string, string> & { 'App.jsx': string };
+  /** Canonical editor order: entry, alphabetical components, optional stylesheet, optional HTML. */
   fileNames: string[];
 }
 
@@ -65,7 +66,7 @@ const validateReactAppFiles = (candidate: unknown): ParsedReactAppBundle => {
 
   const componentNames: string[] = [];
   for (const fileName of Object.keys(source)) {
-    if (fileName === 'App.jsx' || fileName === 'App.css') continue;
+    if (fileName === 'App.jsx' || fileName === 'App.css' || fileName === 'index.html') continue;
     if (!REACT_COMPONENT_FILE_NAME.test(fileName)) {
       throw new Error(
         `Unsupported React App file "${fileName}". Component files must be top-level, begin with an uppercase letter, and end in .jsx.`
@@ -79,7 +80,8 @@ const validateReactAppFiles = (candidate: unknown): ParsedReactAppBundle => {
   }
 
   componentNames.sort((left, right) => left.localeCompare(right));
-  const fileNames = ['App.jsx', ...componentNames, 'App.css'];
+  const fileNames = ['App.jsx', ...componentNames,
+    ...(['App.css', 'index.html'].filter(name => Object.prototype.hasOwnProperty.call(source, name)))];
   const files = Object.fromEntries(
     fileNames.map((fileName) => [fileName, String(source[fileName] ?? '')])
   ) as ParsedReactAppBundle['files'];
@@ -108,7 +110,7 @@ export const parseReactAppBundle = (code: string): ParsedReactAppBundle => {
     }
   }
 
-  return validateReactAppFiles({ 'App.jsx': code, 'App.css': '' });
+  return validateReactAppFiles({ 'App.jsx': code });
 };
 
 export function parseFileBundle(code: string): WebFileBundle;

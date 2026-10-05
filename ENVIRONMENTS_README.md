@@ -193,7 +193,7 @@ Environments for building UI components.
 
 ### `react-app` (React App, Vite-style)
 *   **Engine:** Babel (Presets: `react`, `env`; ES modules compiled to CommonJS).
-*   **Workspace:** Required `App.jsx`, optional lesson-defined component files (two maximum), and `App.css`, stored in the version-1 code envelope. A plain legacy string becomes `App.jsx` with an empty `App.css`. Learners can edit the supplied files but cannot create, delete, or rename them.
+*   **Workspace:** Required `App.jsx`, optional lesson-defined component files (two maximum), and optional `App.css` and `index.html`, stored in the version-1 code envelope. A plain legacy string becomes `App.jsx` alone. Learners can edit the supplied files but cannot create, delete, or rename them.
 *   **Capabilities:**
     *   Accepts normal ES module exports, including named exports.
     *   Requires a default React component export and renders it to `#root` automatically.
@@ -280,3 +280,14 @@ Environments optimized for teaching pure logic without DOM distractions.
 *   **Engine:** Babel (Presets: `typescript`, `env`).
 *   **Visuals:** Headless (Console only).
 *   **Capabilities:** Pure TypeScript. Excellent for teaching interfaces, types, and classes without UI overhead.
+
+React App workspaces may optionally include `App.css` and `index.html`.
+Only explicitly supplied files get tabs; an empty supplied `App.css` still
+shows its tab. Existing two-file bundles retain both tabs. Plain JSX source
+shows only `App.jsx`. Editing preserves which optional files are present.
+
+The optional `index.html` supports external HTTP(S) stylesheet links in
+`<head>`. Links are installed in document order before imported `App.css`
+and removed on the next Run. Load failures are reported in the console.
+HTML body markup and scripts are not executed; React mounts automatically.
+This does not add npm package imports or a Vite build pipeline.
