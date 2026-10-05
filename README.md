@@ -17,7 +17,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
-  - `react-app`: Vite-style `App.jsx`, up to two imported component JSX files, and `App.css`, with ES module exports and automatic default-export rendering.
+  - `react-app`: Vite-style `App.jsx`, up to two imported component JSX files, and optional `App.css` and `index.html`, with ES module exports and automatic default-export rendering.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
@@ -400,6 +400,22 @@ const code = serializeReactAppBundle({
 });
 ```
 
+For a CSS-library lesson, include the optional HTML file:
+
+```tsx
+const code = serializeReactAppBundle({
+  'App.jsx': `export default function App() { return <button className="library-button">Hello</button>; }`,
+  'index.html': `<!doctype html><html><head>
+    <link rel="stylesheet" href="https://your-cdn.example/library.css">
+  </head><body></body></html>`,
+});
+```
+
+Replace the example URL with the library's stylesheet URL. This workspace
+shows `App.jsx` and `index.html` tabs. Add `'App.css': ''` to show an
+empty CSS tab, or omit that entry to hide it. Import `./App.css` from JSX
+when local CSS should apply.
+
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
@@ -444,3 +460,14 @@ We welcome contributions! To set up the project locally and run the internal dem
     ```bash
     npm run build
     ```
+
+React App workspaces may optionally include `App.css` and `index.html`.
+Only explicitly supplied files get tabs; an empty supplied `App.css` still
+shows its tab. Existing two-file bundles retain both tabs. Plain JSX source
+shows only `App.jsx`. Editing preserves which optional files are present.
+
+The optional `index.html` supports external HTTP(S) stylesheet links in
+`<head>`. Links are installed in document order before imported `App.css`
+and removed on the next Run. Load failures are reported in the console.
+HTML body markup and scripts are not executed; React mounts automatically.
+This does not add npm package imports or a Vite build pipeline.

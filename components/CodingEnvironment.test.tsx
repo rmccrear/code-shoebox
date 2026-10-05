@@ -227,6 +227,26 @@ describe('CodingEnvironment routing', () => {
     expect(screen.getByLabelText('Read-only code: App.css')).toHaveAttribute('data-language', 'css');
   });
 
+  it('shows optional HTML and preserves absent CSS when editing it', async () => {
+    const onChange = vi.fn();
+    renderCodingEnvironment('react-app', {
+      code: serializeReactAppBundle({
+        'App.jsx': 'export default function App() { return null; }',
+        'index.html': '<head></head>',
+      }),
+      onChange,
+    });
+    expect(getFileTabNames()).toEqual(['App.jsx', 'index.html']);
+    fireEvent.click(screen.getByRole('button', { name: 'index.html' }));
+    const editor = await screen.findByLabelText('Code editor');
+    expect(editor).toHaveAttribute('data-language', 'html');
+    fireEvent.change(editor, { target: { value: '<head><link rel="stylesheet" href="https://example.com/library.css"></head>' } });
+    const bundle = parseReactAppBundle(onChange.mock.calls[0][0]);
+    expect(bundle.fileNames).toEqual(['App.jsx', 'index.html']);
+    expect(bundle.files['index.html']).toContain('library.css');
+    expect(bundle.files).not.toHaveProperty('App.css');
+  });
+
   it('preserves both editable react-app files in the serialized change envelope', async () => {
     const onChange = vi.fn();
     const code = serializeFileBundle({

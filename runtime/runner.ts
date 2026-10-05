@@ -486,6 +486,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     logic: `
       let rootInstance = null;
       let learnerStyle = null;
+      let libraryLinks = [];
       const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
 
       const parseReactAppFiles = (code) => {
@@ -508,7 +509,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
 
         const jsxNames = [];
         for (const fileName of Object.keys(sourceFiles)) {
-          if (fileName === 'App.css') continue;
+          if (fileName === 'App.css' || fileName === 'index.html') continue;
           if (fileName !== 'App.jsx' && !reactComponentFileName.test(fileName)) {
             throw new Error('Unsupported React App file "' + fileName + '". Component files must be top-level, begin with an uppercase letter, and end in .jsx.');
           }
@@ -518,7 +519,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
           throw new Error('React App mode supports App.jsx plus at most two component JSX files.');
         }
 
-        const files = { 'App.css': String(sourceFiles['App.css'] ?? '') };
+        const files = { 'App.css': String(sourceFiles['App.css'] ?? ''), 'index.html': String(sourceFiles['index.html'] ?? '') };
         for (const fileName of jsxNames) files[fileName] = String(sourceFiles[fileName] ?? '');
         return files;
       };
@@ -532,9 +533,23 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
           learnerStyle.remove();
           learnerStyle = null;
         }
+        libraryLinks.forEach(link => link.remove());
+        libraryLinks = [];
         root.replaceChildren();
         try {
           const files = parseReactAppFiles(code);
+          const html = new DOMParser().parseFromString(files['index.html'], 'text/html');
+          html.head.querySelectorAll('link[rel~="stylesheet"][href]').forEach(source => {
+            const href = source.getAttribute('href');
+            if (!/^https?:\\/\\//i.test(href)) return;
+            const link = document.createElement('link');
+            for (const name of ['href', 'rel', 'integrity', 'crossorigin', 'media', 'referrerpolicy']) {
+              if (source.hasAttribute(name)) link.setAttribute(name, source.getAttribute(name));
+            }
+            link.addEventListener('error', () => console.error('Could not load stylesheet: ' + href));
+            libraryLinks.push(link);
+            document.head.appendChild(link);
+          });
           const moduleCache = Object.create(null);
           let shouldInstallCss = false;
 

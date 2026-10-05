@@ -69,6 +69,34 @@ describe('getSandboxHtml', () => {
     expect(html).toContain('React App mode requires a default export. Add `export default App`.');
   });
 
+  it('installs HTML stylesheets before local CSS and cleans them up on rerun', () => {
+    const html = getSandboxHtml('react-app');
+    const logic = html.slice(html.indexOf('let rootInstance = null;'), html.lastIndexOf('</script>'));
+    const fakeWindow = {
+      ReactDOM: { createRoot: () => ({ render: vi.fn(), unmount: vi.fn() }) },
+      React: { createElement: vi.fn() },
+      require: vi.fn(),
+      __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement) => void,
+    };
+    const babel = { transform: () => ({ code: "require('./App.css'); module.exports.default = function App() {};" }) };
+    new Function('window', 'document', 'DOMParser', 'Babel', logic)(fakeWindow, document, DOMParser, babel);
+    const root = document.createElement('div');
+    fakeWindow.__RUN_MODE__(JSON.stringify({ __csFiles__: 1, files: {
+      'App.jsx': '',
+      'App.css': 'h1 { color: red; }',
+      'index.html': '<head><link rel="stylesheet" href="https://example.com/library.css"><script>throw new Error("must not run")</script></head>',
+    } }), root);
+    const link = document.head.querySelector('link[href="https://example.com/library.css"]');
+    const style = document.head.querySelector('[data-code-shoebox-react-app]');
+    expect(link).not.toBeNull();
+    expect(style?.textContent).toContain('color: red');
+    expect(Array.from(document.head.children).indexOf(link!)).toBeLessThan(Array.from(document.head.children).indexOf(style!));
+    fakeWindow.__RUN_MODE__(JSON.stringify({ __csFiles__: 1, files: { 'App.jsx': '' } }), root);
+    expect(link?.isConnected).toBe(false);
+    expect(style?.isConnected).toBe(false);
+    document.head.querySelector('[data-code-shoebox-react-app]')?.remove();
+  });
+
   it('uses pinned CDN versions for all transpiled modes', () => {
     // React modes get both React UMD and Babel pinned
     expect(getSandboxHtml('react')).toContain('react@18.3.1');
