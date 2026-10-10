@@ -107,6 +107,22 @@ describe('demoPresets', () => {
     expect(files['App.css']).toContain('.counter-demo');
   });
 
+  it('provides an optional React fetch demo without replacing the ordinary React preset', () => {
+    const preset = resolvePresetFromHash('react-app-fetch-demo');
+    const files = parseReactAppBundle(preset!.code).files;
+
+    expect(preset?.mode).toBe('react-app');
+    expect(preset?.mockApi).toEqual(getPresetMockApiForMode('fetch'));
+    expect(getPresetHashForMode('react-app')).toBe('react-app-counter-demo');
+    expect(getPresetMockApiForMode('react-app')).toBeUndefined();
+    expect(files['App.jsx']).toContain('await fetch(endpoint, { signal: controller.signal })');
+    expect(files['App.jsx']).toContain('return () => controller.abort()');
+    expect(files['App.jsx']).toContain("error.name !== 'AbortError'");
+    expect(files['App.jsx']).toContain('Loading readings');
+    expect(files['App.jsx']).toContain('/api/offline');
+    expect(preset!.code).not.toContain('Portland');
+  });
+
   it('provides fetch fixtures outside learner code', () => {
     const preset = resolvePresetFromHash('fetch-air-quality-demo');
     const mockApi = getPresetMockApiForMode('fetch');

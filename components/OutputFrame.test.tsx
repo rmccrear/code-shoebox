@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { executeCodeInSandbox } from '../runtime/runner';
+import { executeCodeInSandbox, getSandboxHtml } from '../runtime/runner';
 import { OutputFrame } from './OutputFrame';
 
 vi.mock('../runtime/runner', () => ({
@@ -79,6 +79,7 @@ describe('OutputFrame', () => {
     channels = [];
     vi.stubGlobal('MessageChannel', FakeMessageChannel);
     mockedExecuteCodeInSandbox.mockClear();
+    vi.mocked(getSandboxHtml).mockClear();
   });
 
   afterEach(() => {
@@ -204,6 +205,63 @@ describe('OutputFrame', () => {
 
     act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 2 } }));
     expect(onExecutionComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('opts React workspaces into mocking and uses updated routes on the next Run', () => {
+    const mockApi = { routes: [{ method: 'GET' as const, path: '/items', body: ['First'] }] };
+    const onExecutionComplete = vi.fn();
+    const props = { code: 'react bundle', themeMode: 'dark' as const, environmentMode: 'react-app' as const, mockApi, onExecutionComplete };
+    const { container, rerender } = renderOutputFrame(props);
+    const { iframe, channel } = loadFrame(container);
+    expect(getSandboxHtml).toHaveBeenCalledWith('react-app', false, { mockApiEnabled: true });
+
+    rerender(<OutputFrame {...props} runTrigger={1} />);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code, { mockApi }, 1);
+    act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 1 } }));
+    expect(onExecutionComplete).toHaveBeenCalledTimes(1);
+
+    const updatedApi = { routes: [{ method: 'GET' as const, path: '/items', body: ['Latest'] }] };
+    rerender(<OutputFrame {...props} mockApi={updatedApi} runTrigger={1} />);
+    expect(container.querySelector('iframe')).toBe(iframe);
+    expect(channel.port1.closed).toBe(false);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledTimes(1);
+    expect(getSandboxHtml).toHaveBeenCalledTimes(1);
+
+    rerender(<OutputFrame {...props} mockApi={updatedApi} runTrigger={2} />);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code, { mockApi: updatedApi }, 2);
+    act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 1 } }));
+    expect(onExecutionComplete).toHaveBeenCalledTimes(1);
+    act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 2 } }));
+    expect(onExecutionComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it('recreates React iframes when mocking toggles and waits for the new port before running', () => {
+    const onExecutionComplete = vi.fn();
+    const props = { code: 'react bundle', themeMode: 'dark' as const, environmentMode: 'react-app' as const, onExecutionComplete };
+    const { container, rerender } = renderOutputFrame(props);
+    const { iframe, channel } = loadFrame(container);
+    expect(getSandboxHtml).toHaveBeenCalledWith('react-app', false, { mockApiEnabled: false });
+
+    const mockApi = { routes: [] };
+    rerender(<OutputFrame {...props} mockApi={mockApi} runTrigger={1} />);
+    expect(container.querySelector('iframe')).not.toBe(iframe);
+    expect(channel.port1.closed).toBe(true);
+    expect(mockedExecuteCodeInSandbox).not.toHaveBeenCalled();
+    // A second Run before load replaces the queued Run.
+    rerender(<OutputFrame {...props} mockApi={mockApi} runTrigger={2} />);
+    const { iframe: mockedIframe, channel: newChannel } = loadFrame(container);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledTimes(1);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code, { mockApi }, 2);
+    act(() => newChannel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 1 } }));
+    expect(onExecutionComplete).not.toHaveBeenCalled();
+
+    rerender(<OutputFrame {...props} runTrigger={2} />);
+    expect(container.querySelector('iframe')).not.toBe(mockedIframe);
+    expect(newChannel.port1.closed).toBe(true);
+    loadFrame(container);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledTimes(1);
+    rerender(<OutputFrame {...props} runTrigger={3} />);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code);
   });
 
   it('does not forward fixture execution data outside DOM mode', () => {

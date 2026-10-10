@@ -79,7 +79,7 @@ export interface CodeShoeboxProps {
   mediaAssets?: readonly MediaAsset[];
   /** Enables Emmet abbreviation completions in editable HTML models. */
   enableEmmet?: boolean;
-  /** Host-authored, local-only routes shown and executed in fetch-enabled modes. */
+  /** Host-authored, local-only routes for fetch and html-js-fetch; supplying this also enables mocking in react-app. */
   mockApi?: MockApiConfig;
   themeMode: ThemeMode;
   theme: Theme;

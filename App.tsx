@@ -11,7 +11,7 @@ import { getPredictionPrompt } from './prompts';
 import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
 import { useEditorHashPresets } from './hooks/useEditorHashPresets';
-import { getPresetMediaAssetsForMode, getPresetMockApiForMode } from './demoPresets';
+import { getPresetMediaAssetsForMode, getPresetMockApiForMode, resolvePresetFromHash } from './demoPresets';
 
 const App: React.FC = () => {
   const {
@@ -64,6 +64,11 @@ const App: React.FC = () => {
     setCode,
     bumpEditorMountKey: () => setEditorMountKey(prev => prev + 1)
   });
+
+  const hashPreset = resolvePresetFromHash(window.location.hash);
+  const mockApi = hashPreset?.mode === environmentMode
+    ? hashPreset.mockApi
+    : getPresetMockApiForMode(environmentMode);
 
   return (
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
@@ -217,7 +222,7 @@ const App: React.FC = () => {
             onCodeChange={setCode}
             environmentMode={environmentMode}
             mediaAssets={getPresetMediaAssetsForMode(environmentMode)}
-            mockApi={getPresetMockApiForMode(environmentMode)}
+            mockApi={mockApi}
             themeMode={themeMode}
             theme={activeTheme}
             sessionId={sessionId}

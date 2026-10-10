@@ -202,6 +202,10 @@ Environments for building UI components.
     *   Applies `App.css` when a JSX module contains the exact import `import './App.css'`.
     *   Lesson authors can create validated workspaces with the public `serializeReactAppBundle` helper.
     *   Unmounts the previous root before each manual run.
+    *   Supplying the optional host `mockApi` prop enables local mock `fetch()` before modules evaluate and adds a read-only **API Server** tab. An empty `{ routes: [] }` still enables mocking; omitting the prop preserves the ordinary runtime.
+    *   Reuses fetch-mode matching, canned responses, simulated delays, HTTP/network errors, and request-level cancellation. Mock routes stay outside learner files and persistence; real network requests are blocked while mocking is enabled.
+    *   Each Run aborts the previous run's pending mock requests. Config changes apply on the next Run; adding or removing the prop recreates the iframe.
+    *   Execution completion means module evaluation and render submission finished. Requests from effects and event handlers may finish later. Use an `AbortController` in effects, abort it during cleanup, and ignore `AbortError` in error UI.
 *   **Limitations:**
     *   This mode models a bounded portion of a Vite app, not the Vite bundler. More than two component files, nested paths, other extensions or stylesheets, arbitrary npm packages, `import.meta`, dynamic imports, and hot-module replacement are unavailable.
     *   Named exports are not rendered; only `export default` supplies the app component.

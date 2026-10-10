@@ -383,6 +383,78 @@ export default app;`
 };`
   },
   {
+    id: 'react-app-fetch-demo',
+    mode: 'react-app',
+    mockApi: FETCH_DEMO_API,
+    code: serializeReactAppBundle({
+      'App.jsx': `import { useEffect, useState } from 'react';
+import './App.css';
+
+export default function App() {
+  const [endpoint, setEndpoint] = useState('/api/air-quality?limit=4');
+  const [refresh, setRefresh] = useState(0);
+  const [readings, setReadings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+
+    async function loadReadings() {
+      try {
+        const response = await fetch(endpoint, { signal: controller.signal });
+        if (!response.ok) throw new Error('Request failed: ' + response.status);
+        const data = await response.json();
+        if (!controller.signal.aborted) setReadings(data);
+      } catch (error) {
+        if (error.name !== 'AbortError' && !controller.signal.aborted) {
+          setError(error.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    loadReadings();
+    return () => controller.abort();
+  }, [endpoint, refresh]);
+
+  function reload(nextEndpoint) {
+    setEndpoint(nextEndpoint);
+    setRefresh((value) => value + 1);
+  }
+
+  return (
+    <main className="air-quality-demo">
+      <h1>Air quality</h1>
+      <p>Fetch from the routes shown in the API Server tab.</p>
+      <div className="actions">
+        <button onClick={() => reload('/api/air-quality?limit=4')}>Load readings</button>
+        <button onClick={() => reload('/api/offline')}>Try network error</button>
+        <button onClick={() => reload('/api/missing')}>Try HTTP error</button>
+      </div>
+      <section aria-live="polite">
+        {loading ? <p>Loading readings…</p> : error ? <p role="alert">{error}</p> : (
+          <ul>{readings.map((reading) => (
+            <li key={reading.city}>{reading.city}: {reading.aqi} ({reading.category})</li>
+          ))}</ul>
+        )}
+      </section>
+    </main>
+  );
+}`,
+      'App.css': `.air-quality-demo {
+  padding: 1.5rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.actions button { padding: 0.5rem 0.75rem; }
+.air-quality-demo li { margin-block: 0.5rem; }`
+    })
+  },
+  {
     id: 'react-app-counter-demo',
     mode: 'react-app',
     code: serializeReactAppBundle({

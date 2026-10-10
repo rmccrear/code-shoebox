@@ -1,5 +1,5 @@
 /**
- * Browser-native fetch mock used only by the fetch tutorial mode.
+ * Browser-native fetch mock shared by environments with the mock API capability.
  *
  * Route data is installed at execution time from a structured-cloned payload;
  * host-authored fixtures are never interpolated into the sandbox document.
