@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
 import { ThemeMode, EnvironmentMode, MockApiConfig } from '../types';
+import { isMockApiEnabled } from '../runtime/mockApi';
 import { PreviewContainer } from './PreviewContainer';
 import { Console, LogEntry } from './Console';
 import { GripHorizontal } from 'lucide-react';
@@ -50,7 +51,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
-  const isFetchMode = environmentMode === 'fetch' || environmentMode === 'html-js-fetch';
+  const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
+  const iframeReadyRef = useRef(false);
+  const pendingReactRunRef = useRef<{ execution: typeof executionRef.current; id: number } | null>(null);
   // HTML modes (single-file and tabbed): full-height output with no console
   // panel, rendered on mount and live-updated as the user types (safe: these
   // modes cannot run JS).
@@ -65,8 +68,8 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   }, []);
 
   const sandboxHtml = useMemo(
-    () => getSandboxHtml(environmentMode, isPredictionMode),
-    [environmentMode, isPredictionMode]
+    () => getSandboxHtml(environmentMode, isPredictionMode, { mockApiEnabled }),
+    [environmentMode, isPredictionMode, mockApiEnabled]
   );
 
   useEffect(() => {
@@ -86,12 +89,12 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
     } else if (
       type === 'EXECUTION_COMPLETE'
-      && isFetchMode
+      && mockApiEnabled
       && payload?.executionId === latestExecutionIdRef.current
     ) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, isFetchMode, onExecutionComplete]);
+  }, [debugMode, addSystemLog, mockApiEnabled, onExecutionComplete]);
 
   // Keep the latest message handler without recreating the transferred port.
   const kernelMessageRef = useRef(handleKernelMessage);
@@ -99,10 +102,18 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
 
-  useEffect(() => () => {
-    channelRef.current?.port1.close();
-    channelRef.current = null;
-  }, []);
+  useEffect(() => {
+    iframeReadyRef.current = false;
+    latestExecutionIdRef.current = null;
+    pendingReactRunRef.current = null;
+    return () => {
+      channelRef.current?.port1.close();
+      channelRef.current = null;
+      iframeReadyRef.current = false;
+      latestExecutionIdRef.current = null;
+      pendingReactRunRef.current = null;
+    };
+  }, [environmentMode, isPredictionMode, mockApiEnabled]);
 
   useEffect(() => {
     if (runTrigger > 0) {
@@ -110,8 +121,11 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         setLogs([]);
         if (execution.debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
-             const executionUsesFetch = execution.environmentMode === 'fetch'
-               || execution.environmentMode === 'html-js-fetch';
+             const executionUsesFetch = isMockApiEnabled(execution.environmentMode, execution.mockApi);
+             if (execution.environmentMode === 'react-app' && !iframeReadyRef.current) {
+               pendingReactRunRef.current = { execution, id: runTrigger };
+               return;
+             }
              if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
              const hasDomFixture = execution.environmentMode === 'dom'
                && (execution.fixtureHtml !== undefined || execution.fixtureCss !== undefined);
@@ -162,6 +176,19 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
     iframeRef.current.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
     iframeRef.current.contentWindow.postMessage({ type: 'THEME', mode: themeMode }, '*');
+    iframeReadyRef.current = true;
+    const pendingRun = pendingReactRunRef.current;
+    if (pendingRun) {
+      pendingReactRunRef.current = null;
+      if (isMockApiEnabled(pendingRun.execution.environmentMode, pendingRun.execution.mockApi)) {
+        latestExecutionIdRef.current = pendingRun.id;
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code, {
+          mockApi: pendingRun.execution.mockApi,
+        }, pendingRun.id);
+      } else {
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code);
+      }
+    }
     if (isStaticHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
     if (debugMode) addSystemLog('Channel Ports initialized.');
   };
@@ -208,7 +235,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         {!isHeadless && (
           <div className="flex-1 min-h-0 relative">
                <iframe
-                  key={`${environmentMode}-${isPredictionMode}`}
+                  key={`${environmentMode}-${isPredictionMode}-${mockApiEnabled}`}
                   ref={iframeRef}
                   srcDoc={sandboxHtml}
                   title="Code Output"

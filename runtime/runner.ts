@@ -485,6 +485,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     babelPresets: ['react', 'env'],
     logic: `
       let rootInstance = null;
+      let activeReactAppRunController = null;
       let learnerStyle = null;
       let libraryLinks = [];
       const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
@@ -524,11 +525,18 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         return files;
       };
 
-      window.__RUN_MODE__ = (code, root) => {
+      window.addEventListener?.('pagehide', () => {
+        if (activeReactAppRunController) activeReactAppRunController.abort();
+      });
+
+      window.__RUN_MODE__ = (code, root, options = {}) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
           rootInstance = null;
         }
+        // Effect cleanup runs before the old backend is aborted or replaced.
+        if (activeReactAppRunController) activeReactAppRunController.abort();
+        activeReactAppRunController = null;
         if (learnerStyle) {
           learnerStyle.remove();
           learnerStyle = null;
@@ -537,6 +545,10 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         libraryLinks = [];
         root.replaceChildren();
         try {
+          if (typeof window.__installFetchMock === 'function') {
+            activeReactAppRunController = new AbortController();
+            window.__installFetchMock(options.mockApi, activeReactAppRunController.signal);
+          }
           const files = parseReactAppFiles(code);
           const html = new DOMParser().parseFromString(files['index.html'], 'text/html');
           html.head.querySelectorAll('link[rel~="stylesheet"][href]').forEach(source => {
@@ -608,6 +620,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
           rootInstance = window.ReactDOM.createRoot(root);
           rootInstance.render(window.React.createElement(App));
         } catch (e) {
+          if (activeReactAppRunController) activeReactAppRunController.abort();
           if (learnerStyle) {
             learnerStyle.remove();
             learnerStyle = null;
@@ -804,15 +817,24 @@ ENV_RECIPES['html-js-css-media'] = {
   name: "HTML, CSS, JavaScript & Media (4 tabs)",
 };
 
-export const getSandboxHtml = (mode: EnvironmentMode = 'dom', isPredictionMode: boolean = false): string => {
+export interface SandboxDocumentOptions {
+  mockApiEnabled?: boolean;
+}
+
+export const getSandboxHtml = (
+  mode: EnvironmentMode = 'dom',
+  isPredictionMode: boolean = false,
+  options: SandboxDocumentOptions = {},
+): string => {
   const recipe = ENV_RECIPES[mode] || ENV_RECIPES.dom;
+  const reactAppMockEnabled = mode === 'react-app' && options.mockApiEnabled === true;
   return BASE_HTML_WRAPPER({
     cdns: recipe.cdns,
-    mocks: recipe.mocks,
+    mocks: reactAppMockEnabled ? FETCH_MOCK_SETUP : recipe.mocks,
     styles: recipe.styles,
     logic: recipe.logic || '',
     showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder,
-    contentSecurityPolicy: recipe.contentSecurityPolicy,
+    contentSecurityPolicy: reactAppMockEnabled ? "connect-src 'none'" : recipe.contentSecurityPolicy,
   });
 };
 

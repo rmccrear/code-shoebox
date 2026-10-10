@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CodingEnvironment } from './CodingEnvironment';
 import { CodeShoeboxProps } from '../types';
+import { isMockApiEnabled } from '../runtime/mockApi';
 
 export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   code,
@@ -40,7 +41,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, environmentMode === 'fetch' || environmentMode === 'html-js-fetch' ? 10000 : 500);
+    }, isMockApiEnabled(environmentMode, mockApi) ? 10000 : 500);
   };
 
   const handleExecutionComplete = () => {

@@ -12,7 +12,9 @@ Bounded React 18 environment that treats learner code like a small Vite workspac
 - **Components:** `./Counter` and `./Counter.jsx` resolve bounded top-level component files with named or default exports.
 - **Styles:** The exact `import './App.css'` applies the editable `App.css` file.
 - **Storage:** Files use the version-1 file envelope. Lesson authors can call `serializeReactAppBundle`; plain legacy code becomes `App.jsx` alone.
-- **Cleanup:** The previous React root is unmounted before every manual run.
+- **Mock fetch:** An optional host `mockApi` prop installs deterministic local routes before modules evaluate and adds a read-only API Server tab. Module code, effects, and event handlers can call `fetch()` with genuine `Response` objects, simulated latency, and cancellation. Routes are canned host data outside learner files and persistence. Omitting `mockApi` keeps the ordinary React runtime; `{ routes: [] }` enables mocking with no declared routes.
+- **Cleanup:** The previous React root is unmounted before every manual run, and its pending mock requests are aborted. Route changes take effect on the next Run; adding or removing `mockApi` recreates the iframe.
+- **Completion:** A completed Run has evaluated modules and submitted the render; effects and event handlers can still have pending requests.
 
 ## Limitations
 - A default component export is required.
@@ -25,6 +27,9 @@ Bounded React 18 environment that treats learner code like a small Vite workspac
 - Import `./App.css` when the stylesheet should apply.
 - Supply meaningful, uppercase component filenames (for example, `Counter.jsx`) in the initial lesson bundle; learners cannot create, delete, or rename files.
 - Do not add `createRoot(...).render(...)`; the sandbox supplies the entry point.
+- For fetch lessons, supply routes through the host `mockApi` prop and use relative `/api/...` URLs. Real network access is blocked while mocking is enabled.
+- In effects, pass an `AbortController` signal to `fetch`, return cleanup that calls `abort()`, and ignore `AbortError` when setting error state. Check `response.ok` before parsing success data.
+- Show loading, success, and error states. The `#react-app-fetch-demo` preset demonstrates each state with refresh buttons.
 
 ## Example Code
 ```jsx

@@ -312,6 +312,45 @@ describe('CodingEnvironment routing', () => {
     expect(screen.getByRole('button', { name: /run code/i })).toBeInTheDocument();
   });
 
+  it('adds a read-only React API tab without serializing routes into learner files', async () => {
+    const onChange = vi.fn();
+    const onRun = vi.fn();
+    const code = serializeReactAppBundle({ 'App.jsx': 'export default function App() { return <p>Hello</p>; }', 'App.css': 'p { color: blue; }' });
+    renderCodingEnvironment('react-app', {
+      code, onChange, onRun, isRunning: true,
+      mockApi: { routes: [{ method: 'GET', path: '/items', body: ['Example'] }] },
+    });
+    expect(await screen.findByLabelText('Code editor')).toHaveValue(parseReactAppBundle(code).files['App.jsx']);
+    const apiTab = screen.getByRole('button', { name: 'API Server' });
+    expect(apiTab).toHaveAttribute('title', 'Read-only mock API');
+    fireEvent.click(apiTab);
+    expect(screen.getByText('/items')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'RUN AGAIN' }));
+    expect(onRun).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'App.jsx' }));
+    fireEvent.change(await screen.findByLabelText('Code editor'), { target: { value: 'export default () => <p>Updated</p>;' } });
+    const updatedBundle = parseReactAppBundle(onChange.mock.calls[0][0]);
+    expect(updatedBundle.files).toEqual({ 'App.jsx': 'export default () => <p>Updated</p>;', 'App.css': 'p { color: blue; }' });
+    expect(onChange.mock.calls[0][0]).not.toContain('/items');
+  });
+
+  it('returns to an editable React file when mock configuration is removed', async () => {
+    const props = {
+      code: serializeReactAppBundle({ 'App.jsx': 'export default () => <p>Hello</p>;', 'App.css': '' }),
+      onChange: vi.fn(), onRun: vi.fn(), isRunning: false, runTrigger: 0,
+      themeMode: 'dark' as const, environmentMode: 'react-app' as const, sessionId: 1,
+    };
+    const { rerender } = render(<CodingEnvironment {...props} mockApi={{ routes: [] }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'API Server' }));
+    expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
+    rerender(<CodingEnvironment {...props} />);
+    expect(screen.queryByRole('button', { name: 'API Server' })).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Code editor')).toHaveValue('export default () => <p>Hello</p>;');
+    expect(screen.getByRole('button', { name: 'App.jsx' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('shows editable script.js and a read-only API Server panel in fetch mode', async () => {
     const onChange = vi.fn();
     renderCodingEnvironment('fetch', {

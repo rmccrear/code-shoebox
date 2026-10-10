@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
+import type { MockApiConfig } from '../types';
+import { FETCH_MOCK_SETUP } from './templates/fetch';
 
 const ALL_MODES: EnvironmentMode[] = [
   'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-app', 'react-ts',
@@ -95,6 +97,99 @@ describe('getSandboxHtml', () => {
     expect(link?.isConnected).toBe(false);
     expect(style?.isConnected).toBe(false);
     document.head.querySelector('[data-code-shoebox-react-app]')?.remove();
+  });
+
+  it('enables the React App mock backend and network containment only when requested', () => {
+    const enabled = getSandboxHtml('react-app', false, { mockApiEnabled: true });
+    const ordinary = getSandboxHtml('react-app');
+    expect(enabled).toContain('window.__installFetchMock = (rawConfig');
+    expect(enabled).toContain("connect-src 'none'");
+    expect(enabled).toContain('react@18.3.1');
+    expect(ordinary).not.toContain('window.__installFetchMock = (rawConfig');
+    expect(ordinary).not.toContain("connect-src 'none'");
+    expect(getSandboxHtml('react-app', false, { mockApiEnabled: false })).toBe(ordinary);
+    expect(getSandboxHtml('dom', false, { mockApiEnabled: true })).toBe(getSandboxHtml('dom'));
+  });
+
+  it('keeps React requests alive after rendering, aborts on rerun, and installs updated routes before modules', async () => {
+    vi.useFakeTimers();
+    try {
+      const html = getSandboxHtml('react-app', false, { mockApiEnabled: true });
+      const logic = html.slice(html.indexOf('let rootInstance = null;'), html.lastIndexOf('</script>'));
+      const signals: AbortSignal[] = [];
+      const order: string[] = [];
+      const pending: Promise<Response>[] = [];
+      const fakeWindow = {
+        ReactDOM: { createRoot: () => ({ render: vi.fn(), unmount: () => order.push('unmount') }) },
+        React: { createElement: vi.fn() },
+        require: vi.fn(),
+        fetch: undefined as unknown as typeof fetch,
+        __installFetchMock: undefined as unknown as (config: MockApiConfig, signal: AbortSignal) => void,
+        __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement, options: { mockApi: MockApiConfig }) => void,
+      };
+      new Function('window', FETCH_MOCK_SETUP)(fakeWindow);
+      const installer = fakeWindow.__installFetchMock;
+      fakeWindow.__installFetchMock = (config, signal) => {
+        signals.push(signal);
+        signal.addEventListener('abort', () => order.push('abort'));
+        order.push('install');
+        installer(config, signal);
+      };
+      const babel = { transform: () => {
+        order.push('module');
+        pending.push(fakeWindow.fetch('/api/items'));
+        return { code: 'module.exports.default = function App() {};' };
+      } };
+      new Function('window', 'document', 'DOMParser', 'Babel', logic)(fakeWindow, document, DOMParser, babel);
+      const root = document.createElement('div');
+      fakeWindow.__RUN_MODE__('', root, { mockApi: { defaultDelayMs: 500, routes: [{ method: 'GET', path: '/api/items', body: ['old'] }] } });
+      const aborted = expect(pending[0]).rejects.toMatchObject({ name: 'AbortError' });
+      expect(signals[0].aborted).toBe(false);
+      expect(order).toEqual(['install', 'module']);
+
+      fakeWindow.__RUN_MODE__('', root, { mockApi: { defaultDelayMs: 0, routes: [{ method: 'GET', path: '/api/items', body: ['new'] }] } });
+      expect(order).toEqual(['install', 'module', 'unmount', 'abort', 'install', 'module']);
+      await aborted;
+      await vi.runAllTimersAsync();
+      await expect((await pending[1]).json()).resolves.toEqual(['new']);
+      expect(signals[1].aborted).toBe(false);
+    } finally {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
+  it('aborts the React run controller on compilation failure and page exit', () => {
+    const html = getSandboxHtml('react-app', false, { mockApiEnabled: true });
+    const logic = html.slice(html.indexOf('let rootInstance = null;'), html.lastIndexOf('</script>'));
+    const signals: AbortSignal[] = [];
+    const events = new EventTarget();
+    const fakeWindow = {
+      ReactDOM: { createRoot: () => ({ render: vi.fn(), unmount: vi.fn() }) },
+      React: { createElement: vi.fn() },
+      addEventListener: events.addEventListener.bind(events),
+      __installFetchMock: (_config: unknown, signal: AbortSignal) => signals.push(signal),
+      __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement) => void,
+    };
+    const babel = { transform: vi.fn(() => ({ code: 'module.exports.default = function App() {};' })) };
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      new Function('window', 'document', 'DOMParser', 'Babel', logic)(fakeWindow, document, DOMParser, babel);
+      const root = document.createElement('div');
+      fakeWindow.__RUN_MODE__('', root);
+      events.dispatchEvent(new Event('pagehide'));
+      expect(signals[0].aborted).toBe(true);
+      babel.transform.mockImplementationOnce(() => { throw new Error('invalid JSX'); });
+      fakeWindow.__RUN_MODE__('', root);
+      expect(signals[1].aborted).toBe(true);
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({ message: 'Error in "App.jsx": invalid JSX' }));
+      babel.transform.mockReturnValueOnce({ code: 'throw new Error("module failed");' });
+      fakeWindow.__RUN_MODE__('', root);
+      expect(signals[2].aborted).toBe(true);
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({ message: 'Error in "App.jsx": module failed' }));
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('uses pinned CDN versions for all transpiled modes', () => {

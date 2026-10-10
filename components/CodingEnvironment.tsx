@@ -12,6 +12,7 @@ import {
 import { ReadOnlyCodeViewer } from './ReadOnlyCodeViewer';
 import { MediaPanel } from './MediaPanel';
 import { ApiServerPanel } from './ApiServerPanel';
+import { isMockApiEnabled } from '../runtime/mockApi';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
@@ -105,7 +106,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
   const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
-  const isFetchMode = environmentMode === 'fetch' || environmentMode === 'html-js-fetch';
+  const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
 
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG
     ? BUNDLE_MODE_CONFIG[environmentMode as keyof typeof BUNDLE_MODE_CONFIG]
@@ -137,7 +138,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       return [
         ...editableBundleFileNames,
         ...(bundleModeConfig?.hasMediaTab ? ['media' as const] : []),
-        ...(environmentMode === 'html-js-fetch' ? ['api-server' as const] : []),
+        ...(mockApiEnabled ? ['api-server' as const] : []),
       ];
     }
     if (environmentMode === 'fetch') return ['script.js', 'api-server'];
@@ -147,7 +148,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
       ...(fixtureHtml !== undefined ? ['index.html' as const] : []),
       ...(fixtureCss !== undefined ? ['style.css' as const] : []),
     ];
-  }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, bundleModeConfig, environmentMode, mockApiEnabled, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(
     editableBundleFileNames?.[0] ?? 'script.js'
@@ -306,12 +307,12 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
           {!isServerMode && (
             <Button 
               onClick={handleRunClick} 
-              disabled={(isRunning && !isFetchMode) || !isPredictionFulfilled}
+              disabled={(isRunning && !mockApiEnabled) || !isPredictionFulfilled}
               variant="primary"
               className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
               icon={isRunning ? <CheckCircle2 className="animate-pulse" size={14}/> : <Play size={14}/>}
             >
-              {isRunning ? (isFetchMode ? 'RUN AGAIN' : 'RUNNING...') : 'RUN CODE'}
+              {isRunning ? (mockApiEnabled ? 'RUN AGAIN' : 'RUNNING...') : 'RUN CODE'}
             </Button>
           )}
         </div>
@@ -388,11 +389,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 environmentMode={environmentMode}
                 fixtureHtml={environmentMode === 'dom' ? fixtureHtml : undefined}
                 fixtureCss={environmentMode === 'dom' ? fixtureCss : undefined}
-                mockApi={isFetchMode ? mockApi : undefined}
+                mockApi={mockApiEnabled ? mockApi : undefined}
                 isBlurred={!isPredictionFulfilled}
                 isPredictionMode={!!predictionPrompt}
                 debugMode={debugMode}
-                onExecutionComplete={isFetchMode ? onExecutionComplete : undefined}
+                onExecutionComplete={mockApiEnabled ? onExecutionComplete : undefined}
               />
             )}
           </div>
