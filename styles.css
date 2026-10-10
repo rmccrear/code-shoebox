@@ -1,4 +1,4 @@
-*, ::before, ::after {
+*:where([data-code-shoebox], [data-code-shoebox] *), :where([data-code-shoebox], [data-code-shoebox] *)::before, :where([data-code-shoebox], [data-code-shoebox] *)::after {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -52,7 +52,7 @@
   --tw-contain-style:  ;
 }
 
-::backdrop {
+:where([data-code-shoebox], [data-code-shoebox] *)::backdrop {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -104,32 +104,24 @@
   --tw-contain-layout:  ;
   --tw-contain-paint:  ;
   --tw-contain-style:  ;
-}
-
-/*
+}/*
 ! tailwindcss v3.4.19 | MIT License | https://tailwindcss.com
-*/
-
-/*
+*//*
 1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
 2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
 */
 
-*,
-::before,
-::after {
-  box-sizing: border-box;
-  /* 1 */
-  border-width: 0;
-  /* 2 */
-  border-style: solid;
-  /* 2 */
-  border-color: #e5e7eb;
-  /* 2 */
+*:where([data-code-shoebox], [data-code-shoebox] *),
+:where([data-code-shoebox], [data-code-shoebox] *)::before,
+:where([data-code-shoebox], [data-code-shoebox] *)::after {
+  box-sizing: border-box; /* 1 */
+  border-width: 0; /* 2 */
+  border-style: solid; /* 2 */
+  border-color: #e5e7eb; /* 2 */
 }
 
-::before,
-::after {
+:where([data-code-shoebox], [data-code-shoebox] *)::before,
+:where([data-code-shoebox], [data-code-shoebox] *)::after {
   --tw-content: '';
 }
 
@@ -143,25 +135,15 @@
 7. Disable tap highlights on iOS
 */
 
-html,
-:host {
-  line-height: 1.5;
-  /* 1 */
-  -webkit-text-size-adjust: 100%;
-  /* 2 */
-  -moz-tab-size: 4;
-  /* 3 */
-  -o-tab-size: 4;
-     tab-size: 4;
-  /* 3 */
-  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  /* 4 */
-  font-feature-settings: normal;
-  /* 5 */
-  font-variation-settings: normal;
-  /* 6 */
-  -webkit-tap-highlight-color: transparent;
-  /* 7 */
+:where([data-code-shoebox]),:where([data-code-shoebox]) {
+  line-height: 1.5; /* 1 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+  -moz-tab-size: 4; /* 3 */
+  tab-size: 4; /* 3 */
+  font-family: inherit; /* 4 */
+  font-feature-settings: normal; /* 5 */
+  font-variation-settings: normal; /* 6 */
+  -webkit-tap-highlight-color: transparent; /* 7 */
 }
 
 /*
@@ -169,11 +151,8 @@ html,
 2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
 */
 
-body {
-  margin: 0;
-  /* 1 */
-  line-height: inherit;
-  /* 2 */
+:where([data-code-shoebox]) {
+  margin: 0; /* 1 */ /* 2 */
 }
 
 /*
@@ -182,34 +161,30 @@ body {
 3. Ensure horizontal rules are visible by default.
 */
 
-hr {
-  height: 0;
-  /* 1 */
-  color: inherit;
-  /* 2 */
-  border-top-width: 1px;
-  /* 3 */
+hr:where([data-code-shoebox], [data-code-shoebox] *) {
+  height: 0; /* 1 */
+  color: inherit; /* 2 */
+  border-top-width: 1px; /* 3 */
 }
 
 /*
 Add the correct text decoration in Chrome, Edge, and Safari.
 */
 
-abbr:where([title]) {
-  -webkit-text-decoration: underline dotted;
-          text-decoration: underline dotted;
+abbr:where([title]):where([data-code-shoebox], [data-code-shoebox] *) {
+  text-decoration: underline dotted;
 }
 
 /*
 Remove the default font size and weight for headings.
 */
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1:where([data-code-shoebox], [data-code-shoebox] *),
+h2:where([data-code-shoebox], [data-code-shoebox] *),
+h3:where([data-code-shoebox], [data-code-shoebox] *),
+h4:where([data-code-shoebox], [data-code-shoebox] *),
+h5:where([data-code-shoebox], [data-code-shoebox] *),
+h6:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: inherit;
   font-weight: inherit;
 }
@@ -218,7 +193,7 @@ h6 {
 Reset links to optimize for opt-in styling instead of opt-out.
 */
 
-a {
+a:where([data-code-shoebox], [data-code-shoebox] *) {
   color: inherit;
   text-decoration: inherit;
 }
@@ -227,8 +202,8 @@ a {
 Add the correct font weight in Edge and Safari.
 */
 
-b,
-strong {
+b:where([data-code-shoebox], [data-code-shoebox] *),
+strong:where([data-code-shoebox], [data-code-shoebox] *) {
   font-weight: bolder;
 }
 
@@ -239,25 +214,21 @@ strong {
 4. Correct the odd `em` font sizing in all browsers.
 */
 
-code,
-kbd,
-samp,
-pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  /* 1 */
-  font-feature-settings: normal;
-  /* 2 */
-  font-variation-settings: normal;
-  /* 3 */
-  font-size: 1em;
-  /* 4 */
+code:where([data-code-shoebox], [data-code-shoebox] *),
+kbd:where([data-code-shoebox], [data-code-shoebox] *),
+samp:where([data-code-shoebox], [data-code-shoebox] *),
+pre:where([data-code-shoebox], [data-code-shoebox] *) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */
+  font-feature-settings: normal; /* 2 */
+  font-variation-settings: normal; /* 3 */
+  font-size: 1em; /* 4 */
 }
 
 /*
 Add the correct font size in all browsers.
 */
 
-small {
+small:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 80%;
 }
 
@@ -265,19 +236,19 @@ small {
 Prevent `sub` and `sup` elements from affecting the line height in all browsers.
 */
 
-sub,
-sup {
+sub:where([data-code-shoebox], [data-code-shoebox] *),
+sup:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 75%;
   line-height: 0;
   position: relative;
   vertical-align: baseline;
 }
 
-sub {
+sub:where([data-code-shoebox], [data-code-shoebox] *) {
   bottom: -0.25em;
 }
 
-sup {
+sup:where([data-code-shoebox], [data-code-shoebox] *) {
   top: -0.5em;
 }
 
@@ -287,13 +258,10 @@ sup {
 3. Remove gaps between table borders by default.
 */
 
-table {
-  text-indent: 0;
-  /* 1 */
-  border-color: inherit;
-  /* 2 */
-  border-collapse: collapse;
-  /* 3 */
+table:where([data-code-shoebox], [data-code-shoebox] *) {
+  text-indent: 0; /* 1 */
+  border-color: inherit; /* 2 */
+  border-collapse: collapse; /* 3 */
 }
 
 /*
@@ -302,39 +270,29 @@ table {
 3. Remove default padding in all browsers.
 */
 
-button,
-input,
-optgroup,
-select,
-textarea {
-  font-family: inherit;
-  /* 1 */
-  font-feature-settings: inherit;
-  /* 1 */
-  font-variation-settings: inherit;
-  /* 1 */
-  font-size: 100%;
-  /* 1 */
-  font-weight: inherit;
-  /* 1 */
-  line-height: inherit;
-  /* 1 */
-  letter-spacing: inherit;
-  /* 1 */
-  color: inherit;
-  /* 1 */
-  margin: 0;
-  /* 2 */
-  padding: 0;
-  /* 3 */
+button:where([data-code-shoebox], [data-code-shoebox] *),
+input:where([data-code-shoebox], [data-code-shoebox] *),
+optgroup:where([data-code-shoebox], [data-code-shoebox] *),
+select:where([data-code-shoebox], [data-code-shoebox] *),
+textarea:where([data-code-shoebox], [data-code-shoebox] *) {
+  font-family: inherit; /* 1 */
+  font-feature-settings: inherit; /* 1 */
+  font-variation-settings: inherit; /* 1 */
+  font-size: 100%; /* 1 */
+  font-weight: inherit; /* 1 */
+  line-height: inherit; /* 1 */
+  letter-spacing: inherit; /* 1 */
+  color: inherit; /* 1 */
+  margin: 0; /* 2 */
+  padding: 0; /* 3 */
 }
 
 /*
 Remove the inheritance of text transform in Edge and Firefox.
 */
 
-button,
-select {
+button:where([data-code-shoebox], [data-code-shoebox] *),
+select:where([data-code-shoebox], [data-code-shoebox] *) {
   text-transform: none;
 }
 
@@ -343,23 +301,20 @@ select {
 2. Remove default button styles.
 */
 
-button,
-input:where([type='button']),
-input:where([type='reset']),
-input:where([type='submit']) {
-  -webkit-appearance: button;
-  /* 1 */
-  background-color: transparent;
-  /* 2 */
-  background-image: none;
-  /* 2 */
+button:where([data-code-shoebox], [data-code-shoebox] *),
+input:where([type='button']):where([data-code-shoebox], [data-code-shoebox] *),
+input:where([type='reset']):where([data-code-shoebox], [data-code-shoebox] *),
+input:where([type='submit']):where([data-code-shoebox], [data-code-shoebox] *) {
+  -webkit-appearance: button; /* 1 */
+  background-color: transparent; /* 2 */
+  background-image: none; /* 2 */
 }
 
 /*
 Use the modern Firefox focus style for all focusable elements.
 */
 
-:-moz-focusring {
+:-moz-focusring:where([data-code-shoebox], [data-code-shoebox] *) {
   outline: auto;
 }
 
@@ -367,7 +322,7 @@ Use the modern Firefox focus style for all focusable elements.
 Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
 */
 
-:-moz-ui-invalid {
+:-moz-ui-invalid:where([data-code-shoebox], [data-code-shoebox] *) {
   box-shadow: none;
 }
 
@@ -375,7 +330,7 @@ Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/
 Add the correct vertical alignment in Chrome and Firefox.
 */
 
-progress {
+progress:where([data-code-shoebox], [data-code-shoebox] *) {
   vertical-align: baseline;
 }
 
@@ -383,8 +338,8 @@ progress {
 Correct the cursor style of increment and decrement buttons in Safari.
 */
 
-::-webkit-inner-spin-button,
-::-webkit-outer-spin-button {
+:where([data-code-shoebox], [data-code-shoebox] *)::-webkit-inner-spin-button,
+:where([data-code-shoebox], [data-code-shoebox] *)::-webkit-outer-spin-button {
   height: auto;
 }
 
@@ -393,18 +348,16 @@ Correct the cursor style of increment and decrement buttons in Safari.
 2. Correct the outline style in Safari.
 */
 
-[type='search'] {
-  -webkit-appearance: textfield;
-  /* 1 */
-  outline-offset: -2px;
-  /* 2 */
+[type='search']:where([data-code-shoebox], [data-code-shoebox] *) {
+  -webkit-appearance: textfield; /* 1 */
+  outline-offset: -2px; /* 2 */
 }
 
 /*
 Remove the inner padding in Chrome and Safari on macOS.
 */
 
-::-webkit-search-decoration {
+:where([data-code-shoebox], [data-code-shoebox] *)::-webkit-search-decoration {
   -webkit-appearance: none;
 }
 
@@ -413,18 +366,16 @@ Remove the inner padding in Chrome and Safari on macOS.
 2. Change font properties to `inherit` in Safari.
 */
 
-::-webkit-file-upload-button {
-  -webkit-appearance: button;
-  /* 1 */
-  font: inherit;
-  /* 2 */
+:where([data-code-shoebox], [data-code-shoebox] *)::-webkit-file-upload-button {
+  -webkit-appearance: button; /* 1 */
+  font: inherit; /* 2 */
 }
 
 /*
 Add the correct display in Chrome and Safari.
 */
 
-summary {
+summary:where([data-code-shoebox], [data-code-shoebox] *) {
   display: list-item;
 }
 
@@ -432,34 +383,34 @@ summary {
 Removes the default spacing and border for appropriate elements.
 */
 
-blockquote,
-dl,
-dd,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-hr,
-figure,
-p,
-pre {
+blockquote:where([data-code-shoebox], [data-code-shoebox] *),
+dl:where([data-code-shoebox], [data-code-shoebox] *),
+dd:where([data-code-shoebox], [data-code-shoebox] *),
+h1:where([data-code-shoebox], [data-code-shoebox] *),
+h2:where([data-code-shoebox], [data-code-shoebox] *),
+h3:where([data-code-shoebox], [data-code-shoebox] *),
+h4:where([data-code-shoebox], [data-code-shoebox] *),
+h5:where([data-code-shoebox], [data-code-shoebox] *),
+h6:where([data-code-shoebox], [data-code-shoebox] *),
+hr:where([data-code-shoebox], [data-code-shoebox] *),
+figure:where([data-code-shoebox], [data-code-shoebox] *),
+p:where([data-code-shoebox], [data-code-shoebox] *),
+pre:where([data-code-shoebox], [data-code-shoebox] *) {
   margin: 0;
 }
 
-fieldset {
+fieldset:where([data-code-shoebox], [data-code-shoebox] *) {
   margin: 0;
   padding: 0;
 }
 
-legend {
+legend:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0;
 }
 
-ol,
-ul,
-menu {
+ol:where([data-code-shoebox], [data-code-shoebox] *),
+ul:where([data-code-shoebox], [data-code-shoebox] *),
+menu:where([data-code-shoebox], [data-code-shoebox] *) {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -468,8 +419,7 @@ menu {
 /*
 Reset default styling for dialogs.
 */
-
-dialog {
+dialog:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0;
 }
 
@@ -477,7 +427,7 @@ dialog {
 Prevent resizing textareas horizontally by default.
 */
 
-textarea {
+textarea:where([data-code-shoebox], [data-code-shoebox] *) {
   resize: vertical;
 }
 
@@ -486,35 +436,25 @@ textarea {
 2. Set the default placeholder color to the user's configured gray 400 color.
 */
 
-input::-moz-placeholder, textarea::-moz-placeholder {
-  opacity: 1;
-  /* 1 */
-  color: #9ca3af;
-  /* 2 */
-}
-
-input::placeholder,
-textarea::placeholder {
-  opacity: 1;
-  /* 1 */
-  color: #9ca3af;
-  /* 2 */
+input:where([data-code-shoebox], [data-code-shoebox] *)::placeholder,
+textarea:where([data-code-shoebox], [data-code-shoebox] *)::placeholder {
+  opacity: 1; /* 1 */
+  color: #9ca3af; /* 2 */
 }
 
 /*
 Set the default cursor for buttons.
 */
 
-button,
-[role="button"] {
+button:where([data-code-shoebox], [data-code-shoebox] *),
+[role="button"]:where([data-code-shoebox], [data-code-shoebox] *) {
   cursor: pointer;
 }
 
 /*
 Make sure disabled buttons don't get the pointer cursor.
 */
-
-:disabled {
+:disabled:where([data-code-shoebox], [data-code-shoebox] *) {
   cursor: default;
 }
 
@@ -524,1231 +464,949 @@ Make sure disabled buttons don't get the pointer cursor.
    This can trigger a poorly considered lint error in some tools but is included by design.
 */
 
-img,
-svg,
-video,
-canvas,
-audio,
-iframe,
-embed,
-object {
-  display: block;
-  /* 1 */
-  vertical-align: middle;
-  /* 2 */
+img:where([data-code-shoebox], [data-code-shoebox] *),
+svg:where([data-code-shoebox], [data-code-shoebox] *),
+video:where([data-code-shoebox], [data-code-shoebox] *),
+canvas:where([data-code-shoebox], [data-code-shoebox] *),
+audio:where([data-code-shoebox], [data-code-shoebox] *),
+iframe:where([data-code-shoebox], [data-code-shoebox] *),
+embed:where([data-code-shoebox], [data-code-shoebox] *),
+object:where([data-code-shoebox], [data-code-shoebox] *) {
+  display: block; /* 1 */
+  vertical-align: middle; /* 2 */
 }
 
 /*
 Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
 */
 
-img,
-video {
+img:where([data-code-shoebox], [data-code-shoebox] *),
+video:where([data-code-shoebox], [data-code-shoebox] *) {
   max-width: 100%;
   height: auto;
 }
 
 /* Make elements with the HTML hidden attribute stay hidden by default */
-
-[hidden]:where(:not([hidden="until-found"])) {
+[hidden]:where(:not([hidden="until-found"])):where([data-code-shoebox], [data-code-shoebox] *) {
   display: none;
 }
-
-.container {
+.container:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 100%;
 }
-
 @media (min-width: 640px) {
-  .container {
+
+  .container:where([data-code-shoebox], [data-code-shoebox] *) {
     max-width: 640px;
   }
 }
-
 @media (min-width: 768px) {
-  .container {
+
+  .container:where([data-code-shoebox], [data-code-shoebox] *) {
     max-width: 768px;
   }
 }
-
 @media (min-width: 1024px) {
-  .container {
+
+  .container:where([data-code-shoebox], [data-code-shoebox] *) {
     max-width: 1024px;
   }
 }
-
 @media (min-width: 1280px) {
-  .container {
+
+  .container:where([data-code-shoebox], [data-code-shoebox] *) {
     max-width: 1280px;
   }
 }
-
 @media (min-width: 1536px) {
-  .container {
+
+  .container:where([data-code-shoebox], [data-code-shoebox] *) {
     max-width: 1536px;
   }
 }
-
-.pointer-events-none {
+.pointer-events-none:where([data-code-shoebox], [data-code-shoebox] *) {
   pointer-events: none;
 }
-
-.collapse {
+.collapse:where([data-code-shoebox], [data-code-shoebox] *) {
   visibility: collapse;
 }
-
-.static {
+.static:where([data-code-shoebox], [data-code-shoebox] *) {
   position: static;
 }
-
-.fixed {
+.fixed:where([data-code-shoebox], [data-code-shoebox] *) {
   position: fixed;
 }
-
-.absolute {
+.absolute:where([data-code-shoebox], [data-code-shoebox] *) {
   position: absolute;
 }
-
-.relative {
+.relative:where([data-code-shoebox], [data-code-shoebox] *) {
   position: relative;
 }
-
-.inset-0 {
+.inset-0:where([data-code-shoebox], [data-code-shoebox] *) {
   inset: 0px;
 }
-
-.right-2 {
+.right-2:where([data-code-shoebox], [data-code-shoebox] *) {
   right: 0.5rem;
 }
-
-.top-2 {
+.top-2:where([data-code-shoebox], [data-code-shoebox] *) {
   top: 0.5rem;
 }
-
-.z-10 {
+.z-10:where([data-code-shoebox], [data-code-shoebox] *) {
   z-index: 10;
 }
-
-.z-50 {
+.z-50:where([data-code-shoebox], [data-code-shoebox] *) {
   z-index: 50;
 }
-
-.m-0 {
+.m-0:where([data-code-shoebox], [data-code-shoebox] *) {
   margin: 0px;
 }
-
-.m-4 {
+.m-4:where([data-code-shoebox], [data-code-shoebox] *) {
   margin: 1rem;
 }
-
-.mx-1 {
+.mx-1:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-left: 0.25rem;
   margin-right: 0.25rem;
 }
-
-.mb-1 {
+.mb-1:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-bottom: 0.25rem;
 }
-
-.mb-2 {
+.mb-2:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-bottom: 0.5rem;
 }
-
-.mb-3 {
+.mb-3:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-bottom: 0.75rem;
 }
-
-.mb-4 {
+.mb-4:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-bottom: 1rem;
 }
-
-.mb-6 {
+.mb-6:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-bottom: 1.5rem;
 }
-
-.ml-1 {
+.ml-1:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-left: 0.25rem;
 }
-
-.ml-2 {
+.ml-2:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-left: 0.5rem;
 }
-
-.mr-2 {
+.mr-2:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-right: 0.5rem;
 }
-
-.mt-1 {
+.mt-1:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-top: 0.25rem;
 }
-
-.mt-2 {
+.mt-2:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-top: 0.5rem;
 }
-
-.mt-3 {
+.mt-3:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-top: 0.75rem;
 }
-
-.mt-5 {
+.mt-5:where([data-code-shoebox], [data-code-shoebox] *) {
   margin-top: 1.25rem;
 }
-
-.block {
+.block:where([data-code-shoebox], [data-code-shoebox] *) {
   display: block;
 }
-
-.inline {
+.inline:where([data-code-shoebox], [data-code-shoebox] *) {
   display: inline;
 }
-
-.flex {
+.flex:where([data-code-shoebox], [data-code-shoebox] *) {
   display: flex;
 }
-
-.table {
+.table:where([data-code-shoebox], [data-code-shoebox] *) {
   display: table;
 }
-
-.hidden {
+.hidden:where([data-code-shoebox], [data-code-shoebox] *) {
   display: none;
 }
-
-.h-1\.5 {
+.h-1\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 0.375rem;
 }
-
-.h-12 {
+.h-12:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 3rem;
 }
-
-.h-3 {
+.h-3:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 0.75rem;
 }
-
-.h-4 {
+.h-4:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 1rem;
 }
-
-.h-6 {
+.h-6:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 1.5rem;
 }
-
-.h-8 {
+.h-8:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 2rem;
 }
-
-.h-full {
+.h-full:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 100%;
 }
-
-.h-screen {
+.h-screen:where([data-code-shoebox], [data-code-shoebox] *) {
   height: 100vh;
 }
-
-.max-h-64 {
+.max-h-64:where([data-code-shoebox], [data-code-shoebox] *) {
   max-height: 16rem;
 }
-
-.min-h-0 {
+.min-h-0:where([data-code-shoebox], [data-code-shoebox] *) {
   min-height: 0px;
 }
-
-.min-h-40 {
+.min-h-40:where([data-code-shoebox], [data-code-shoebox] *) {
   min-height: 10rem;
 }
-
-.w-1\.5 {
+.w-1\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 0.375rem;
 }
-
-.w-12 {
+.w-12:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 3rem;
 }
-
-.w-3 {
+.w-3:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 0.75rem;
 }
-
-.w-4 {
+.w-4:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 1rem;
 }
-
-.w-6 {
+.w-6:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 1.5rem;
 }
-
-.w-8 {
+.w-8:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 2rem;
 }
-
-.w-full {
+.w-full:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 100%;
 }
-
-.w-px {
+.w-px:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 1px;
 }
-
-.w-screen {
+.w-screen:where([data-code-shoebox], [data-code-shoebox] *) {
   width: 100vw;
 }
-
-.min-w-0 {
+.min-w-0:where([data-code-shoebox], [data-code-shoebox] *) {
   min-width: 0px;
 }
-
-.max-w-full {
+.max-w-full:where([data-code-shoebox], [data-code-shoebox] *) {
   max-width: 100%;
 }
-
-.max-w-md {
+.max-w-md:where([data-code-shoebox], [data-code-shoebox] *) {
   max-width: 28rem;
 }
-
-.flex-1 {
+.flex-1:where([data-code-shoebox], [data-code-shoebox] *) {
   flex: 1 1 0%;
 }
-
-.flex-shrink {
+.flex-shrink:where([data-code-shoebox], [data-code-shoebox] *) {
   flex-shrink: 1;
 }
-
-.shrink-0 {
+.shrink-0:where([data-code-shoebox], [data-code-shoebox] *) {
   flex-shrink: 0;
 }
-
-.scale-100 {
+.scale-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-scale-x: 1;
   --tw-scale-y: 1;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
-
-.transform {
+.transform:where([data-code-shoebox], [data-code-shoebox] *) {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
+@keyframes code-shoebox-pulse {
 
-@keyframes pulse {
   50% {
     opacity: .5;
   }
 }
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-pulse:where([data-code-shoebox], [data-code-shoebox] *) {
+  animation: code-shoebox-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-
-.cursor-col-resize {
+.cursor-col-resize:where([data-code-shoebox], [data-code-shoebox] *) {
   cursor: col-resize;
 }
-
-.cursor-pointer {
+.cursor-pointer:where([data-code-shoebox], [data-code-shoebox] *) {
   cursor: pointer;
 }
-
-.cursor-row-resize {
+.cursor-row-resize:where([data-code-shoebox], [data-code-shoebox] *) {
   cursor: row-resize;
 }
-
-.select-none {
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+.select-none:where([data-code-shoebox], [data-code-shoebox] *) {
+  user-select: none;
 }
-
-.select-text {
-  -webkit-user-select: text;
-     -moz-user-select: text;
-          user-select: text;
+.select-text:where([data-code-shoebox], [data-code-shoebox] *) {
+  user-select: text;
 }
-
-.appearance-none {
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
+.appearance-none:where([data-code-shoebox], [data-code-shoebox] *) {
+  appearance: none;
 }
-
-.flex-row {
+.flex-row:where([data-code-shoebox], [data-code-shoebox] *) {
   flex-direction: row;
 }
-
-.flex-col {
+.flex-col:where([data-code-shoebox], [data-code-shoebox] *) {
   flex-direction: column;
 }
-
-.flex-wrap {
+.flex-wrap:where([data-code-shoebox], [data-code-shoebox] *) {
   flex-wrap: wrap;
 }
-
-.items-center {
+.items-center:where([data-code-shoebox], [data-code-shoebox] *) {
   align-items: center;
 }
-
-.justify-end {
+.justify-end:where([data-code-shoebox], [data-code-shoebox] *) {
   justify-content: flex-end;
 }
-
-.justify-center {
+.justify-center:where([data-code-shoebox], [data-code-shoebox] *) {
   justify-content: center;
 }
-
-.justify-between {
+.justify-between:where([data-code-shoebox], [data-code-shoebox] *) {
   justify-content: space-between;
 }
-
-.gap-1 {
+.gap-1:where([data-code-shoebox], [data-code-shoebox] *) {
   gap: 0.25rem;
 }
-
-.gap-1\.5 {
+.gap-1\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   gap: 0.375rem;
 }
-
-.gap-2 {
+.gap-2:where([data-code-shoebox], [data-code-shoebox] *) {
   gap: 0.5rem;
 }
-
-.gap-3 {
+.gap-3:where([data-code-shoebox], [data-code-shoebox] *) {
   gap: 0.75rem;
 }
-
-.gap-4 {
+.gap-4:where([data-code-shoebox], [data-code-shoebox] *) {
   gap: 1rem;
 }
-
-.gap-x-4 {
-  -moz-column-gap: 1rem;
-       column-gap: 1rem;
+.gap-x-4:where([data-code-shoebox], [data-code-shoebox] *) {
+  column-gap: 1rem;
 }
-
-.gap-y-1 {
+.gap-y-1:where([data-code-shoebox], [data-code-shoebox] *) {
   row-gap: 0.25rem;
 }
-
-.space-y-1 > :not([hidden]) ~ :not([hidden]) {
+.space-y-1 > :not([hidden]) ~ :not([hidden]):where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-space-y-reverse: 0;
   margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(0.25rem * var(--tw-space-y-reverse));
 }
-
-.space-y-3 > :not([hidden]) ~ :not([hidden]) {
+.space-y-3 > :not([hidden]) ~ :not([hidden]):where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-space-y-reverse: 0;
   margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
 }
-
-.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+.space-y-4 > :not([hidden]) ~ :not([hidden]):where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-space-y-reverse: 0;
   margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1rem * var(--tw-space-y-reverse));
 }
-
-.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+.space-y-6 > :not([hidden]) ~ :not([hidden]):where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
 }
-
-.overflow-auto {
+.overflow-auto:where([data-code-shoebox], [data-code-shoebox] *) {
   overflow: auto;
 }
-
-.overflow-hidden {
+.overflow-hidden:where([data-code-shoebox], [data-code-shoebox] *) {
   overflow: hidden;
 }
-
-.overflow-x-auto {
+.overflow-x-auto:where([data-code-shoebox], [data-code-shoebox] *) {
   overflow-x: auto;
 }
-
-.overflow-y-auto {
+.overflow-y-auto:where([data-code-shoebox], [data-code-shoebox] *) {
   overflow-y: auto;
 }
-
-.whitespace-nowrap {
+.whitespace-nowrap:where([data-code-shoebox], [data-code-shoebox] *) {
   white-space: nowrap;
 }
-
-.whitespace-pre {
+.whitespace-pre:where([data-code-shoebox], [data-code-shoebox] *) {
   white-space: pre;
 }
-
-.whitespace-pre-wrap {
+.whitespace-pre-wrap:where([data-code-shoebox], [data-code-shoebox] *) {
   white-space: pre-wrap;
 }
-
-.break-all {
+.break-all:where([data-code-shoebox], [data-code-shoebox] *) {
   word-break: break-all;
 }
-
-.rounded {
+.rounded:where([data-code-shoebox], [data-code-shoebox] *) {
   border-radius: 0.25rem;
 }
-
-.rounded-full {
+.rounded-full:where([data-code-shoebox], [data-code-shoebox] *) {
   border-radius: 9999px;
 }
-
-.rounded-lg {
+.rounded-lg:where([data-code-shoebox], [data-code-shoebox] *) {
   border-radius: 0.5rem;
 }
-
-.rounded-md {
+.rounded-md:where([data-code-shoebox], [data-code-shoebox] *) {
   border-radius: 0.375rem;
 }
-
-.rounded-xl {
+.rounded-xl:where([data-code-shoebox], [data-code-shoebox] *) {
   border-radius: 0.75rem;
 }
-
-.border {
+.border:where([data-code-shoebox], [data-code-shoebox] *) {
   border-width: 1px;
 }
-
-.border-b {
+.border-b:where([data-code-shoebox], [data-code-shoebox] *) {
   border-bottom-width: 1px;
 }
-
-.border-l {
+.border-l:where([data-code-shoebox], [data-code-shoebox] *) {
   border-left-width: 1px;
 }
-
-.border-t {
+.border-t:where([data-code-shoebox], [data-code-shoebox] *) {
   border-top-width: 1px;
 }
-
-.border-dashed {
+.border-dashed:where([data-code-shoebox], [data-code-shoebox] *) {
   border-style: dashed;
 }
-
-.border-none {
+.border-none:where([data-code-shoebox], [data-code-shoebox] *) {
   border-style: none;
 }
-
-.border-black\/10 {
+.border-black\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(0 0 0 / 0.1);
 }
-
-.border-black\/20 {
+.border-black\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(0 0 0 / 0.2);
 }
-
-.border-black\/5 {
+.border-black\/5:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(0 0 0 / 0.05);
 }
-
-.border-blue-100 {
+.border-blue-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(219 234 254 / var(--tw-border-opacity, 1));
 }
-
-.border-blue-200 {
+.border-blue-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(191 219 254 / var(--tw-border-opacity, 1));
 }
-
-.border-blue-400\/30 {
+.border-blue-400\/30:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(96 165 250 / 0.3);
 }
-
-.border-blue-500\/20 {
+.border-blue-500\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(59 130 246 / 0.2);
 }
-
-.border-gray-100 {
+.border-gray-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(243 244 246 / var(--tw-border-opacity, 1));
 }
-
-.border-gray-200 {
+.border-gray-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
 }
-
-.border-gray-300 {
+.border-gray-300:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
 }
-
-.border-gray-500\/20 {
+.border-gray-500\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(107 114 128 / 0.2);
 }
-
-.border-gray-700 {
+.border-gray-700:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
 }
-
-.border-red-200 {
+.border-red-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(254 202 202 / var(--tw-border-opacity, 1));
 }
-
-.border-red-400\/30 {
+.border-red-400\/30:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(248 113 113 / 0.3);
 }
-
-.border-red-500\/20 {
+.border-red-500\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(239 68 68 / 0.2);
 }
-
-.border-slate-200 {
+.border-slate-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-border-opacity: 1;
   border-color: rgb(226 232 240 / var(--tw-border-opacity, 1));
 }
-
-.border-transparent {
+.border-transparent:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: transparent;
 }
-
-.border-white\/10 {
+.border-white\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   border-color: rgb(255 255 255 / 0.1);
 }
-
-.bg-\[\#181818\] {
+.bg-\[\#181818\]:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(24 24 24 / var(--tw-bg-opacity, 1));
 }
-
-.bg-\[\#1a1a1a\] {
+.bg-\[\#1a1a1a\]:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(26 26 26 / var(--tw-bg-opacity, 1));
 }
-
-.bg-\[\#1e1e1e\] {
+.bg-\[\#1e1e1e\]:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(30 30 30 / var(--tw-bg-opacity, 1));
 }
-
-.bg-\[\#252526\] {
+.bg-\[\#252526\]:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(37 37 38 / var(--tw-bg-opacity, 1));
 }
-
-.bg-\[hsl\(var\(--background\)\)\] {
+.bg-\[hsl\(var\(--background\)\)\]:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: hsl(var(--background));
 }
-
-.bg-\[hsl\(var\(--primary\)\)\] {
+.bg-\[hsl\(var\(--primary\)\)\]:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: hsl(var(--primary));
 }
-
-.bg-black\/20 {
+.bg-black\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.2);
 }
-
-.bg-black\/30 {
+.bg-black\/30:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.3);
 }
-
-.bg-black\/40 {
+.bg-black\/40:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.4);
 }
-
-.bg-black\/5 {
+.bg-black\/5:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.05);
 }
-
-.bg-black\/50 {
+.bg-black\/50:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.5);
 }
-
-.bg-blue-100 {
+.bg-blue-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1));
 }
-
-.bg-blue-400\/10 {
+.bg-blue-400\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(96 165 250 / 0.1);
 }
-
-.bg-blue-50 {
+.bg-blue-50:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(239 246 255 / var(--tw-bg-opacity, 1));
 }
-
-.bg-blue-500\/10 {
+.bg-blue-500\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(59 130 246 / 0.1);
 }
-
-.bg-blue-500\/20 {
+.bg-blue-500\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(59 130 246 / 0.2);
 }
-
-.bg-blue-900\/50 {
+.bg-blue-900\/50:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(30 58 138 / 0.5);
 }
-
-.bg-current {
+.bg-current:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: currentColor;
 }
-
-.bg-emerald-500\/15 {
+.bg-emerald-500\/15:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(16 185 129 / 0.15);
 }
-
-.bg-gray-100 {
+.bg-gray-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
-
-.bg-gray-50 {
+.bg-gray-50:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(249 250 251 / var(--tw-bg-opacity, 1));
 }
-
-.bg-gray-700 {
+.bg-gray-700:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
 }
-
-.bg-gray-800 {
+.bg-gray-800:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
 }
-
-.bg-orange-100 {
+.bg-orange-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(255 237 213 / var(--tw-bg-opacity, 1));
 }
-
-.bg-orange-500\/10 {
+.bg-orange-500\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(249 115 22 / 0.1);
 }
-
-.bg-purple-100 {
+.bg-purple-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(243 232 255 / var(--tw-bg-opacity, 1));
 }
-
-.bg-purple-500\/10 {
+.bg-purple-500\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(168 85 247 / 0.1);
 }
-
-.bg-red-50 {
+.bg-red-50:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1));
 }
-
-.bg-red-500\/5 {
+.bg-red-500\/5:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(239 68 68 / 0.05);
 }
-
-.bg-red-950\/30 {
+.bg-red-950\/30:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(69 10 10 / 0.3);
 }
-
-.bg-slate-100 {
+.bg-slate-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(241 245 249 / var(--tw-bg-opacity, 1));
 }
-
-.bg-slate-50 {
+.bg-slate-50:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(248 250 252 / var(--tw-bg-opacity, 1));
 }
-
-.bg-transparent {
+.bg-transparent:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: transparent;
 }
-
-.bg-white {
+.bg-white:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
-
-.bg-white\/10 {
+.bg-white\/10:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(255 255 255 / 0.1);
 }
-
-.bg-white\/\[0\.03\] {
+.bg-white\/\[0\.03\]:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(255 255 255 / 0.03);
 }
-
-.bg-yellow-500\/5 {
+.bg-yellow-500\/5:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(234 179 8 / 0.05);
 }
-
-.object-contain {
-  -o-object-fit: contain;
-     object-fit: contain;
+.object-contain:where([data-code-shoebox], [data-code-shoebox] *) {
+  object-fit: contain;
 }
-
-.\!p-1 {
+.\!p-1:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0.25rem !important;
 }
-
-.p-0\.5 {
+.p-0\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0.125rem;
 }
-
-.p-2 {
+.p-2:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0.5rem;
 }
-
-.p-3 {
+.p-3:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 0.75rem;
 }
-
-.p-4 {
+.p-4:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 1rem;
 }
-
-.p-6 {
+.p-6:where([data-code-shoebox], [data-code-shoebox] *) {
   padding: 1.5rem;
 }
-
-.\!px-3 {
+.\!px-3:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 0.75rem !important;
   padding-right: 0.75rem !important;
 }
-
-.\!px-5 {
+.\!px-5:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 1.25rem !important;
   padding-right: 1.25rem !important;
 }
-
-.\!py-1 {
+.\!py-1:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.25rem !important;
   padding-bottom: 0.25rem !important;
 }
-
-.px-1 {
+.px-1:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 0.25rem;
   padding-right: 0.25rem;
 }
-
-.px-2 {
+.px-2:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
 }
-
-.px-3 {
+.px-3:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
 }
-
-.px-4 {
+.px-4:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 1rem;
   padding-right: 1rem;
 }
-
-.px-5 {
+.px-5:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-left: 1.25rem;
   padding-right: 1.25rem;
 }
-
-.py-0\.5 {
+.py-0\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.125rem;
   padding-bottom: 0.125rem;
 }
-
-.py-1 {
+.py-1:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
-
-.py-1\.5 {
+.py-1\.5:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.375rem;
   padding-bottom: 0.375rem;
 }
-
-.py-2 {
+.py-2:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
-
-.py-3 {
+.py-3:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
 }
-
-.py-4 {
+.py-4:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 1rem;
   padding-bottom: 1rem;
 }
-
-.py-8 {
+.py-8:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
-
-.pb-2 {
+.pb-2:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-bottom: 0.5rem;
 }
-
-.pr-4 {
+.pr-4:where([data-code-shoebox], [data-code-shoebox] *) {
   padding-right: 1rem;
 }
-
-.text-center {
+.text-center:where([data-code-shoebox], [data-code-shoebox] *) {
   text-align: center;
 }
-
-.font-mono {
+.font-mono:where([data-code-shoebox], [data-code-shoebox] *) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
-
-.text-\[10px\] {
+.text-\[10px\]:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 10px;
 }
-
-.text-lg {
+.text-lg:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 1.125rem;
   line-height: 1.75rem;
 }
-
-.text-sm {
+.text-sm:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
-
-.text-xs {
+.text-xs:where([data-code-shoebox], [data-code-shoebox] *) {
   font-size: 0.75rem;
   line-height: 1rem;
 }
-
-.font-bold {
+.font-bold:where([data-code-shoebox], [data-code-shoebox] *) {
   font-weight: 700;
 }
-
-.font-medium {
+.font-medium:where([data-code-shoebox], [data-code-shoebox] *) {
   font-weight: 500;
 }
-
-.font-semibold {
+.font-semibold:where([data-code-shoebox], [data-code-shoebox] *) {
   font-weight: 600;
 }
-
-.uppercase {
+.uppercase:where([data-code-shoebox], [data-code-shoebox] *) {
   text-transform: uppercase;
 }
-
-.lowercase {
+.lowercase:where([data-code-shoebox], [data-code-shoebox] *) {
   text-transform: lowercase;
 }
-
-.italic {
+.italic:where([data-code-shoebox], [data-code-shoebox] *) {
   font-style: italic;
 }
-
-.leading-6 {
+.leading-6:where([data-code-shoebox], [data-code-shoebox] *) {
   line-height: 1.5rem;
 }
-
-.leading-relaxed {
+.leading-relaxed:where([data-code-shoebox], [data-code-shoebox] *) {
   line-height: 1.625;
 }
-
-.leading-tight {
+.leading-tight:where([data-code-shoebox], [data-code-shoebox] *) {
   line-height: 1.25;
 }
-
-.tracking-tight {
+.tracking-tight:where([data-code-shoebox], [data-code-shoebox] *) {
   letter-spacing: -0.025em;
 }
-
-.tracking-wide {
+.tracking-wide:where([data-code-shoebox], [data-code-shoebox] *) {
   letter-spacing: 0.025em;
 }
-
-.tracking-wider {
+.tracking-wider:where([data-code-shoebox], [data-code-shoebox] *) {
   letter-spacing: 0.05em;
 }
-
-.text-\[hsl\(var\(--foreground\)\)\] {
+.text-\[hsl\(var\(--foreground\)\)\]:where([data-code-shoebox], [data-code-shoebox] *) {
   color: hsl(var(--foreground));
 }
-
-.text-\[hsl\(var\(--primary-foreground\)\)\] {
+.text-\[hsl\(var\(--primary-foreground\)\)\]:where([data-code-shoebox], [data-code-shoebox] *) {
   color: hsl(var(--primary-foreground));
 }
-
-.text-black {
+.text-black:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(0 0 0 / var(--tw-text-opacity, 1));
 }
-
-.text-blue-300 {
+.text-blue-300:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(147 197 253 / var(--tw-text-opacity, 1));
 }
-
-.text-blue-400 {
+.text-blue-400:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(96 165 250 / var(--tw-text-opacity, 1));
 }
-
-.text-blue-500 {
+.text-blue-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(59 130 246 / var(--tw-text-opacity, 1));
 }
-
-.text-blue-600 {
+.text-blue-600:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(37 99 235 / var(--tw-text-opacity, 1));
 }
-
-.text-blue-700 {
+.text-blue-700:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(29 78 216 / var(--tw-text-opacity, 1));
 }
-
-.text-emerald-500 {
+.text-emerald-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(16 185 129 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-100 {
+.text-gray-100:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(243 244 246 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-200 {
+.text-gray-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(229 231 235 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-300 {
+.text-gray-300:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(209 213 219 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-400 {
+.text-gray-400:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(156 163 175 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-500 {
+.text-gray-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(107 114 128 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-600 {
+.text-gray-600:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(75 85 99 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-700 {
+.text-gray-700:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(55 65 81 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-800 {
+.text-gray-800:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(31 41 55 / var(--tw-text-opacity, 1));
 }
-
-.text-gray-900 {
+.text-gray-900:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(17 24 39 / var(--tw-text-opacity, 1));
 }
-
-.text-green-500 {
+.text-green-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(34 197 94 / var(--tw-text-opacity, 1));
 }
-
-.text-inherit {
+.text-inherit:where([data-code-shoebox], [data-code-shoebox] *) {
   color: inherit;
 }
-
-.text-orange-400 {
+.text-orange-400:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(251 146 60 / var(--tw-text-opacity, 1));
 }
-
-.text-orange-600 {
+.text-orange-600:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(234 88 12 / var(--tw-text-opacity, 1));
 }
-
-.text-purple-400 {
+.text-purple-400:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(192 132 252 / var(--tw-text-opacity, 1));
 }
-
-.text-purple-500 {
+.text-purple-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(168 85 247 / var(--tw-text-opacity, 1));
 }
-
-.text-purple-600 {
+.text-purple-600:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(147 51 234 / var(--tw-text-opacity, 1));
 }
-
-.text-red-200 {
+.text-red-200:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(254 202 202 / var(--tw-text-opacity, 1));
 }
-
-.text-red-400 {
+.text-red-400:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(248 113 113 / var(--tw-text-opacity, 1));
 }
-
-.text-red-500 {
+.text-red-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(239 68 68 / var(--tw-text-opacity, 1));
 }
-
-.text-red-800 {
+.text-red-800:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(153 27 27 / var(--tw-text-opacity, 1));
 }
-
-.text-slate-800 {
+.text-slate-800:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(30 41 59 / var(--tw-text-opacity, 1));
 }
-
-.text-white {
+.text-white:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
-
-.text-yellow-500 {
+.text-yellow-500:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(234 179 8 / var(--tw-text-opacity, 1));
 }
-
-.placeholder-gray-400::-moz-placeholder {
+.placeholder-gray-400:where([data-code-shoebox], [data-code-shoebox] *)::placeholder {
   --tw-placeholder-opacity: 1;
   color: rgb(156 163 175 / var(--tw-placeholder-opacity, 1));
 }
-
-.placeholder-gray-400::placeholder {
-  --tw-placeholder-opacity: 1;
-  color: rgb(156 163 175 / var(--tw-placeholder-opacity, 1));
-}
-
-.placeholder-gray-600::-moz-placeholder {
+.placeholder-gray-600:where([data-code-shoebox], [data-code-shoebox] *)::placeholder {
   --tw-placeholder-opacity: 1;
   color: rgb(75 85 99 / var(--tw-placeholder-opacity, 1));
 }
-
-.placeholder-gray-600::placeholder {
-  --tw-placeholder-opacity: 1;
-  color: rgb(75 85 99 / var(--tw-placeholder-opacity, 1));
-}
-
-.opacity-10 {
+.opacity-10:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.1;
 }
-
-.opacity-20 {
+.opacity-20:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.2;
 }
-
-.opacity-30 {
+.opacity-30:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.3;
 }
-
-.opacity-40 {
+.opacity-40:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.4;
 }
-
-.opacity-50 {
+.opacity-50:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.5;
 }
-
-.opacity-60 {
+.opacity-60:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.6;
 }
-
-.opacity-70 {
+.opacity-70:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.7;
 }
-
-.opacity-80 {
+.opacity-80:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.8;
 }
-
-.opacity-90 {
+.opacity-90:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.9;
 }
-
-.shadow-2xl {
+.shadow-2xl:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
-.shadow-inner {
+.shadow-inner:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
-.shadow-lg {
+.shadow-lg:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
-.shadow-sm {
+.shadow-sm:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
-
-.shadow-blue-500\/20 {
+.shadow-blue-500\/20:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-shadow-color: rgb(59 130 246 / 0.2);
   --tw-shadow: var(--tw-shadow-colored);
 }
-
-.outline-none {
+.outline-none:where([data-code-shoebox], [data-code-shoebox] *) {
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
-
-.ring {
+.ring:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
-
-.filter {
+.filter:where([data-code-shoebox], [data-code-shoebox] *) {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
-
-.backdrop-blur-md {
+.backdrop-blur-md:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-backdrop-blur: blur(12px);
   -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
 }
-
-.backdrop-blur-sm {
+.backdrop-blur-sm:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-backdrop-blur: blur(4px);
   -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
 }
-
-.transition {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
+.transition:where([data-code-shoebox], [data-code-shoebox] *) {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-
-.transition-all {
+.transition-all:where([data-code-shoebox], [data-code-shoebox] *) {
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-
-.transition-colors {
+.transition-colors:where([data-code-shoebox], [data-code-shoebox] *) {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
-
-.duration-200 {
+.duration-200:where([data-code-shoebox], [data-code-shoebox] *) {
   transition-duration: 200ms;
 }
-
-.duration-300 {
+.duration-300:where([data-code-shoebox], [data-code-shoebox] *) {
   transition-duration: 300ms;
 }
 
@@ -1756,12 +1414,11 @@ video {
   Defensive styles for Monaco Editor.
   Tailwind's preflight (reset) can sometimes interfere with Monaco's internal alignment.
 */
-
-.monaco-editor-container .monaco-editor,
-.monaco-editor-container .monaco-editor .inputarea,
-.monaco-editor-container .monaco-editor .view-line,
-.monaco-editor-container .monaco-editor .view-line span,
-.monaco-editor-container .monaco-editor textarea {
+.monaco-editor-container .monaco-editor:where([data-code-shoebox], [data-code-shoebox] *),
+.monaco-editor-container .monaco-editor .inputarea:where([data-code-shoebox], [data-code-shoebox] *),
+.monaco-editor-container .monaco-editor .view-line:where([data-code-shoebox], [data-code-shoebox] *),
+.monaco-editor-container .monaco-editor .view-line span:where([data-code-shoebox], [data-code-shoebox] *),
+.monaco-editor-container .monaco-editor textarea:where([data-code-shoebox], [data-code-shoebox] *) {
   text-align: left !important;
   letter-spacing: 0 !important;
   font-variant-ligatures: none !important;
@@ -1769,141 +1426,123 @@ video {
 }
 
 /* Ensure z-index context is correct for widgets/hovers */
-
-.monaco-editor-container {
+.monaco-editor-container:where([data-code-shoebox], [data-code-shoebox] *) {
   isolation: isolate;
 }
-
-.hover\:bg-black\/10:hover {
+.hover\:bg-black\/10:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.1);
 }
-
-.hover\:bg-black\/40:hover {
+.hover\:bg-black\/40:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.4);
 }
-
-.hover\:bg-black\/5:hover {
+.hover\:bg-black\/5:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(0 0 0 / 0.05);
 }
-
-.hover\:bg-blue-500:hover {
+.hover\:bg-blue-500:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(59 130 246 / var(--tw-bg-opacity, 1));
 }
-
-.hover\:bg-blue-500\/50:hover {
+.hover\:bg-blue-500\/50:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   background-color: rgb(59 130 246 / 0.5);
 }
-
-.hover\:bg-gray-600:hover {
+.hover\:bg-gray-600:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-bg-opacity: 1;
   background-color: rgb(75 85 99 / var(--tw-bg-opacity, 1));
 }
-
-.hover\:text-white:hover {
+.hover\:text-white:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
-
-.hover\:opacity-60:hover {
+.hover\:opacity-60:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.6;
 }
-
-.hover\:opacity-80:hover {
+.hover\:opacity-80:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.8;
 }
-
-.hover\:opacity-90:hover {
+.hover\:opacity-90:hover:where([data-code-shoebox], [data-code-shoebox] *) {
   opacity: 0.9;
 }
-
-.focus\:outline-none:focus {
+.focus\:outline-none:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
-
-.focus\:ring-1:focus {
+.focus\:ring-1:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
-
-.focus\:ring-2:focus {
+.focus\:ring-2:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
-
-.focus\:ring-\[hsl\(var\(--ring\)\)\]:focus {
+.focus\:ring-\[hsl\(var\(--ring\)\)\]:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-color: hsl(var(--ring));
 }
-
-.focus\:ring-gray-500:focus {
+.focus\:ring-gray-500:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(107 114 128 / var(--tw-ring-opacity, 1));
 }
-
-.focus\:ring-purple-500:focus {
+.focus\:ring-purple-500:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(168 85 247 / var(--tw-ring-opacity, 1));
 }
-
-.focus\:ring-offset-2:focus {
+.focus\:ring-offset-2:focus:where([data-code-shoebox], [data-code-shoebox] *) {
   --tw-ring-offset-width: 2px;
 }
-
 @media (min-width: 640px) {
-  .sm\:block {
+
+  .sm\:block:where([data-code-shoebox], [data-code-shoebox] *) {
     display: block;
   }
 
-  .sm\:inline {
+  .sm\:inline:where([data-code-shoebox], [data-code-shoebox] *) {
     display: inline;
   }
 
-  .sm\:gap-3 {
+  .sm\:gap-3:where([data-code-shoebox], [data-code-shoebox] *) {
     gap: 0.75rem;
   }
 
-  .sm\:px-6 {
+  .sm\:px-6:where([data-code-shoebox], [data-code-shoebox] *) {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
 }
-
 @media (min-width: 768px) {
-  .md\:inline {
+
+  .md\:inline:where([data-code-shoebox], [data-code-shoebox] *) {
     display: inline;
   }
 
-  .md\:w-80 {
+  .md\:w-80:where([data-code-shoebox], [data-code-shoebox] *) {
     width: 20rem;
   }
 
-  .md\:p-3 {
+  .md\:p-3:where([data-code-shoebox], [data-code-shoebox] *) {
     padding: 0.75rem;
   }
 }
-
 @media (prefers-color-scheme: dark) {
-  .dark\:border-white\/5 {
+
+  .dark\:border-white\/5:where([data-code-shoebox], [data-code-shoebox] *) {
     border-color: rgb(255 255 255 / 0.05);
   }
 
-  .dark\:bg-gray-700 {
+  .dark\:bg-gray-700:where([data-code-shoebox], [data-code-shoebox] *) {
     --tw-bg-opacity: 1;
     background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
   }
 
-  .dark\:bg-white\/5 {
+  .dark\:bg-white\/5:where([data-code-shoebox], [data-code-shoebox] *) {
     background-color: rgb(255 255 255 / 0.05);
   }
 
-  .dark\:hover\:bg-white\/10:hover {
+  .dark\:hover\:bg-white\/10:hover:where([data-code-shoebox], [data-code-shoebox] *) {
     background-color: rgb(255 255 255 / 0.1);
   }
 
-  .dark\:hover\:bg-white\/5:hover {
+  .dark\:hover\:bg-white\/5:hover:where([data-code-shoebox], [data-code-shoebox] *) {
     background-color: rgb(255 255 255 / 0.05);
   }
 }

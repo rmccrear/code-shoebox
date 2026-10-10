@@ -1720,6 +1720,7 @@ var ENV_RECIPES = {
     logic: `
       let rootInstance = null;
       let learnerStyle = null;
+      let libraryLinks = [];
       const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
 
       const parseReactAppFiles = (code) => {
@@ -1742,7 +1743,7 @@ var ENV_RECIPES = {
 
         const jsxNames = [];
         for (const fileName of Object.keys(sourceFiles)) {
-          if (fileName === 'App.css') continue;
+          if (fileName === 'App.css' || fileName === 'index.html') continue;
           if (fileName !== 'App.jsx' && !reactComponentFileName.test(fileName)) {
             throw new Error('Unsupported React App file "' + fileName + '". Component files must be top-level, begin with an uppercase letter, and end in .jsx.');
           }
@@ -1752,7 +1753,7 @@ var ENV_RECIPES = {
           throw new Error('React App mode supports App.jsx plus at most two component JSX files.');
         }
 
-        const files = { 'App.css': String(sourceFiles['App.css'] ?? '') };
+        const files = { 'App.css': String(sourceFiles['App.css'] ?? ''), 'index.html': String(sourceFiles['index.html'] ?? '') };
         for (const fileName of jsxNames) files[fileName] = String(sourceFiles[fileName] ?? '');
         return files;
       };
@@ -1766,9 +1767,23 @@ var ENV_RECIPES = {
           learnerStyle.remove();
           learnerStyle = null;
         }
+        libraryLinks.forEach(link => link.remove());
+        libraryLinks = [];
         root.replaceChildren();
         try {
           const files = parseReactAppFiles(code);
+          const html = new DOMParser().parseFromString(files['index.html'], 'text/html');
+          html.head.querySelectorAll('link[rel~="stylesheet"][href]').forEach(source => {
+            const href = source.getAttribute('href');
+            if (!/^https?:\\/\\//i.test(href)) return;
+            const link = document.createElement('link');
+            for (const name of ['href', 'rel', 'integrity', 'crossorigin', 'media', 'referrerpolicy']) {
+              if (source.hasAttribute(name)) link.setAttribute(name, source.getAttribute(name));
+            }
+            link.addEventListener('error', () => console.error('Could not load stylesheet: ' + href));
+            libraryLinks.push(link);
+            document.head.appendChild(link);
+          });
           const moduleCache = Object.create(null);
           let shouldInstallCss = false;
 
@@ -2621,7 +2636,7 @@ var validateReactAppFiles = (candidate) => {
   }
   const componentNames = [];
   for (const fileName of Object.keys(source)) {
-    if (fileName === "App.jsx" || fileName === "App.css") continue;
+    if (fileName === "App.jsx" || fileName === "App.css" || fileName === "index.html") continue;
     if (!REACT_COMPONENT_FILE_NAME.test(fileName)) {
       throw new Error(
         `Unsupported React App file "${fileName}". Component files must be top-level, begin with an uppercase letter, and end in .jsx.`
@@ -2633,7 +2648,11 @@ var validateReactAppFiles = (candidate) => {
     throw new Error("React App mode supports App.jsx plus at most two component JSX files.");
   }
   componentNames.sort((left, right) => left.localeCompare(right));
-  const fileNames = ["App.jsx", ...componentNames, "App.css"];
+  const fileNames = [
+    "App.jsx",
+    ...componentNames,
+    ...["App.css", "index.html"].filter((name) => Object.prototype.hasOwnProperty.call(source, name))
+  ];
   const files = Object.fromEntries(
     fileNames.map((fileName) => [fileName, String(source[fileName] ?? "")])
   );
@@ -2655,7 +2674,7 @@ var parseReactAppBundle = (code) => {
       throw error;
     }
   }
-  return validateReactAppFiles({ "App.jsx": code, "App.css": "" });
+  return validateReactAppFiles({ "App.jsx": code });
 };
 function parseFileBundle(code, fileNames = HTML_CSS_FILE_NAMES) {
   try {
@@ -3036,6 +3055,7 @@ var CodeShoebox = ({
   return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
     "div",
     {
+      "data-code-shoebox": true,
       className: "flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]",
       style: themeStyles,
       children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(

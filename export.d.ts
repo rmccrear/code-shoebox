@@ -130,10 +130,11 @@ declare const useSandboxState: (persistenceKey?: string, initialCodeOverride?: s
  */
 declare const useAutoKey: (identifier: string, initialCode?: string, prefix?: string) => string;
 
-/** A bounded React App workspace. `App.jsx` is required; `App.css` is optional. */
+/** A bounded React App workspace. `App.jsx` is required; `App.css` and `index.html` are optional. */
 type ReactAppBundleInput = {
     'App.jsx': string;
     'App.css'?: string;
+    'index.html'?: string;
     [fileName: string]: string | undefined;
 };
 /** Serialize and validate the public, bounded `react-app` workspace format. */
