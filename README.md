@@ -17,7 +17,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
-  - `react-app`: Vite-style `App.jsx`, up to two imported component JSX files, and optional `App.css` and `index.html`, with ES module exports and automatic default-export rendering.
+  - `react-app`: Vite-style `App.jsx`, up to two imported component JSX files, and optional `App.css` and `index.html`, with ES module exports and automatic default-export rendering. Supplying `mockApi` optionally enables local mock fetch routes.
   - `react-ts`: React with TypeScript support.
   - `express`: Mocked Node.js/Express environment for testing API routes.
   - `express-ts`: Mocked Express environment with TypeScript support.
@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.35**:
+To install version **v1.0.36**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.35
+npm install github:rmccrear/code-shoebox#v1.0.36
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.35
+yarn add github:rmccrear/code-shoebox#v1.0.36
 ```
 
 ## Maintenance & Releases
@@ -259,6 +259,25 @@ console.log(await response.json());
 
 Undeclared `/api/...` routes resolve as JSON `404` responses; declared network errors reject. Absolute URL strings are rejected and the iframe uses `connect-src 'none'`, so tutorial calls never contact a real API. Responses remain stateless and canned: request matchers select a response but do not run host callbacks or mutate server state. Values such as tutorial API keys are visible fixture data, not secrets—never place real credentials in `mockApi`.
 
+For `react-app`, supplying `mockApi` enables the same mock backend and adds the read-only **API Server** tab after the learner files. Omitting it preserves the ordinary React runtime; `{ routes: [] }` enables mocking with no declared routes. The route config stays outside the React file bundle and saved learner code.
+
+```tsx
+<CodeShoebox
+  environmentMode="react-app"
+  code={serializeReactAppBundle({
+    'App.jsx': reactFetchExample,
+  })}
+  onCodeChange={setCode}
+  mockApi={mockApi}
+  theme={activeTheme}
+  themeMode="dark"
+/>
+```
+
+The mock is installed before React modules evaluate, so module code, effects, and event handlers can call `fetch()`. Each Run unmounts the previous root and aborts its pending mock requests. In effects, pass an `AbortController` signal, abort it during cleanup, and ignore `AbortError` when updating error UI. Execution completion means modules finished evaluating and the render was submitted; effects and event handlers may still have requests in flight. Route edits apply on the next Run. Adding or removing `mockApi` recreates the iframe.
+
+The demo's `#react-app-fetch-demo` preset includes loading, success, network-error, and HTTP-error states with effect cleanup. The ordinary `#react-app-counter-demo` preset remains available without mocking.
+
 In `html-js-fetch`, the code prop uses the same two-file envelope as `html-js`, and `index.html` must contain the literal `<script src="script.js"></script>` link. Each Run rebuilds the page, then executes `script.js` asynchronously with the configured mock routes.
 
 ## HTML + JavaScript Mode
@@ -432,7 +451,7 @@ when local CSS should apply.
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
 | `enableEmmet` | `boolean` | No | Enables Emmet abbreviation completions in editable HTML models; defaults to `false`. |
-| `mockApi` | `MockApiConfig` | No | Host-authored mock routes shown and executed in `fetch` and `html-js-fetch`. Routes remain outside learner code and persistence. |
+| `mockApi` | `MockApiConfig` | No | Host-authored mock routes for `fetch` and `html-js-fetch`; supplying this also enables mocking in `react-app`. Routes remain outside learner code and persistence. |
 | `theme` | `Theme` | Yes | An object defining the color palette. See `theme.ts` for structure. |
 | `themeMode` | `'light' \| 'dark'` | Yes | Toggles the UI and editor between light and dark visual styles. |
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |

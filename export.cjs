@@ -649,6 +649,9 @@ var ApiServerPanel = ({ mockApi, themeMode }) => {
   );
 };
 
+// runtime/mockApi.ts
+var isMockApiEnabled = (mode, mockApi) => mode === "fetch" || mode === "html-js-fetch" || mode === "react-app" && mockApi !== void 0;
+
 // components/OutputFrame.tsx
 var import_react3 = require("react");
 
@@ -1719,6 +1722,7 @@ var ENV_RECIPES = {
     babelPresets: ["react", "env"],
     logic: `
       let rootInstance = null;
+      let activeReactAppRunController = null;
       let learnerStyle = null;
       let libraryLinks = [];
       const reactComponentFileName = /^[A-Z][A-Za-z0-9_-]*\\.jsx$/;
@@ -1758,11 +1762,18 @@ var ENV_RECIPES = {
         return files;
       };
 
-      window.__RUN_MODE__ = (code, root) => {
+      window.addEventListener?.('pagehide', () => {
+        if (activeReactAppRunController) activeReactAppRunController.abort();
+      });
+
+      window.__RUN_MODE__ = (code, root, options = {}) => {
         if (rootInstance) {
           try { rootInstance.unmount(); } catch (e) {}
           rootInstance = null;
         }
+        // Effect cleanup runs before the old backend is aborted or replaced.
+        if (activeReactAppRunController) activeReactAppRunController.abort();
+        activeReactAppRunController = null;
         if (learnerStyle) {
           learnerStyle.remove();
           learnerStyle = null;
@@ -1771,6 +1782,10 @@ var ENV_RECIPES = {
         libraryLinks = [];
         root.replaceChildren();
         try {
+          if (typeof window.__installFetchMock === 'function') {
+            activeReactAppRunController = new AbortController();
+            window.__installFetchMock(options.mockApi, activeReactAppRunController.signal);
+          }
           const files = parseReactAppFiles(code);
           const html = new DOMParser().parseFromString(files['index.html'], 'text/html');
           html.head.querySelectorAll('link[rel~="stylesheet"][href]').forEach(source => {
@@ -1842,6 +1857,7 @@ var ENV_RECIPES = {
           rootInstance = window.ReactDOM.createRoot(root);
           rootInstance.render(window.React.createElement(App));
         } catch (e) {
+          if (activeReactAppRunController) activeReactAppRunController.abort();
           if (learnerStyle) {
             learnerStyle.remove();
             learnerStyle = null;
@@ -2036,15 +2052,16 @@ ENV_RECIPES["html-js-css-media"] = {
   ...ENV_RECIPES["html-css-js"],
   name: "HTML, CSS, JavaScript & Media (4 tabs)"
 };
-var getSandboxHtml = (mode = "dom", isPredictionMode = false) => {
+var getSandboxHtml = (mode = "dom", isPredictionMode = false, options = {}) => {
   const recipe = ENV_RECIPES[mode] || ENV_RECIPES.dom;
+  const reactAppMockEnabled = mode === "react-app" && options.mockApiEnabled === true;
   return BASE_HTML_WRAPPER({
     cdns: recipe.cdns,
-    mocks: recipe.mocks,
+    mocks: reactAppMockEnabled ? FETCH_MOCK_SETUP : recipe.mocks,
     styles: recipe.styles,
     logic: recipe.logic || "",
     showPlaceholder: isPredictionMode ? false : recipe.showPlaceholder,
-    contentSecurityPolicy: recipe.contentSecurityPolicy
+    contentSecurityPolicy: reactAppMockEnabled ? "connect-src 'none'" : recipe.contentSecurityPolicy
   });
 };
 var executeCodeInSandbox = (iframeContentWindow, code, options, executionId) => {
@@ -2170,7 +2187,9 @@ var OutputFrame = ({
   const [consoleHeight, setConsoleHeight] = (0, import_react3.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react3.useState)(false);
   const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
-  const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
+  const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
+  const iframeReadyRef = (0, import_react3.useRef)(false);
+  const pendingReactRunRef = (0, import_react3.useRef)(null);
   const isStaticHtmlMode = environmentMode === "html" || environmentMode === "html-css";
   const addSystemLog = (0, import_react3.useCallback)((msg, type = "log") => {
     setLogs((prev) => appendLog(prev, {
@@ -2180,8 +2199,8 @@ var OutputFrame = ({
     }));
   }, []);
   const sandboxHtml = (0, import_react3.useMemo)(
-    () => getSandboxHtml(environmentMode, isPredictionMode),
-    [environmentMode, isPredictionMode]
+    () => getSandboxHtml(environmentMode, isPredictionMode, { mockApiEnabled }),
+    [environmentMode, isPredictionMode, mockApiEnabled]
   );
   (0, import_react3.useEffect)(() => {
     executionRef.current = { code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode };
@@ -2197,25 +2216,37 @@ var OutputFrame = ({
       }));
     } else if (type === "READY_SIGNAL" && debugMode) {
       addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
-    } else if (type === "EXECUTION_COMPLETE" && isFetchMode && payload?.executionId === latestExecutionIdRef.current) {
+    } else if (type === "EXECUTION_COMPLETE" && mockApiEnabled && payload?.executionId === latestExecutionIdRef.current) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, isFetchMode, onExecutionComplete]);
+  }, [debugMode, addSystemLog, mockApiEnabled, onExecutionComplete]);
   const kernelMessageRef = (0, import_react3.useRef)(handleKernelMessage);
   (0, import_react3.useEffect)(() => {
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
-  (0, import_react3.useEffect)(() => () => {
-    channelRef.current?.port1.close();
-    channelRef.current = null;
-  }, []);
+  (0, import_react3.useEffect)(() => {
+    iframeReadyRef.current = false;
+    latestExecutionIdRef.current = null;
+    pendingReactRunRef.current = null;
+    return () => {
+      channelRef.current?.port1.close();
+      channelRef.current = null;
+      iframeReadyRef.current = false;
+      latestExecutionIdRef.current = null;
+      pendingReactRunRef.current = null;
+    };
+  }, [environmentMode, isPredictionMode, mockApiEnabled]);
   (0, import_react3.useEffect)(() => {
     if (runTrigger > 0) {
       const execution = executionRef.current;
       setLogs([]);
       if (execution.debugMode) addSystemLog("Attempting to execute code...");
       if (iframeRef.current?.contentWindow) {
-        const executionUsesFetch = execution.environmentMode === "fetch" || execution.environmentMode === "html-js-fetch";
+        const executionUsesFetch = isMockApiEnabled(execution.environmentMode, execution.mockApi);
+        if (execution.environmentMode === "react-app" && !iframeReadyRef.current) {
+          pendingReactRunRef.current = { execution, id: runTrigger };
+          return;
+        }
         if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
         const hasDomFixture = execution.environmentMode === "dom" && (execution.fixtureHtml !== void 0 || execution.fixtureCss !== void 0);
         if (hasDomFixture) {
@@ -2259,6 +2290,19 @@ var OutputFrame = ({
     channel.port1.onmessage = (event) => kernelMessageRef.current(event.data);
     iframeRef.current.contentWindow.postMessage({ type: "INIT_PORT" }, "*", [channel.port2]);
     iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
+    iframeReadyRef.current = true;
+    const pendingRun = pendingReactRunRef.current;
+    if (pendingRun) {
+      pendingReactRunRef.current = null;
+      if (isMockApiEnabled(pendingRun.execution.environmentMode, pendingRun.execution.mockApi)) {
+        latestExecutionIdRef.current = pendingRun.id;
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code, {
+          mockApi: pendingRun.execution.mockApi
+        }, pendingRun.id);
+      } else {
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code);
+      }
+    }
     if (isStaticHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
     if (debugMode) addSystemLog("Channel Ports initialized.");
   };
@@ -2306,7 +2350,7 @@ var OutputFrame = ({
             className: `w-full h-full border-none ${isDragging ? "pointer-events-none" : ""}`,
             onLoad: handleIframeLoad
           },
-          `${environmentMode}-${isPredictionMode}`
+          `${environmentMode}-${isPredictionMode}-${mockApiEnabled}`
         ) }),
         !isHeadless && !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "div",
@@ -2741,7 +2785,7 @@ var CodingEnvironment = ({
   const containerRef = (0, import_react7.useRef)(null);
   const isPredictionFulfilled = !predictionPrompt || predictionAnswer.trim().length > 0;
   const isPredictionSourceMode = !!predictionPrompt || isPredictionLocked;
-  const isFetchMode = environmentMode === "fetch" || environmentMode === "html-js-fetch";
+  const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
   const bundleModeConfig = environmentMode in BUNDLE_MODE_CONFIG ? BUNDLE_MODE_CONFIG[environmentMode] : null;
   const reactAppParse = (0, import_react7.useMemo)(
     () => {
@@ -2767,7 +2811,7 @@ var CodingEnvironment = ({
       return [
         ...editableBundleFileNames,
         ...bundleModeConfig?.hasMediaTab ? ["media"] : [],
-        ...environmentMode === "html-js-fetch" ? ["api-server"] : []
+        ...mockApiEnabled ? ["api-server"] : []
       ];
     }
     if (environmentMode === "fetch") return ["script.js", "api-server"];
@@ -2777,7 +2821,7 @@ var CodingEnvironment = ({
       ...fixtureHtml !== void 0 ? ["index.html"] : [],
       ...fixtureCss !== void 0 ? ["style.css"] : []
     ];
-  }, [editableBundleFileNames, bundleModeConfig, environmentMode, hasDomFixtures, fixtureHtml, fixtureCss]);
+  }, [editableBundleFileNames, bundleModeConfig, environmentMode, mockApiEnabled, hasDomFixtures, fixtureHtml, fixtureCss]);
   const isTabbedMode = visibleTabs.length > 1;
   const [activeTab, setActiveTab] = (0, import_react7.useState)(
     editableBundleFileNames?.[0] ?? "script.js"
@@ -2908,11 +2952,11 @@ var CodingEnvironment = ({
           Button,
           {
             onClick: handleRunClick,
-            disabled: isRunning && !isFetchMode || !isPredictionFulfilled,
+            disabled: isRunning && !mockApiEnabled || !isPredictionFulfilled,
             variant: "primary",
             className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
             icon: isRunning ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.CheckCircle2, { className: "animate-pulse", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_lucide_react6.Play, { size: 14 }),
-            children: isRunning ? isFetchMode ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
+            children: isRunning ? mockApiEnabled ? "RUN AGAIN" : "RUNNING..." : "RUN CODE"
           }
         )
       ] })
@@ -2984,11 +3028,11 @@ var CodingEnvironment = ({
           environmentMode,
           fixtureHtml: environmentMode === "dom" ? fixtureHtml : void 0,
           fixtureCss: environmentMode === "dom" ? fixtureCss : void 0,
-          mockApi: isFetchMode ? mockApi : void 0,
+          mockApi: mockApiEnabled ? mockApi : void 0,
           isBlurred: !isPredictionFulfilled,
           isPredictionMode: !!predictionPrompt,
           debugMode,
-          onExecutionComplete: isFetchMode ? onExecutionComplete : void 0
+          onExecutionComplete: mockApiEnabled ? onExecutionComplete : void 0
         }
       ) }) })
     ] })
@@ -3030,7 +3074,7 @@ var CodeShoebox = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, environmentMode === "fetch" || environmentMode === "html-js-fetch" ? 1e4 : 500);
+    }, isMockApiEnabled(environmentMode, mockApi) ? 1e4 : 500);
   };
   const handleExecutionComplete = () => {
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
