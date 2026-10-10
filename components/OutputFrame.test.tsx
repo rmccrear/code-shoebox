@@ -264,6 +264,19 @@ describe('OutputFrame', () => {
     expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code);
   });
 
+  it('queues an ordinary React Run while the replacement iframe loads after mocking is removed', () => {
+    const props = { code: 'react bundle', themeMode: 'dark' as const, environmentMode: 'react-app' as const };
+    const { container, rerender } = renderOutputFrame({ ...props, mockApi: { routes: [] } });
+    const { iframe, channel } = loadFrame(container);
+    rerender(<OutputFrame {...props} runTrigger={1} />);
+    expect(container.querySelector('iframe')).not.toBe(iframe);
+    expect(channel.port1.closed).toBe(true);
+    expect(mockedExecuteCodeInSandbox).not.toHaveBeenCalled();
+    loadFrame(container);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenCalledTimes(1);
+    expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), props.code);
+  });
+
   it('does not forward fixture execution data outside DOM mode', () => {
     const { rerender } = renderOutputFrame({
       environmentMode: 'typescript',

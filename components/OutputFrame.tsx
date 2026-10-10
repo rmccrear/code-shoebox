@@ -122,7 +122,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         if (execution.debugMode) addSystemLog('Attempting to execute code...');
         if (iframeRef.current?.contentWindow) {
              const executionUsesFetch = isMockApiEnabled(execution.environmentMode, execution.mockApi);
-             if (execution.environmentMode === 'react-app' && executionUsesFetch && !iframeReadyRef.current) {
+             if (execution.environmentMode === 'react-app' && !iframeReadyRef.current) {
                pendingReactRunRef.current = { execution, id: runTrigger };
                return;
              }
@@ -180,10 +180,14 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     const pendingRun = pendingReactRunRef.current;
     if (pendingRun) {
       pendingReactRunRef.current = null;
-      latestExecutionIdRef.current = pendingRun.id;
-      executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code, {
-        mockApi: pendingRun.execution.mockApi,
-      }, pendingRun.id);
+      if (isMockApiEnabled(pendingRun.execution.environmentMode, pendingRun.execution.mockApi)) {
+        latestExecutionIdRef.current = pendingRun.id;
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code, {
+          mockApi: pendingRun.execution.mockApi,
+        }, pendingRun.id);
+      } else {
+        executeCodeInSandbox(iframeRef.current.contentWindow, pendingRun.execution.code);
+      }
     }
     if (isStaticHtmlMode) executeCodeInSandbox(iframeRef.current.contentWindow, code);
     if (debugMode) addSystemLog('Channel Ports initialized.');
