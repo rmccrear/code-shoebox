@@ -68,6 +68,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
 
   return (
     <div 
+      data-code-shoebox
       className="flex flex-col h-full w-full transition-colors duration-300 bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
       style={themeStyles}
     >

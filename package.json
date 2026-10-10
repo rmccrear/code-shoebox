@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "type": "module",
   "description": "A secure, client-side code playground component for React featuring Monaco editor and sandboxed execution.",
   "main": "dist/export.cjs",
@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsup export.ts --format cjs,esm --dts --clean && npx tailwindcss -i ./styles/input.css -o ./dist/styles.css",
+    "build": "tsup export.ts --format cjs,esm --dts --clean && node scripts/build-styles.mjs",
+    "test:styles": "node scripts/check-style-isolation.mjs",
     "build:demo": "vite build --outDir .demo-site",
     "prepublishOnly": "npm run build",
     "publish:dist": "npm run build && node scripts/prepare-dist.js && npx gh-pages -d dist -b dist",
@@ -56,6 +57,10 @@
     "gh-pages": "^6.1.1",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
+    "playwright": "1.56.1",
+    "postcss": "^8.5.15",
+    "postcss-selector-parser": "^6.1.2",
+    "postcss-value-parser": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.1",

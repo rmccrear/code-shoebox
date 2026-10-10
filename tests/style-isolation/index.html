@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8"><title>Packaged CSS isolation regression</title></head>
+  <body>
+    <section id="host">
+      <button id="primary" class="bg-primary text-white">Host primary</button>
+      <button id="inactive" class="text-zinc-400">Host inactive tab</button>
+      <div id="collision" class="flex p-4 text-sm">Host utilities</div>
+      <h1 id="heading">Host heading</h1>
+      <ul id="list"><li>Host list</li></ul>
+      <input id="input" value="Host input">
+      <img id="image" width="20" height="20" alt="Host image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'/%3E">
+      <div id="animation">Host animation</div>
+    </section>
+    <div id="components"></div>
+    <script type="module" src="/tests/style-isolation/main.jsx"></script>
+  </body>
+</html>

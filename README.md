@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.34**:
+To install version **v1.0.35**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.34
+npm install github:rmccrear/code-shoebox#v1.0.35
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.34
+yarn add github:rmccrear/code-shoebox#v1.0.35
 ```
 
 ## Maintenance & Releases
@@ -53,6 +53,13 @@ To create a new release (tagging and updating distribution branch):
    This script will automatically tag the release with `v[version]` using your latest commit message as the tag description, push the tag, and update the `dist` branch.
 
 ## Layout Requirements
+
+The distributed `code-shoebox/styles.css` applies its reset and utilities only
+to CodeShoebox's root and descendants. Keep the ordinary JavaScript CSS import
+shown below; no host Tailwind installation or cascade-layer configuration is
+required. Starting with v1.0.35, the package no longer supplies global resets
+or utility styles for unrelated host elements. Applications that relied on
+those styles should provide their own page styles.
 
 **Important:** The `CodeShoebox` component is designed to fill its parent container (`height: 100%`). 
 You must ensure the parent element has a defined height (e.g., a fixed pixel height like `500px` or a flex grow container like `h-screen`). If the parent has no height, the editor will collapse to 0px.
@@ -460,6 +467,12 @@ We welcome contributions! To set up the project locally and run the internal dem
     ```bash
     npm run build
     ```
+
+To check that the packaged stylesheet leaves host styles unchanged, run
+`npm run build`, install the test browser with `npx playwright install chromium`,
+then run `npm run test:styles`. The regression suite serves the built package
+and Monaco assets locally and checks both stylesheet load orders, host cascade
+layers, plain hosts, and editable component interactions.
 
 React App workspaces may optionally include `App.css` and `index.html`.
 Only explicitly supplied files get tabs; an empty supplied `App.css` still
