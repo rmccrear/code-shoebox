@@ -35,6 +35,7 @@ your row when done.
 | 012  | Component tests for iframe hosts (ServerOutput, OutputFrame, routing) | P2 | M | 008, 009 | DONE (implemented 2026-06-12; 57 tests pass) |
 | 013  | Harden build-toolchain audit findings (Vite + esbuild) | P2 | S-M | 010 | TODO |
 | 014  | DOM fixtures, bounded file tabs, and useful runtime errors | P1 | M-L | 012 | DONE (implemented 2026-07-16; typecheck/lint/builds/70 tests pass; browser smoke passed) |
+| 019  | Isolate distributed styles from host applications (issue #20) | P1 | M | — | DONE (2026-10-09; 174 tests, 16 browser scenarios + editable smoke; host QA passed; font inheritance corrected; 1.0.35 prepared) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
