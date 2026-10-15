@@ -5,6 +5,11 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    // These features load on demand. Prebundle them to avoid a development
+    // reload that would discard edits when a learner first enables a feature.
+    include: ['@emmetio/codemirror6-plugin', '@codemirror/autocomplete'],
+  },
   server: {
     port: 5173,
     host: true

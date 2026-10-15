@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CodeEditor } from './CodeEditor';
+import { MonacoCodeEditor as CodeEditor } from './MonacoCodeEditor';
 import { registerHtmlEmmetForModel } from './emmet';
 import { prepareJsxHighlighting } from './jsxHighlighting';
 

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CodingEnvironment } from './CodingEnvironment';
+import { EditorBackendContext } from './EditorBackendContext';
 import type { EnvironmentMode } from '../types';
 import {
   HTML_CSS_JS_FILE_NAMES,
@@ -56,6 +57,12 @@ class FakeMessageChannel {
   }
 }
 
+// These routing specs use the existing textarea-backed Monaco mock.
+// The CodeMirror release default is covered by EditorBackend and packaged browser checks.
+const MonacoTestBackend = ({ children }: { children: React.ReactNode }) => (
+  <EditorBackendContext.Provider value="monaco">{children}</EditorBackendContext.Provider>
+);
+
 const renderCodingEnvironment = (
   environmentMode: EnvironmentMode,
   props: Partial<ComponentProps<typeof CodingEnvironment>> = {}
@@ -71,7 +78,7 @@ const renderCodingEnvironment = (
       environmentMode={environmentMode}
       sessionId={1}
       {...props}
-    />
+    />, { wrapper: MonacoTestBackend }
   );
 
 const getFileTabNames = () => screen.queryAllByRole('button')
@@ -342,7 +349,7 @@ describe('CodingEnvironment routing', () => {
       onChange: vi.fn(), onRun: vi.fn(), isRunning: false, runTrigger: 0,
       themeMode: 'dark' as const, environmentMode: 'react-app' as const, sessionId: 1,
     };
-    const { rerender } = render(<CodingEnvironment {...props} mockApi={{ routes: [] }} />);
+    const { rerender } = render(<CodingEnvironment {...props} mockApi={{ routes: [] }} />, { wrapper: MonacoTestBackend });
     fireEvent.click(screen.getByRole('button', { name: 'API Server' }));
     expect(screen.queryByLabelText('Code editor')).not.toBeInTheDocument();
     rerender(<CodingEnvironment {...props} />);

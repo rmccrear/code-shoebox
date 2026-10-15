@@ -1,11 +1,11 @@
 # CodeShoebox
 
-CodeShoebox is a self-contained, secure code playground component for React. It features a Monaco editor, a sandboxed execution environment (iframe), and support for multiple runtime modes (DOM, p5.js, React).
+CodeShoebox is a self-contained, secure code playground component for React. This CodeMirror QA release features a CodeMirror 6 editor, a sandboxed execution environment (iframe), and support for multiple runtime modes (DOM, p5.js, React).
 
 ## Features
 
 - **Secure Execution**: Uses a sandboxed iframe with strict permissions (`allow-scripts`).
-- **Monaco Editor**: Full-featured code editing experience via `@monaco-editor/react`.
+- **CodeMirror 6**: Built-in language support, snippets and local-name completion, with Tab acceptance.
 - **Optional Emmet**: Set `enableEmmet` to expand Emmet abbreviations in editable HTML models.
 - **Multiple Environments**:
   - `html`: Static HTML pages with live preview (no JavaScript execution).
@@ -32,13 +32,21 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.36**:
+The experimental **v1.0.36-c** release defaults to CodeMirror 6 without changing
+`CodeShoebox` props. Install the compiled QA release:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.36
-# or
-yarn add github:rmccrear/code-shoebox#v1.0.36
+npm install github:rmccrear/code-shoebox#v1.0.36-c
 ```
+
+Keep importing `code-shoebox/styles.css`. Emmet lessons retain `enableEmmet` for
+editable HTML. JavaScript, JSX, TypeScript and TSX use built-in language support;
+semantic type errors and inferred type hovers are not provided. Exercise
+execution, including TypeScript transpilation, is unchanged.
+
+The QA distribution is also available on `dist-c`. Stable Monaco remains at
+`v1.0.36` and `dist`. The QA tag points to compiled package files; the source is
+on `codex/codemirror6-prototype`.
 
 ## Maintenance & Releases
 

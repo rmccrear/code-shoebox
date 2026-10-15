@@ -38,16 +38,6 @@ const scenario = params.get('scenario') || 'B';
 const plain = params.get('host') === 'plain';
 const reverse = params.get('order') === 'package-first';
 const editable = params.get('editable') === '1';
-if (editable) {
-  const { loader } = await import('@monaco-editor/react');
-  loader.config({ paths: { vs: '/node_modules/monaco-editor/min/vs' } });
-  const monaco = await loader.init();
-  // Test explicit suggestions while keeping background requests from racing
-  // with the smoke test's rapid model changes.
-  monaco.editor.onDidCreateEditor(editor => editor.updateOptions({
-    quickSuggestions: false, suggestOnTriggerCharacters: false, occurrencesHighlight: 'off',
-  }));
-}
 // Layer D must be declared before any host layers are established.
 if (scenario === 'D') addStyle('@layer code-shoebox, theme, base, components, utilities;');
 const hostStyle = addStyle(plain ? plainHost : layeredHost);
@@ -91,7 +81,7 @@ function EditableFixture() {
   window.editableCode = code;
   return <div className="component-holder" data-theme="light"><CodeShoebox code={code}
     onCodeChange={setCode} environmentMode="html-js-css-media" theme={baseTheme} themeMode="light"
-    sessionId={91} mediaAssets={[{ kind: 'image', name: 'Local preview', alt: 'Fixture media',
+    sessionId={91} enableEmmet mediaAssets={[{ kind: 'image', name: 'Local preview', alt: 'Fixture media',
       src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'/%3E" }]} />
   </div>;
 }

@@ -12,6 +12,7 @@ import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
 import { useEditorHashPresets } from './hooks/useEditorHashPresets';
 import { getPresetMediaAssetsForMode, getPresetMockApiForMode, resolvePresetFromHash } from './demoPresets';
+import { EditorBackendContext, type EditorBackend } from './components/EditorBackendContext';
 
 const App: React.FC = () => {
   const {
@@ -31,6 +32,8 @@ const App: React.FC = () => {
   const [editorMountKey, setEditorMountKey] = useState(0);
   const [isPredictionMode, setIsPredictionMode] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [editorBackend, setEditorBackend] = useState<EditorBackend>(() =>
+    new URLSearchParams(window.location.search).get('editor') === 'codemirror' ? 'codemirror' : 'monaco');
   
   const [modalOpen, setModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
@@ -71,6 +74,7 @@ const App: React.FC = () => {
     : getPresetMockApiForMode(environmentMode);
 
   return (
+    <EditorBackendContext.Provider value={editorBackend}>
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
       
       <header className={`flex items-center justify-between px-4 sm:px-6 py-3 border-b shrink-0 transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-black/10 text-gray-800'}`}>
@@ -85,6 +89,21 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <select
+            aria-label="Editor engine"
+            value={editorBackend}
+            className="rounded border border-gray-400 px-2 py-1 text-sm bg-transparent"
+            onChange={event => {
+              const backend = event.target.value as EditorBackend;
+              setEditorBackend(backend);
+              const url = new URL(window.location.href);
+              url.searchParams.set('editor', backend);
+              window.history.replaceState(null, '', url);
+            }}
+          >
+            <option value="monaco" className="text-black">Monaco</option>
+            <option value="codemirror" className="text-black">CodeMirror 6 (experimental)</option>
+          </select>
           {view === 'editor' ? (
             <Button
               variant="ghost"
@@ -243,6 +262,7 @@ const App: React.FC = () => {
         themeMode={themeMode}
       />
     </div>
+    </EditorBackendContext.Provider>
   );
 };
 
