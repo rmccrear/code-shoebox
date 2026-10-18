@@ -1038,9 +1038,11 @@ var ENV_RECIPES = {
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
     logic: `
+      let htmlCssHeadStyles = [];
       window.__RUN_MODE__ = (code, root) => {
         root.replaceChildren();
-        document.querySelectorAll('style[data-code-shoebox-html-css-js]').forEach((style) => style.remove());
+        htmlCssHeadStyles.forEach((node) => node.remove());
+        htmlCssHeadStyles = [];
 
         // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
         // The iframe kernel cannot import modules; keep both copies in sync.
@@ -1057,20 +1059,27 @@ var ENV_RECIPES = {
         } catch (e) { files = { html: code, css: '', js: '' }; }
 
         const doc = new DOMParser().parseFromString(files.html, 'text/html');
-        const linkedStyles = doc.querySelector('link[rel="stylesheet"][href="style.css"]');
+        const linkedStyles = doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]');
         const linkedScript = doc.querySelector('script[src="script.js"]');
 
-        // The bundled files are the only CSS/JS resource paths in this mode.
-        // Detect their markers first, then remove every parsed resource node.
+        // Only bundled script.js executes. Stylesheet links remain browser
+        // resources, except exact style.css markers resolved from the CSS tab.
         doc.querySelectorAll('script').forEach((script) => script.remove());
-        doc.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => link.remove());
-
-        if (linkedStyles) {
-          const style = document.createElement('style');
-          style.setAttribute('data-code-shoebox-html-css-js', '');
+        linkedStyles.forEach((link) => {
+          const style = doc.createElement('style');
           style.textContent = files.css;
-          document.head.appendChild(style);
-        } else if (files.css.trim()) {
+          link.replaceWith(style);
+        });
+
+        // Restore head styles in source order; the body is imported below.
+        // Track node references so reruns remove only this recipe's resources.
+        doc.head.querySelectorAll('style, link[rel~="stylesheet"]').forEach((source) => {
+          const node = document.importNode(source, true);
+          htmlCssHeadStyles.push(node);
+          document.head.appendChild(node);
+        });
+
+        if (linkedStyles.length === 0 && files.css.trim()) {
           const hint = document.createElement('div');
           hint.className = 'cs-hint-banner';
           hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
