@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsup export.ts --format cjs,esm --dts --clean && node scripts/build-styles.mjs",
+    "test:html-stylesheets": "node scripts/check-html-stylesheets.mjs",
     "test:styles": "node scripts/check-style-isolation.mjs",
     "build:demo": "vite build --outDir .demo-site",
     "prepublishOnly": "npm run build",

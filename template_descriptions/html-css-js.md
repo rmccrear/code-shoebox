@@ -9,7 +9,8 @@ A complete interactive page split across three editable tabs: structure in **ind
 - **Explicit CSS connection:** bundled styles apply only when HTML includes `<link rel="stylesheet" href="style.css">`.
 - **Explicit JS connection:** bundled JavaScript runs only when HTML includes `<script src="script.js"></script>`.
 - **Independent links:** a missing CSS link does not block linked JavaScript, and a missing script link does not block linked CSS. Each missing non-empty file gets its own blue hint.
-- **Fresh page per Run:** learner DOM and the prior bundled stylesheet are replaced before current JS executes.
+- **External CSS:** stylesheet links and inline styles in head or body apply in source order, alongside explicitly linked bundled CSS. External CSS loads asynchronously; JavaScript does not wait for it.
+- **Fresh page per Run:** learner DOM and prior head stylesheet links/styles are replaced before current JS executes.
 - **Browser APIs and console:** `root`, `document`, and `window` are available; logs, warnings, errors, and rejected promises appear below the output.
 
 ## Output UI
@@ -19,11 +20,10 @@ A complete interactive page split across three editable tabs: structure in **ind
 
 ## Limitations
 - HTML-authored scripts never execute. Inline, remote, module, data-URL, and differently named scripts are removed; bundled `script.js` is the only JS path.
-- Parsed stylesheet links are removed after detecting the exact `style.css` marker, so remote stylesheets do not load in this mode. Inline `<style>` elements may still apply.
-- Only body content is restored. Head metadata, title, body attributes, and parser timing are not reproduced.
-- Native JavaScript only: no TypeScript, Babel, JSX, modules, imports, packages, CDNs, or additional files.
+- Body content plus head stylesheet links and `<style>` elements are restored. Head metadata, title, body attributes, and parser timing are not reproduced.
+- Native JavaScript only: no TypeScript, Babel, JSX, modules, imports, JavaScript packages/CDNs, or additional files.
 - Tabs cannot be added, removed, renamed, or moved into folders.
-- Runs replace learner nodes and bundled CSS, but timers or listeners attached directly to `window` or `document` are not automatically disposed.
+- Runs replace learner nodes and installed head styles, but timers or listeners attached directly to `window` or `document` are not automatically disposed.
 
 ## Code format (for tools and LLMs)
 The public code value remains one version-1 JSON envelope:
