@@ -318,14 +318,13 @@ describe('getSandboxHtml', () => {
 
   it('builds html-css-js with independent local style and script semantics', () => {
     const html = getSandboxHtml('html-css-js');
-    const cleanupAt = html.indexOf("style[data-code-shoebox-html-css-js]");
+    const cleanupAt = html.indexOf("htmlCssHeadStyles.forEach");
     const parseAt = html.indexOf('__csFiles__');
     const styleLinkAt = html.indexOf('link[rel="stylesheet"][href="style.css"]');
     const scriptLinkAt = html.indexOf('script[src="script.js"]');
     const scriptRemoveAt = html.indexOf("querySelectorAll('script').forEach");
-    const linkRemoveAt = html.indexOf("querySelectorAll('link[rel~=\"stylesheet\"]')");
     const styleTextAt = html.indexOf('style.textContent = files.css');
-    const styleAppendAt = html.indexOf('document.head.appendChild(style)');
+    const styleAppendAt = html.indexOf('document.head.appendChild(node)');
     const importAt = html.indexOf('root.appendChild(document.importNode(node, true))');
     const executeAt = html.indexOf("new Function('root', files.js)(root)");
 
@@ -334,8 +333,7 @@ describe('getSandboxHtml', () => {
     expect(styleLinkAt).toBeGreaterThan(parseAt);
     expect(scriptLinkAt).toBeGreaterThan(styleLinkAt);
     expect(scriptRemoveAt).toBeGreaterThan(scriptLinkAt);
-    expect(linkRemoveAt).toBeGreaterThan(scriptRemoveAt);
-    expect(styleTextAt).toBeGreaterThan(linkRemoveAt);
+    expect(styleTextAt).toBeGreaterThan(scriptRemoveAt);
     expect(styleAppendAt).toBeGreaterThan(styleTextAt);
     expect(importAt).toBeGreaterThan(styleAppendAt);
     expect(executeAt).toBeGreaterThan(importAt);
@@ -440,6 +438,97 @@ describe('getSandboxHtml', () => {
         'console.log("[Kernel] Received EXECUTE signal.")'
       );
     }
+  });
+});
+
+describe('HTML stylesheet resources', () => {
+  const bundle = (html: string, css = '', js = '') => JSON.stringify({
+    __csFiles__: 1, files: { 'index.html': html, 'style.css': css, 'script.js': js },
+  });
+  const createRunner = (mode: EnvironmentMode) => {
+    const html = getSandboxHtml(mode);
+    const stateAt = html.indexOf('let htmlCssHeadStyles = []');
+    const logic = html.slice(stateAt >= 0 ? stateAt : html.indexOf('window.__RUN_MODE__ ='), html.lastIndexOf('</script>'));
+    const host = { __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement) => void };
+    new Function('window', 'document', 'DOMParser', logic)(host, document, DOMParser);
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    return {
+      root,
+      run: (code: string) => host.__RUN_MODE__(code, root),
+      cleanup: () => { host.__RUN_MODE__('', root); root.remove(); },
+    };
+  };
+
+  it.each(['html', 'html-css'] as const)('%s preserves external stylesheet links', (mode) => {
+    const runner = createRunner(mode);
+    try {
+      const html = '<head><link rel="stylesheet" href="https://example.com/theme.css"></head><body><p>Page</p></body>';
+      runner.run(mode === 'html' ? html : bundle(html));
+      const frame = runner.root.querySelector('iframe')!;
+      const rendered = new DOMParser().parseFromString(frame.srcdoc, 'text/html');
+      expect(rendered.querySelector('link')?.getAttribute('href')).toBe('https://example.com/theme.css');
+    } finally { runner.cleanup(); }
+  });
+
+  describe.each(['html-css-js', 'html-js-css-media'] as const)('%s', (mode) => {
+    it('restores head styles in order, preserves link attributes, and cleans up only owned resources', () => {
+      const runner = createRunner(mode);
+      const hostStyle = document.createElement('style');
+      document.head.appendChild(hostStyle);
+      try {
+        runner.run(bundle(`<head>
+          <link rel="stylesheet" href="https://example.com/theme.css" media="screen" integrity="sha384-test" crossorigin="anonymous" referrerpolicy="no-referrer" disabled>
+          <style>p { color: blue; }</style>
+          <link rel="stylesheet" href="style.css">
+          <title>Do not import</title><script>throw new Error('Do not run')</script>
+          </head><body><p>Page</p><script src="script.js"></script></body>`,
+          'p { color: green; }', "root.dataset.runs = String(Number(root.dataset.runs || 0) + 1);"));
+        const nodes = Array.from(document.head.children).slice(Array.from(document.head.children).indexOf(hostStyle) + 1);
+        expect(nodes.map(node => node.tagName)).toEqual(['LINK', 'STYLE', 'STYLE']);
+        expect(nodes[0].getAttributeNames().sort()).toEqual(['crossorigin', 'disabled', 'href', 'integrity', 'media', 'referrerpolicy', 'rel']);
+        expect(nodes[0].getAttribute('media')).toBe('screen');
+        expect(nodes[0].getAttribute('integrity')).toBe('sha384-test');
+        expect(nodes[0].getAttribute('crossorigin')).toBe('anonymous');
+        expect(nodes[0].getAttribute('referrerpolicy')).toBe('no-referrer');
+        expect(nodes[1].textContent).toBe('p { color: blue; }');
+        expect(nodes[2].textContent).toBe('p { color: green; }');
+        expect(runner.root.querySelector('script, link')).toBeNull();
+        expect(runner.root.dataset.runs).toBe('1');
+        runner.run(bundle('<head><link rel="stylesheet" href="https://example.com/next.css"></head><body>Next</body>'));
+        expect(nodes.every(node => !node.isConnected)).toBe(true);
+        expect(document.head.querySelectorAll('link[href="https://example.com/next.css"]')).toHaveLength(1);
+        runner.run(bundle('<p>No styles</p>'));
+        expect(document.head.querySelector('link[href="https://example.com/next.css"]')).toBeNull();
+        expect(hostStyle.isConnected).toBe(true);
+      } finally { runner.cleanup(); hostStyle.remove(); }
+    });
+
+    it('keeps body links and local replacements in place without duplicate injection', () => {
+      const runner = createRunner(mode);
+      try {
+        runner.run(bundle('<body><p>Page</p><link rel="stylesheet" href="https://example.com/body.css"><link rel="stylesheet" href="style.css"><style>p { color: blue; }</style></body>', 'p { color: green; }'));
+        expect(Array.from(runner.root.children).map(node => node.tagName)).toEqual(['P', 'LINK', 'STYLE', 'STYLE']);
+        expect(runner.root.querySelector('link')?.getAttribute('href')).toBe('https://example.com/body.css');
+        expect(runner.root.querySelector('style')?.textContent).toBe('p { color: green; }');
+        const bodyLink = runner.root.querySelector('link')!;
+        runner.run(bundle('<p>Next</p>'));
+        expect(bodyLink.isConnected).toBe(false);
+        runner.run(bundle('<link rel="stylesheet" href="https://example.com/fragment.css"><p>Fragment</p>'));
+        expect(document.head.querySelector('link[href="https://example.com/fragment.css"]')).not.toBeNull();
+      } finally { runner.cleanup(); }
+    });
+
+    it('keeps missing-file hints independent of external styles', () => {
+      const runner = createRunner(mode);
+      try {
+        runner.run(bundle('<link rel="stylesheet" href="https://example.com/theme.css"><p>Page</p>', 'p { color: red; }', 'throw new Error("unlinked");'));
+        expect(document.head.querySelector('link[href="https://example.com/theme.css"]')).not.toBeNull();
+        expect(runner.root.querySelectorAll('.cs-hint-banner')).toHaveLength(2);
+        expect(runner.root.textContent).toContain('style.css is not linked');
+        expect(runner.root.textContent).toContain('script.js is not linked');
+      } finally { runner.cleanup(); }
+    });
   });
 });
 
