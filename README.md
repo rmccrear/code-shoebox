@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.36**:
+To install version **v1.0.37**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.36
+npm install github:rmccrear/code-shoebox#v1.0.37
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.36
+yarn add github:rmccrear/code-shoebox#v1.0.37
 ```
 
 ## Maintenance & Releases
