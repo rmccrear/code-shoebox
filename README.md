@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.36**:
+To install version **v1.0.37**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.36
+npm install github:rmccrear/code-shoebox#v1.0.37
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.36
+yarn add github:rmccrear/code-shoebox#v1.0.37
 ```
 
 ## Maintenance & Releases
@@ -299,7 +299,7 @@ const state = useSandboxState('interactive-page', undefined, 'html-js');
 
 ## HTML + CSS + JavaScript Mode
 
-Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors.
+Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors. External stylesheet links and inline styles in head or body also apply in source order. Each Run replaces previous head styles and learner DOM. External CSS loads asynchronously; bundled JavaScript does not wait for it.
 
 ```tsx
 const state = useSandboxState('complete-web-page', undefined, 'html-css-js');
