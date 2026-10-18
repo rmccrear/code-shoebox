@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.37-c — 2026-10-18 (CodeMirror QA)
+
+- Incorporate the v1.0.37 external stylesheet fixes in the CodeMirror QA build.
+- Retain CodeMirror defaults, opt-in HTML Emmet, Tab completion and no TypeScript
+  compiler service.
+- Publish compiled QA artifacts on `dist-c` and tag `v1.0.37-c`.
+
+## 1.0.37 — 2026-10-18
+
+- Fix [#24](https://github.com/rmccrear/code-shoebox/pull/24): allow external
+  stylesheet links in HTML + CSS + JavaScript mode and its Media variant,
+  matching HTML and HTML + CSS modes.
+- Preserve head styles and stylesheet order, and remove prior resources on Run.
+
 ## 1.0.36-c — 2026-10-15 (CodeMirror QA)
 
 - Default to CodeMirror 6 with HTML/CSS/JS/JSX/TS/TSX language support, snippets,

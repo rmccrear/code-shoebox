@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.36-c",
+  "version": "1.0.37-c",
   "type": "module",
   "description": "A client-side code playground component for React featuring CodeMirror 6 and sandboxed execution.",
   "main": "dist/export.cjs",
@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsup export.ts --format cjs,esm --dts --clean && node scripts/build-styles.mjs",
+    "test:html-stylesheets": "node scripts/check-html-stylesheets.mjs",
     "test:styles": "node scripts/check-style-isolation.mjs",
     "compare:editors": "node scripts/compare-editors.mjs",
     "build:demo": "vite build --outDir .demo-site",

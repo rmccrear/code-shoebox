@@ -82,14 +82,14 @@ change runtime behavior.
 *   **Code format:** `{"__csFiles__":1,"files":{"index.html":"…","style.css":"…","script.js":"…"}}`. A plain string becomes `index.html` with empty CSS and JS.
 *   **Capabilities:**
     *   **Independent explicit links:** bundled CSS requires literal `<link rel="stylesheet" href="style.css">`; bundled JS requires literal `<script src="script.js"></script>`. A missing non-empty file link shows its own blue hint without blocking the other linked file.
-    *   Pressing Run clears the previous page and generated stylesheet, applies the current linked CSS, restores HTML body children under `#root`, and executes linked `script.js` once.
+    *   Pressing Run clears the previous page and installed head styles, restores stylesheet links and inline styles in source order (resolving exact `style.css` links from the CSS tab), restores HTML body children under `#root`, and executes linked `script.js` once. External CSS loads asynchronously; JavaScript does not wait for it.
     *   All three tabs are editable with separate Monaco models and undo histories. The console captures logs, warnings, errors, and rejected promises.
 *   **Limitations:**
     *   Manual-run only. Editing does not update output or execute JavaScript automatically.
-    *   Parsed script and stylesheet-link elements are removed. HTML-authored scripts and remote stylesheets do not create alternate resource paths; only bundled CSS and JS resolve.
-    *   `<head>` metadata, title, body attributes, parser timing, `async`, and `defer` behavior are not reproduced. Inline `<style>` elements in body content may still apply.
-    *   Native JavaScript only: no TypeScript, Babel, modules, imports, packages, CDNs, extra files, or renames.
-    *   Re-running replaces learner DOM and bundled CSS, but learner timers or listeners attached directly to `window`/`document` are not automatically disposed.
+    *   Parsed script elements are removed. Bundled `script.js` is the only JavaScript execution path; external CSS stylesheet links are supported.
+    *   `<head>` metadata, title, body attributes, parser timing, `async`, and `defer` behavior are not reproduced. Stylesheet links and `<style>` elements in both head and body apply.
+    *   Native JavaScript only: no TypeScript, Babel, modules, imports, JavaScript packages/CDNs, extra files, or renames.
+    *   Re-running replaces learner DOM and installed head styles, but learner timers or listeners attached directly to `window`/`document` are not automatically disposed.
 
 ### `html-js-css-media` (HTML, CSS, JavaScript & Media, four tabs)
 *   **Engine:** The same native three-file sandbox recipe as `html-css-js`. `index.html`, `style.css`, and `script.js` remain in the version-1 code envelope; the fourth `Media` tab is host-owned UI and is never part of execution data.

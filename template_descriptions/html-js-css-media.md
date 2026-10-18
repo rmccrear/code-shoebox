@@ -43,7 +43,7 @@ Host values are escaped for HTML attributes, CSS strings, or JavaScript string l
 - Absolute HTTPS or data URLs are the most portable. Relative paths resolve against the host page.
 - External media may display/play while cross-origin Canvas or Web Audio reads remain restricted by CORS.
 - Media is not automatically inserted into the output; paste a snippet into the appropriate code file.
-- The three-file runtime retains the `html-css-js` limitations: native JavaScript only, parsed resource-node suppression, body-only restoration, and global listener/timer cleanup caveats.
+- The three-file runtime retains the `html-css-js` limitations: native JavaScript only, HTML-authored script suppression, body and head-style restoration, and global listener/timer cleanup caveats. External stylesheet links load asynchronously and are replaced on each Run, just as in `html-css-js`.
 
 ## LLM Usage Hints
 - Use this mode when the lesson supplies specific assets learners should incorporate rather than edit.
