@@ -109,3 +109,17 @@ Previous performance numbers used the full TypeScript worker and are superseded.
 Development timings and allocated JS heap snapshots are smoke measurements,
 not production benchmarks. Production transfer, input latency, mobile behavior
 and multiple-playground scaling remain unmeasured.
+
+## Optional diagnostics follow-up (unreleased)
+
+The new `createTypeScriptWorker` prop opts CodeMirror TS/TSX lessons into a real
+checker. The host imports `code-shoebox/ts-checker.worker.js?worker` and supplies
+its constructor factory; Vite emits the self-contained worker as a separate
+hashed application asset. It contains TypeScript 5.9.3 and matching libraries,
+without VFS, Comlink, remote type fetching or learner-code execution. No factory
+means no diagnostics or compiler download. JS/JSX lessons remain on built-in
+assistance even when the factory is supplied. Emmet remains independent.
+
+Only diagnostics are restored: completions and hovers retain their built-in
+behavior. See README for configuration and framework-typing limits. The new
+`test:typescript-worker` check tests package exports in real consuming builds.

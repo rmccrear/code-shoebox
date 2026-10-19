@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — CodeMirror
+
+- Add optional TypeScript diagnostics through a host worker factory and a separately
+  bundled `ts-checker.worker.js` export, suitable for Vite automatic asset handling.
+- Start the checker only for editable TS/TSX lessons; preserve lightweight JS/JSX,
+  read-only previews and independent Emmet support.
+
 ## 1.0.37-c — 2026-10-18 (CodeMirror QA)
 
 - Incorporate the v1.0.37 external stylesheet fixes in the CodeMirror QA build.

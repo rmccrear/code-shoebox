@@ -1,3 +1,5 @@
+import TypeScriptWorker from './components/typescript.worker?worker';
+const createTypeScriptWorker = () => new TypeScriptWorker();
 
 import React, { useState } from 'react';
 import { Box, Code2, Palette, Sun, Moon, RotateCcw, Brain, ArrowLeft, Bug } from 'lucide-react';
@@ -239,6 +241,7 @@ const App: React.FC = () => {
             key={editorMountKey}
             code={code}
             onCodeChange={setCode}
+            createTypeScriptWorker={createTypeScriptWorker}
             environmentMode={environmentMode}
             mediaAssets={getPresetMediaAssetsForMode(environmentMode)}
             mockApi={mockApi}

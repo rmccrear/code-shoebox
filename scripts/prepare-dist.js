@@ -38,7 +38,8 @@ packageJson.exports = {
     "import": "./export.js",
     "require": "./export.cjs"
   },
-  "./styles.css": "./styles.css"
+  "./styles.css": "./styles.css",
+  "./ts-checker.worker.js": "./ts-checker.worker.js"
 };
 
 // Add the style definition so bundlers find the CSS

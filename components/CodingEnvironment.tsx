@@ -72,6 +72,7 @@ interface CodingEnvironmentProps {
   fixtureCss?: string;
   mediaAssets?: readonly MediaAsset[];
   enableEmmet?: boolean;
+  createTypeScriptWorker?: () => Worker;
   mockApi?: MockApiConfig;
   sessionId: number;
   predictionPrompt?: React.ReactNode;
@@ -91,6 +92,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   sessionId,
   predictionPrompt,
@@ -356,6 +358,8 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 sessionId={sessionId}
                 activeFile={isTabbedMode ? selectedFile ?? undefined : undefined}
                 enableEmmet={enableEmmet}
+                createTypeScriptWorker={createTypeScriptWorker}
+                workspaceFiles={files ?? undefined}
                 readOnly={hasDomFixtures && selectedFile !== 'script.js'}
               />
             </React.Suspense>

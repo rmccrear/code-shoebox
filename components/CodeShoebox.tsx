@@ -12,6 +12,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   theme,
   themeMode,
@@ -87,6 +88,7 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
         fixtureCss={fixtureCss}
         mediaAssets={mediaAssets}
         enableEmmet={enableEmmet}
+        createTypeScriptWorker={createTypeScriptWorker}
         mockApi={mockApi}
         predictionPrompt={prediction_prompt}
         debugMode={debugMode}

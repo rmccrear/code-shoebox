@@ -10,6 +10,10 @@ import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { CodeEditorProps } from './editorTypes';
 import { codeMirrorKeys } from './codeMirrorKeys';
+import type { startTypeScriptDiagnostics } from './codeMirrorTypeScript';
+
+const emptyWorkspace: Readonly<Record<string,string>> = {};
+const typeScriptModes = new Set(['typescript','react-ts','node-ts','express-ts','hono-ts','p5-ts']);
 
 const externalChange = Annotation.define<boolean>();
 
@@ -36,23 +40,33 @@ interface Controller {
   listener: Extension;
   extensions?: Extension[];
   emmet?: Extension;
+  typescript?: ReturnType<typeof startTypeScriptDiagnostics>;
+  path?: string;
+  workspaceFiles?: Readonly<Record<string,string>>;
   assistanceKey?: string;
   pendingLocalChanges: Map<string, string[]>;
 }
 
 export const CodeMirrorCodeEditor: React.FC<CodeEditorProps> = props => {
-  const { code, onChange, activeFile, environmentMode, themeMode, readOnly = false, enableEmmet = false } = props;
+  const { code, onChange, activeFile, environmentMode, themeMode, readOnly = false, enableEmmet = false, createTypeScriptWorker, workspaceFiles } = props;
   const parent = useRef<HTMLDivElement>(null);
   const controller = useRef<Controller | null>(null);
   const callback = useRef(onChange);
+  const workspace = useRef(workspaceFiles ?? emptyWorkspace);
+  const factory = useRef(createTypeScriptWorker);
+  useEffect(() => { workspace.current = workspaceFiles ?? emptyWorkspace; }, [workspaceFiles]);
+  useEffect(() => { factory.current = createTypeScriptWorker; }, [createTypeScriptWorker]);
+  const typeSupport = useMemo(() => new Compartment(), []);
   useEffect(() => { callback.current = onChange; }, [onChange]);
   const emmetSupport = useMemo(() => new Compartment(), []);
   const path = editorFilename({ activeFile, environmentMode });
+  const wantsTypeChecking = !!createTypeScriptWorker && !readOnly && typeScriptModes.has(environmentMode) && /\.tsx?$/.test(path);
   const wantsEmmet = enableEmmet && !readOnly && path.endsWith('.html');
 
   const extensions = useMemo(() => [
     codeMirrorKeys,
     basicSetup,
+    typeSupport.of([]),
     emmetSupport.of([]),
     keymap.of([indentWithTab]),
     editorLanguage({ activeFile, environmentMode }),
@@ -67,7 +81,7 @@ export const CodeMirrorCodeEditor: React.FC<CodeEditorProps> = props => {
       '.cm-gutters': { backgroundColor: themeMode === 'dark' ? '#1e1e1e' : '#fffffe', border: 'none' },
     }, { dark: themeMode === 'dark' }),
     ...(themeMode === 'dark' ? [oneDark] : []),
-  ], [activeFile, environmentMode, readOnly, themeMode, emmetSupport]);
+  ], [activeFile, environmentMode, readOnly, themeMode, emmetSupport, typeSupport]);
 
   useEffect(() => {
     const listener = EditorView.updateListener.of(update => {
@@ -91,6 +105,33 @@ export const CodeMirrorCodeEditor: React.FC<CodeEditorProps> = props => {
   }, []);
 
   useEffect(() => {
+    const current = controller.current!;
+    let canceled = false;
+    parent.current!.dataset.typescriptStatus = wantsTypeChecking ? 'loading' : 'disabled';
+    if (!wantsTypeChecking) return;
+    void import('./codeMirrorTypeScript').then(({ startTypeScriptDiagnostics }) => {
+      if (canceled) return;
+      current.typescript = startTypeScriptDiagnostics(factory.current!, environmentMode, error => {
+        if (canceled) return;
+        parent.current!.dataset.typescriptStatus = 'failed';
+        current.view.dispatch({ effects: typeSupport.reconfigure([]) });
+        console.error('[CodeShoebox] TypeScript diagnostics failed.', error);
+      }, () => { if (!canceled) parent.current!.dataset.typescriptStatus = 'ready'; });
+      current.view.dispatch({ effects: typeSupport.reconfigure(current.typescript.extension(current.path!, () => workspace.current)) });
+    }).catch(error => {
+      if (!canceled) {
+        parent.current!.dataset.typescriptStatus = 'failed';
+        console.error('[CodeShoebox] TypeScript diagnostics failed.', error);
+      }
+    });
+    return () => {
+      canceled = true;
+      current.typescript?.dispose();
+      current.typescript = undefined;
+    };
+  }, [wantsTypeChecking, environmentMode, typeSupport]);
+
+  useEffect(() => {
     if (!wantsEmmet) return;
     const current = controller.current!;
     let canceled = false;
@@ -106,22 +147,27 @@ export const CodeMirrorCodeEditor: React.FC<CodeEditorProps> = props => {
   useEffect(() => {
     const current = controller.current!;
     const file = activeFile ?? 'source';
-    const assistanceKey = `${path}-${wantsEmmet}`;
+    current.path = path;
+    const assistanceKey = `${path}-${wantsEmmet}-${wantsTypeChecking}`;
     parent.current!.dataset.emmetStatus = wantsEmmet ? current.emmet ? 'ready' : 'loading' : 'disabled';
     const config = [...extensions, current.listener];
-    const assistance = [
-      emmetSupport.reconfigure(wantsEmmet && current.emmet ? current.emmet : []),
-    ];
-    if (file !== current.file) {
-      if (current.file) current.files.set(current.file, current.view.state);
-      const saved = current.files.get(file);
-      const nextState = saved ?? EditorState.create({ doc: code, extensions: config });
-      current.view.setState(nextState.update({ effects: [StateEffect.reconfigure.of(config), ...assistance] }).state);
-      current.file = file;
-      current.view.focus();
-    } else if (current.extensions !== extensions || current.assistanceKey !== assistanceKey) {
-      current.view.dispatch({ effects: [StateEffect.reconfigure.of(config), ...assistance] });
+    if (file !== current.file || current.extensions !== extensions || current.assistanceKey !== assistanceKey || workspaceFiles !== current.workspaceFiles) {
+      const assistance = [
+        typeSupport.reconfigure(wantsTypeChecking && current.typescript ? current.typescript.extension(path, () => workspace.current) : []),
+        emmetSupport.reconfigure(wantsEmmet && current.emmet ? current.emmet : []),
+      ];
+      if (file !== current.file) {
+        if (current.file) current.files.set(current.file, current.view.state);
+        const saved = current.files.get(file);
+        const nextState = saved ?? EditorState.create({ doc: code, extensions: config });
+        current.view.setState(nextState.update({ effects: [StateEffect.reconfigure.of(config), ...assistance] }).state);
+        current.file = file;
+        current.view.focus();
+      } else {
+        current.view.dispatch({ effects: [StateEffect.reconfigure.of(config), ...assistance] });
+      }
     }
+    current.workspaceFiles = workspaceFiles;
     current.extensions = extensions;
     current.assistanceKey = assistanceKey;
     // React can echo an earlier keystroke after the view has already accepted
@@ -137,7 +183,7 @@ export const CodeMirrorCodeEditor: React.FC<CodeEditorProps> = props => {
         annotations: [externalChange.of(true), Transaction.addToHistory.of(false)],
       });
     }
-  }, [activeFile, code, extensions, path, wantsEmmet, emmetSupport]);
+  }, [activeFile, code, extensions, path, wantsEmmet, emmetSupport, wantsTypeChecking, typeSupport, workspaceFiles]);
 
   return <div ref={parent} data-editor-backend="codemirror" className="h-full w-full overflow-hidden" />;
 };

@@ -12,14 +12,15 @@
       "import": "./dist/export.js",
       "require": "./dist/export.cjs"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./ts-checker.worker.js": "./dist/ts-checker.worker.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsup export.ts --format cjs,esm --dts --clean && node scripts/build-styles.mjs",
+    "build": "tsup export.ts --format cjs,esm --dts --clean && node scripts/build-typescript-worker.mjs && node scripts/build-styles.mjs",
     "test:html-stylesheets": "node scripts/check-html-stylesheets.mjs",
     "test:styles": "node scripts/check-style-isolation.mjs",
     "compare:editors": "node scripts/compare-editors.mjs",
@@ -31,7 +32,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:typescript-worker": "node scripts/check-typescript-worker.mjs"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -44,6 +46,7 @@
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
     "@codemirror/state": "^6.7.6",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.43.14",
@@ -65,6 +68,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "^0.27.3",
     "eslint": "^10.4.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "gh-pages": "^6.1.1",
@@ -78,7 +82,7 @@
     "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "5.9.3",
     "typescript-eslint": "^8.61.0",
     "vite": "^5.0.0",
     "vitest": "^4.1.8"

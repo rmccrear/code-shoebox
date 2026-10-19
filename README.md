@@ -49,6 +49,49 @@ The QA distribution is also available on `dist-c`. Stable Monaco remains at
 on `codex/codemirror6-prototype`. This QA release includes the v1.0.37 external
 stylesheet fixes for HTML + CSS + JavaScript and its Media variant.
 
+## Optional TypeScript diagnostics (Vite)
+
+The development branch adds a separately bundled checker. This is not part of
+published `v1.0.37-c` yet. Import its worker through your application's bundler:
+
+```tsx
+import TypeScriptWorker from 'code-shoebox/ts-checker.worker.js?worker';
+
+// Keep this factory outside the component. No worker is constructed by the import.
+const createTypeScriptWorker = () => new TypeScriptWorker();
+
+<CodeShoebox {...props} createTypeScriptWorker={createTypeScriptWorker} />
+```
+
+Vite emits a hashed worker under the application's assets directory, including
+when deployed under a configured base path. No public-folder copy, external
+compiler CDN, backend endpoint or `workerUrl` setting is required. Include
+`vite/client` types in the application's TypeScript configuration for `?worker`.
+Other bundlers can supply an equivalent factory returning a browser `Worker`.
+
+CodeMirror calls the factory only in editable TypeScript lessons (`typescript`,
+`react-ts`, `node-ts`, `express-ts`, `hono-ts`, `p5-ts`) on TS/TSX files. Ordinary
+JS/JSX/HTML/CSS lessons and read-only/prediction previews do not download the
+checker. Omit the factory to keep the existing lightweight behavior. Monaco's
+existing diagnostics are unchanged.
+
+The editor remains usable during initialization. Diagnostics include syntax and
+semantic errors, update after an editing pause and clear when corrected. Workers
+are scoped to a playground and terminated on unmount, session/mode changes,
+read-only transitions or opting out. Type-aware completion and hovers are not
+included. TypeScript 5.9.3 and matching ES2020/DOM libraries are bundled together;
+the compiler is a build dependency, not a runtime npm dependency. Console modes
+exclude DOM globals. React/p5/Express/Hono declarations are the existing teaching
+shims, not arbitrary npm type acquisition or full framework typings.
+
+Serve the emitted worker with JavaScript MIME type and compression. Hashed worker
+assets can use long-lived immutable caching; allow same-origin workers in the
+application's CSP. Hosting headers remain the consuming application's responsibility.
+
+Build and run `npm run test:typescript-worker` to check the actual distribution
+in consuming Vite development and production applications, including a non-root
+base URL, diagnostics, corrections, lazy requests and cleanup.
+
 ## Maintenance & Releases
 
 For CodeMirror QA releases, follow [PUBLISH.md](PUBLISH.md) to publish prepared
