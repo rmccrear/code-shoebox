@@ -478,6 +478,92 @@ var init_codeMirrorKeys = __esm({
   }
 });
 
+// components/codeMirrorTypeScript.ts
+var codeMirrorTypeScript_exports = {};
+__export(codeMirrorTypeScript_exports, {
+  startTypeScriptDiagnostics: () => startTypeScriptDiagnostics
+});
+function startTypeScriptDiagnostics(createWorker, mode, onError, onReady) {
+  const worker = createWorker();
+  let nextId = 0;
+  let disposed = false;
+  let generation = 0;
+  let failed = false;
+  const pending = /* @__PURE__ */ new Map();
+  function fail(error) {
+    if (failed || disposed) return;
+    failed = true;
+    worker.terminate();
+    for (const request of pending.values()) {
+      clearTimeout(request.timer);
+      request.reject(error);
+    }
+    pending.clear();
+    onError(error);
+  }
+  worker.onmessage = ({ data }) => {
+    const request = pending.get(data.id);
+    if (!request) return;
+    clearTimeout(request.timer);
+    pending.delete(data.id);
+    if ("error" in data) {
+      request.reject(new Error(data.error));
+      fail(new Error(data.error));
+    } else {
+      onReady();
+      request.resolve(data.diagnostics);
+    }
+  };
+  worker.onerror = (event) => {
+    event.preventDefault();
+    fail(new Error(event.message || "TypeScript worker failed"));
+  };
+  worker.onmessageerror = () => fail(new Error("Invalid TypeScript worker response"));
+  return {
+    extension(path, workspace) {
+      const activeGeneration = ++generation;
+      return (0, import_lint.linter)(async (view) => {
+        if (disposed || failed || activeGeneration !== generation) return [];
+        const code = view.state.doc.toString();
+        const files = workspace();
+        const id = ++nextId;
+        try {
+          const diagnostics = await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => fail(new Error("TypeScript worker timed out")), 3e4);
+            pending.set(id, { resolve, reject, timer });
+            const request = { id, mode, path, code, files };
+            try {
+              worker.postMessage(request);
+            } catch (error) {
+              fail(error instanceof Error ? error : new Error(String(error)));
+            }
+          });
+          return disposed || activeGeneration !== generation || view.state.doc.toString() !== code || workspace() !== files ? [] : diagnostics;
+        } catch {
+          return [];
+        }
+      }, { delay: 400 });
+    },
+    dispose() {
+      disposed = true;
+      worker.terminate();
+      worker.onmessage = worker.onerror = worker.onmessageerror = null;
+      for (const request of pending.values()) {
+        clearTimeout(request.timer);
+        request.resolve([]);
+      }
+      pending.clear();
+    }
+  };
+}
+var import_lint;
+var init_codeMirrorTypeScript = __esm({
+  "components/codeMirrorTypeScript.ts"() {
+    "use strict";
+    import_lint = require("@codemirror/lint");
+  }
+});
+
 // components/codeMirrorEmmet.ts
 var codeMirrorEmmet_exports = {};
 __export(codeMirrorEmmet_exports, {
@@ -523,7 +609,7 @@ function editorLanguage({ activeFile, environmentMode }) {
   const jsx14 = activeFile ? /\.[jt]sx$/.test(activeFile) : ["react", "react-app", "react-ts"].includes(environmentMode);
   return (0, import_lang_javascript.javascript)({ typescript, jsx: jsx14 });
 }
-var import_react8, import_codemirror, import_state3, import_view2, import_commands, import_lang_html, import_lang_css, import_lang_javascript, import_theme_one_dark, import_jsx_runtime10, externalChange, CodeMirrorCodeEditor;
+var import_react8, import_codemirror, import_state3, import_view2, import_commands, import_lang_html, import_lang_css, import_lang_javascript, import_theme_one_dark, import_jsx_runtime10, emptyWorkspace, typeScriptModes, externalChange, CodeMirrorCodeEditor;
 var init_CodeMirrorCodeEditor = __esm({
   "components/CodeMirrorCodeEditor.tsx"() {
     "use strict";
@@ -538,21 +624,34 @@ var init_CodeMirrorCodeEditor = __esm({
     import_theme_one_dark = require("@codemirror/theme-one-dark");
     init_codeMirrorKeys();
     import_jsx_runtime10 = require("react/jsx-runtime");
+    emptyWorkspace = {};
+    typeScriptModes = /* @__PURE__ */ new Set(["typescript", "react-ts", "node-ts", "express-ts", "hono-ts", "p5-ts"]);
     externalChange = import_state3.Annotation.define();
     CodeMirrorCodeEditor = (props) => {
-      const { code, onChange, activeFile, environmentMode, themeMode, readOnly = false, enableEmmet = false } = props;
+      const { code, onChange, activeFile, environmentMode, themeMode, readOnly = false, enableEmmet = false, createTypeScriptWorker, workspaceFiles } = props;
       const parent = (0, import_react8.useRef)(null);
       const controller = (0, import_react8.useRef)(null);
       const callback = (0, import_react8.useRef)(onChange);
+      const workspace = (0, import_react8.useRef)(workspaceFiles ?? emptyWorkspace);
+      const factory = (0, import_react8.useRef)(createTypeScriptWorker);
+      (0, import_react8.useEffect)(() => {
+        workspace.current = workspaceFiles ?? emptyWorkspace;
+      }, [workspaceFiles]);
+      (0, import_react8.useEffect)(() => {
+        factory.current = createTypeScriptWorker;
+      }, [createTypeScriptWorker]);
+      const typeSupport = (0, import_react8.useMemo)(() => new import_state3.Compartment(), []);
       (0, import_react8.useEffect)(() => {
         callback.current = onChange;
       }, [onChange]);
       const emmetSupport = (0, import_react8.useMemo)(() => new import_state3.Compartment(), []);
       const path = editorFilename({ activeFile, environmentMode });
+      const wantsTypeChecking = !!createTypeScriptWorker && !readOnly && typeScriptModes.has(environmentMode) && /\.tsx?$/.test(path);
       const wantsEmmet = enableEmmet && !readOnly && path.endsWith(".html");
       const extensions = (0, import_react8.useMemo)(() => [
         codeMirrorKeys,
         import_codemirror.basicSetup,
+        typeSupport.of([]),
         emmetSupport.of([]),
         import_view2.keymap.of([import_commands.indentWithTab]),
         editorLanguage({ activeFile, environmentMode }),
@@ -567,7 +666,7 @@ var init_CodeMirrorCodeEditor = __esm({
           ".cm-gutters": { backgroundColor: themeMode === "dark" ? "#1e1e1e" : "#fffffe", border: "none" }
         }, { dark: themeMode === "dark" }),
         ...themeMode === "dark" ? [import_theme_one_dark.oneDark] : []
-      ], [activeFile, environmentMode, readOnly, themeMode, emmetSupport]);
+      ], [activeFile, environmentMode, readOnly, themeMode, emmetSupport, typeSupport]);
       (0, import_react8.useEffect)(() => {
         const listener = import_view2.EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((transaction) => transaction.annotation(externalChange))) {
@@ -589,6 +688,34 @@ var init_CodeMirrorCodeEditor = __esm({
         };
       }, []);
       (0, import_react8.useEffect)(() => {
+        const current = controller.current;
+        let canceled = false;
+        parent.current.dataset.typescriptStatus = wantsTypeChecking ? "loading" : "disabled";
+        if (!wantsTypeChecking) return;
+        void Promise.resolve().then(() => (init_codeMirrorTypeScript(), codeMirrorTypeScript_exports)).then(({ startTypeScriptDiagnostics: startTypeScriptDiagnostics2 }) => {
+          if (canceled) return;
+          current.typescript = startTypeScriptDiagnostics2(factory.current, environmentMode, (error) => {
+            if (canceled) return;
+            parent.current.dataset.typescriptStatus = "failed";
+            current.view.dispatch({ effects: typeSupport.reconfigure([]) });
+            console.error("[CodeShoebox] TypeScript diagnostics failed.", error);
+          }, () => {
+            if (!canceled) parent.current.dataset.typescriptStatus = "ready";
+          });
+          current.view.dispatch({ effects: typeSupport.reconfigure(current.typescript.extension(current.path, () => workspace.current)) });
+        }).catch((error) => {
+          if (!canceled) {
+            parent.current.dataset.typescriptStatus = "failed";
+            console.error("[CodeShoebox] TypeScript diagnostics failed.", error);
+          }
+        });
+        return () => {
+          canceled = true;
+          current.typescript?.dispose();
+          current.typescript = void 0;
+        };
+      }, [wantsTypeChecking, environmentMode, typeSupport]);
+      (0, import_react8.useEffect)(() => {
         if (!wantsEmmet) return;
         const current = controller.current;
         let canceled = false;
@@ -608,22 +735,27 @@ var init_CodeMirrorCodeEditor = __esm({
       (0, import_react8.useEffect)(() => {
         const current = controller.current;
         const file = activeFile ?? "source";
-        const assistanceKey = `${path}-${wantsEmmet}`;
+        current.path = path;
+        const assistanceKey = `${path}-${wantsEmmet}-${wantsTypeChecking}`;
         parent.current.dataset.emmetStatus = wantsEmmet ? current.emmet ? "ready" : "loading" : "disabled";
         const config = [...extensions, current.listener];
-        const assistance = [
-          emmetSupport.reconfigure(wantsEmmet && current.emmet ? current.emmet : [])
-        ];
-        if (file !== current.file) {
-          if (current.file) current.files.set(current.file, current.view.state);
-          const saved = current.files.get(file);
-          const nextState = saved ?? import_state3.EditorState.create({ doc: code, extensions: config });
-          current.view.setState(nextState.update({ effects: [import_state3.StateEffect.reconfigure.of(config), ...assistance] }).state);
-          current.file = file;
-          current.view.focus();
-        } else if (current.extensions !== extensions || current.assistanceKey !== assistanceKey) {
-          current.view.dispatch({ effects: [import_state3.StateEffect.reconfigure.of(config), ...assistance] });
+        if (file !== current.file || current.extensions !== extensions || current.assistanceKey !== assistanceKey || workspaceFiles !== current.workspaceFiles) {
+          const assistance = [
+            typeSupport.reconfigure(wantsTypeChecking && current.typescript ? current.typescript.extension(path, () => workspace.current) : []),
+            emmetSupport.reconfigure(wantsEmmet && current.emmet ? current.emmet : [])
+          ];
+          if (file !== current.file) {
+            if (current.file) current.files.set(current.file, current.view.state);
+            const saved = current.files.get(file);
+            const nextState = saved ?? import_state3.EditorState.create({ doc: code, extensions: config });
+            current.view.setState(nextState.update({ effects: [import_state3.StateEffect.reconfigure.of(config), ...assistance] }).state);
+            current.file = file;
+            current.view.focus();
+          } else {
+            current.view.dispatch({ effects: [import_state3.StateEffect.reconfigure.of(config), ...assistance] });
+          }
         }
+        current.workspaceFiles = workspaceFiles;
         current.extensions = extensions;
         current.assistanceKey = assistanceKey;
         const pending = current.pendingLocalChanges.get(file) ?? [];
@@ -636,7 +768,7 @@ var init_CodeMirrorCodeEditor = __esm({
             annotations: [externalChange.of(true), import_state3.Transaction.addToHistory.of(false)]
           });
         }
-      }, [activeFile, code, extensions, path, wantsEmmet, emmetSupport]);
+      }, [activeFile, code, extensions, path, wantsEmmet, emmetSupport, wantsTypeChecking, typeSupport, workspaceFiles]);
       return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { ref: parent, "data-editor-backend": "codemirror", className: "h-full w-full overflow-hidden" });
     };
   }
@@ -2997,6 +3129,7 @@ var CodingEnvironment = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   sessionId,
   predictionPrompt,
@@ -3223,6 +3356,8 @@ var CodingEnvironment = ({
           sessionId,
           activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
           enableEmmet,
+          createTypeScriptWorker,
+          workspaceFiles: files ?? void 0,
           readOnly: hasDomFixtures && selectedFile !== "script.js"
         }
       ) }) }),
@@ -3275,6 +3410,7 @@ var CodeShoebox = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   theme,
   themeMode,
@@ -3343,6 +3479,7 @@ var CodeShoebox = ({
           fixtureCss,
           mediaAssets,
           enableEmmet,
+          createTypeScriptWorker,
           mockApi,
           predictionPrompt: prediction_prompt,
           debugMode,

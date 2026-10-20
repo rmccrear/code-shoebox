@@ -81,6 +81,8 @@ interface EditorProps {
     theme?: ThemeMode;
 }
 interface CodeShoeboxProps {
+    /** Optional browser worker factory. CodeMirror invokes it only for editable TS/TSX lessons. */
+    createTypeScriptWorker?: () => Worker;
     code: string;
     onCodeChange: (code: string) => void;
     environmentMode: EnvironmentMode;

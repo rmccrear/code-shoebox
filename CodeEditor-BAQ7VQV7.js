@@ -8,7 +8,7 @@ var EditorBackendContext = createContext("codemirror");
 // components/CodeEditor.tsx
 import { jsx } from "react/jsx-runtime";
 var Monaco = lazy(() => import("./MonacoCodeEditor-7DYHM6J2.js").then((module) => ({ default: module.MonacoCodeEditor })));
-var CodeMirror = lazy(() => import("./CodeMirrorCodeEditor-7KORQYIN.js").then((module) => ({ default: module.CodeMirrorCodeEditor })));
+var CodeMirror = lazy(() => import("./CodeMirrorCodeEditor-YQTHKQQR.js").then((module) => ({ default: module.CodeMirrorCodeEditor })));
 var CodeEditor = (props) => {
   const backend = useContext(EditorBackendContext);
   const Implementation = backend === "codemirror" ? CodeMirror : Monaco;

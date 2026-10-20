@@ -2311,7 +2311,7 @@ var getCodeLanguage = (mode, filename) => {
   }
   return "javascript";
 };
-var CodeEditor = React5.lazy(() => import("./CodeEditor-X6KVEFN3.js").then((module) => ({
+var CodeEditor = React5.lazy(() => import("./CodeEditor-BAQ7VQV7.js").then((module) => ({
   default: module.CodeEditor
 })));
 var CodingEnvironment = ({
@@ -2326,6 +2326,7 @@ var CodingEnvironment = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   sessionId,
   predictionPrompt,
@@ -2552,6 +2553,8 @@ var CodingEnvironment = ({
           sessionId,
           activeFile: isTabbedMode ? selectedFile ?? void 0 : void 0,
           enableEmmet,
+          createTypeScriptWorker,
+          workspaceFiles: files ?? void 0,
           readOnly: hasDomFixtures && selectedFile !== "script.js"
         }
       ) }) }),
@@ -2604,6 +2607,7 @@ var CodeShoebox = ({
   fixtureCss,
   mediaAssets,
   enableEmmet = false,
+  createTypeScriptWorker,
   mockApi,
   theme,
   themeMode,
@@ -2672,6 +2676,7 @@ var CodeShoebox = ({
           fixtureCss,
           mediaAssets,
           enableEmmet,
+          createTypeScriptWorker,
           mockApi,
           predictionPrompt: prediction_prompt,
           debugMode,
