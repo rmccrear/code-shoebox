@@ -3,7 +3,7 @@
 Branch: `codex/codemirror6-prototype`.
 
 An internal context selects a lazy-loaded Monaco or CodeMirror implementation.
-The `1.0.37-c` QA release defaults to CodeMirror; the public `CodeShoebox` API
+The `1.0.38-c` QA release defaults to CodeMirror; the public `CodeShoebox` API
 remains unchanged. The demo can still select either implementation.
 The demo's **Editor engine** selector preserves source when switching engines;
 engine switches start fresh editor history. File tabs preserve document,
@@ -110,7 +110,7 @@ Development timings and allocated JS heap snapshots are smoke measurements,
 not production benchmarks. Production transfer, input latency, mobile behavior
 and multiple-playground scaling remain unmeasured.
 
-## Optional diagnostics follow-up (unreleased)
+## Optional diagnostics (v1.0.38-c)
 
 The new `createTypeScriptWorker` prop opts CodeMirror TS/TSX lessons into a real
 checker. The host imports `code-shoebox/ts-checker.worker.js?worker` and supplies

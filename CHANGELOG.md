@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — CodeMirror
+## 1.0.38-c — 2026-10-20 (CodeMirror QA)
 
 - Add optional TypeScript diagnostics through a host worker factory and a separately
   bundled `ts-checker.worker.js` export, suitable for Vite automatic asset handling.
