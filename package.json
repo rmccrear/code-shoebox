@@ -58,6 +58,7 @@
     "@shikijs/monaco": "^4.4.3",
     "@shikijs/themes": "^4.4.3",
     "codemirror": "^6.0.2",
+    "emmet": "^2.4.11",
     "emmet-monaco-es": "^5.7.0",
     "lucide-react": "^0.469.0"
   },
