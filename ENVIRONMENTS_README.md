@@ -24,7 +24,10 @@ These environments are designed for standard DOM manipulation and vanilla JavaSc
 
 Hosts can pass `enableEmmet` to enable Emmet abbreviation completions in any
 editable HTML model. This editor-only opt-in is disabled by default and does not
-change runtime behavior.
+change runtime behavior. In the CodeMirror backend, automatic expansion is
+restricted to standard HTML tags and clear abbreviations such as `ul>li*3` or
+`.card`; ordinary prose and custom tag names are not expanded. Tab expands both
+newly typed and saved/pasted abbreviations, while Enter inserts a newline.
 
 ### `html` (HTML, single file)
 *   **Engine:** Nested `<iframe sandbox="">` — the editor buffer is rendered **verbatim** as the inner frame's `srcdoc`, exactly like opening a saved `.html` file. No transpiler.

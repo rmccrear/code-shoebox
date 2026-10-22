@@ -182,6 +182,14 @@ feature applies only to editable HTML models, including the `index.html` tab in
 multi-file web modes. It is disabled by default and does not change sandbox
 execution.
 
+In the CodeMirror backend, automatic suggestions and Tab expansion accept
+standard HTML tags and abbreviations built from them (`div`, `ul>li.item*3`,
+`.card`, `#main`, and `a:link`). Ordinary words, unknown/custom tag names, and
+abbreviations following prose on the same line stay as text. HTML attributes,
+comments, and embedded JavaScript/CSS are excluded. Tab works on saved or pasted
+abbreviations as well as freshly typed ones; it also moves between snippet
+fields. Enter inserts a newline, and Escape dismisses the suggestion list.
+
 ```tsx
 <CodeShoebox
   code={code}
