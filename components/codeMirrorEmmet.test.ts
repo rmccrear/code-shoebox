@@ -43,6 +43,38 @@ function tab(view: EditorView) {
 }
 
 describe("selective automatic HTML Emmet", () => {
+  it.each(['div|erse', 'a|bout', 'div|-widget', 'div|2', 'div|é', '.card|inal'])(
+    "does not expand a prefix inside saved text %s", async marked => {
+      const text = marked.replace('|', '');
+      const view = editor(text, '', true);
+      view.dispatch({ selection: { anchor: marked.indexOf('|') } });
+      expect(await completion(view)).toBeNull();
+      expect(tab(view)).toBe(false);
+      expect(view.state.doc.toString()).toBe(text);
+    },
+  );
+
+  it.each(['<p>The result is 2 > a|</p>', '<p>Hello > div|</p>', '2 > .card|'])(
+    "does not treat a literal greater-than sign as a tag boundary in %s", async marked => {
+      const text = marked.replace('|', '');
+      const view = editor(text, '', true);
+      view.dispatch({ selection: { anchor: marked.indexOf('|') } });
+      expect(await completion(view)).toBeNull();
+      expect(tab(view)).toBe(false);
+      expect(view.state.doc.toString()).toBe(text);
+    },
+  );
+
+  it.each(['<p> span|</p>', '<ul><li>Hello</li> span|</ul>', '<div><br> span|</div>'])(
+    "allows abbreviations after a parsed tag and whitespace in %s", async marked => {
+      const view = editor(marked.replace('|', ''), '', true);
+      view.dispatch({ selection: { anchor: marked.indexOf('|') } });
+      expect(await completion(view)).not.toBeNull();
+      expect(tab(view)).toBe(true);
+      expect(view.state.doc.toString()).toBe(marked.replace('span|', '<span></span>'));
+    },
+  );
+
   it("previews an implicit tag in its parent HTML context", () => {
     const view = editor(".item", "<ul>");
     expect(completion(view)?.options[0].info).toContain('<li class="item">');

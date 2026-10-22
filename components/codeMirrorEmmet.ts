@@ -18,10 +18,11 @@ const standardHtmlTags = new Set((
 
 function htmlAbbreviation(state: EditorState, pos: number) {
   if (state.facet(EditorState.readOnly) || !htmlLanguage.isActiveAt(state, pos)) return null;
+  const tree = syntaxTree(state);
   // HTML language data is also available inside tags and comments. Only offer
   // markup in text positions, never attribute values, comments or embedded JS/CSS.
   let parentTag: string | undefined;
-  for (let node = syntaxTree(state).resolveInner(pos, -1); node; node = node.parent!) {
+  for (let node = tree.resolveInner(pos, -1); node; node = node.parent!) {
     if (['OpenTag', 'CloseTag', 'SelfClosingTag', 'Comment', 'DoctypeDecl', 'ProcessingInst'].includes(node.name)) return null;
     if (!parentTag && node.name === 'Element') {
       const name = node.getChild('OpenTag')?.getChild('TagName');
@@ -29,13 +30,21 @@ function htmlAbbreviation(state: EditorState, pos: number) {
     }
   }
   const line = state.doc.lineAt(pos);
+  // Moving into saved text must not turn a word prefix (div|erse) into markup.
+  if (/^[\p{L}\p{M}\p{N}_:-]/u.test(line.text.slice(pos - line.from))) return null;
   const extracted = extract(line.text, pos - line.from, { type: 'markup', lookAhead: false });
   if (!extracted) return null;
   const from = line.from + extracted.start;
-  const prefix = line.text.slice(0, extracted.start);
+  const prefix = line.text.slice(0, extracted.start).trimEnd();
   // A tag-name word in prose ("This is a") should remain text. An abbreviation
   // at the start of a line or directly after a tag is an explicit editing intent.
-  if (prefix.slice(prefix.lastIndexOf('>') + 1).trim()) return null;
+  if (prefix.trim()) {
+    const boundary = line.from + prefix.length;
+    let node = tree.resolveInner(boundary, -1);
+    while (node && !['OpenTag', 'CloseTag', 'SelfClosingTag'].includes(node.name)) node = node.parent!;
+    // A literal > in text is not a tag boundary ("The result is 2 > a").
+    if (!node || node.to !== boundary) return null;
+  }
 
   try {
     const ast = markupAbbreviation(extracted.abbreviation);
