@@ -32,11 +32,11 @@ CodeShoebox is a self-contained, secure code playground component for React. Thi
 
 ## Installation
 
-The experimental **v1.0.38-c** release defaults to CodeMirror 6 without changing
+The experimental **v1.0.39-c** release defaults to CodeMirror 6 without changing
 `CodeShoebox` props. Install the compiled QA release:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.38-c
+npm install github:rmccrear/code-shoebox#v1.0.39-c
 ```
 
 Keep importing `code-shoebox/styles.css`. Emmet lessons retain `enableEmmet` for
@@ -46,13 +46,13 @@ hovers remain unavailable. Exercise execution, including TypeScript transpilatio
 is unchanged.
 
 The QA distribution is also available on `dist-c`. Stable Monaco remains at
-`v1.0.37` and `dist`. The QA tag points to compiled package files; the source is
-on `codex/codemirror6-prototype`. This QA release includes the v1.0.37 external
-stylesheet fixes for HTML + CSS + JavaScript and its Media variant.
+`v1.0.39` and `dist`. The QA tag points to compiled package files; the source is
+on `codex/codemirror6-prototype`. This QA release matches stable v1.0.39's runtime,
+including the isolated page frame for the HTML + JavaScript modes (issue #26).
 
 ## Optional TypeScript diagnostics (Vite)
 
-Version `v1.0.38-c` includes a separately bundled, opt-in checker. Import its
+Since `v1.0.38-c`, the QA release includes a separately bundled, opt-in checker. Import its
 worker through your application's bundler:
 
 ```tsx

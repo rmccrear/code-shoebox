@@ -1,6 +1,6 @@
 {
   "name": "code-shoebox",
-  "version": "1.0.38-c",
+  "version": "1.0.39-c",
   "type": "module",
   "description": "A client-side code playground component for React featuring CodeMirror 6 and sandboxed execution.",
   "main": "dist/export.cjs",

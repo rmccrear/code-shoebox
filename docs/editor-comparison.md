@@ -3,7 +3,7 @@
 Branch: `codex/codemirror6-prototype`.
 
 An internal context selects a lazy-loaded Monaco or CodeMirror implementation.
-The `1.0.38-c` QA release defaults to CodeMirror; the public `CodeShoebox` API
+The `1.0.39-c` QA release defaults to CodeMirror; the public `CodeShoebox` API
 remains unchanged. The demo can still select either implementation.
 The demo's **Editor engine** selector preserves source when switching engines;
 engine switches start fresh editor history. File tabs preserve document,

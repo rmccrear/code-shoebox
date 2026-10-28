@@ -5,13 +5,13 @@ This project is configured to automate versioning, Git tagging, and the deployme
 
 ## CodeMirror QA release
 
-`1.0.38-c` is published separately from stable Monaco. Its package defaults to
+`1.0.39-c` is published separately from stable Monaco. Its package defaults to
 CodeMirror 6 and retains `enableEmmet`. The compiled distribution lives on
-`dist-c`, with annotated tag `v1.0.38-c` pointing to the same compiled commit.
+`dist-c`, with annotated tag `v1.0.39-c` pointing to the same compiled commit.
 Source lives on `codex/codemirror6-prototype`. The source commit is recorded in
 the compiled release's commit message and GitHub prerelease notes.
 
-Install with `npm install github:rmccrear/code-shoebox#v1.0.38-c`.
+Install with `npm install github:rmccrear/code-shoebox#v1.0.39-c`.
 
 Build and run checks before running `node scripts/prepare-dist.js`. Publish the
 prepared `dist/` files in an isolated checkout to `dist-c` and tag that compiled

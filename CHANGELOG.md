@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.39-c — 2026-10-28 (CodeMirror QA)
+
+- Incorporate the v1.0.39 fix for [#26](https://github.com/rmccrear/code-shoebox/issues/26)
+  ([#28](https://github.com/rmccrear/code-shoebox/pull/28)): HTML + JavaScript,
+  HTML + JavaScript + Fetch, HTML + CSS + JavaScript and its Media variant render
+  each Run in an isolated nested page frame, so learner `html`/`body` CSS no longer
+  breaks preview scrolling.
+- Retain CodeMirror defaults, opt-in HTML Emmet and the optional TypeScript checker.
+
+## 1.0.39 — 2026-10-28
+
+- Fix [#26](https://github.com/rmccrear/code-shoebox/issues/26) ([#27](https://github.com/rmccrear/code-shoebox/pull/27)):
+  HTML + JavaScript, HTML + JavaScript + Fetch, HTML + CSS + JavaScript and its
+  Media variant now render each Run in an isolated nested page frame. Learner
+  `html`/`body` CSS (such as a centered full-height layout) no longer restyles
+  the playground's internal document, so the preview scrolls normally.
+- The page frame never gets `allow-same-origin`; `script.js` is delivered by
+  message rather than embedded in any `srcdoc`.
+
 ## 1.0.38-c — 2026-10-20 (CodeMirror QA)
 
 - Add optional TypeScript diagnostics through a host worker factory and a separately
