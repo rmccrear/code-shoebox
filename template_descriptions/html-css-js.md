@@ -9,21 +9,21 @@ A complete interactive page split across three editable tabs: structure in **ind
 - **Explicit CSS connection:** bundled styles apply only when HTML includes `<link rel="stylesheet" href="style.css">`.
 - **Explicit JS connection:** bundled JavaScript runs only when HTML includes `<script src="script.js"></script>`.
 - **Independent links:** a missing CSS link does not block linked JavaScript, and a missing script link does not block linked CSS. Each missing non-empty file gets its own blue hint.
+- **Real page document:** the page renders in its own document, so `html`/`body` CSS, `<html>` attributes such as `data-theme`, `lang`, and `dir`, the title, and scrolling behave as in a normal browser tab.
 - **External CSS:** stylesheet links and inline styles in head or body apply in source order, alongside explicitly linked bundled CSS. External CSS loads asynchronously; JavaScript does not wait for it.
-- **Fresh page per Run:** learner DOM and prior head stylesheet links/styles are replaced before current JS executes.
-- **Browser APIs and console:** `root`, `document`, and `window` are available; logs, warnings, errors, and rejected promises appear below the output.
+- **Fresh page per Run:** each Run replaces the whole page, so styles, timers, and listeners from the previous Run are gone before current JS executes.
+- **Browser APIs and console:** `root` (the page's `document.body`), `document`, and `window` are available; logs, warnings, errors, and rejected promises appear below the output.
 
 ## Output UI
-- **Visual:** body children from `index.html` render under the sandbox's `#root` and linked CSS is installed in the sandbox document.
+- **Visual:** `index.html` renders as its own page with linked CSS applied.
 - **Console:** visible below the page.
 - **Execution:** manual only. Editing any tab has no output side effect until Run.
 
 ## Limitations
 - HTML-authored scripts never execute. Inline, remote, module, data-URL, and differently named scripts are removed; bundled `script.js` is the only JS path.
-- Body content plus head stylesheet links and `<style>` elements are restored. Head metadata, title, body attributes, and parser timing are not reproduced.
+- `script.js` always runs once after the page is parsed; `async`/`defer` timing is not reproduced.
 - Native JavaScript only: no TypeScript, Babel, JSX, modules, imports, JavaScript packages/CDNs, or additional files.
 - Tabs cannot be added, removed, renamed, or moved into folders.
-- Runs replace learner nodes and installed head styles, but timers or listeners attached directly to `window` or `document` are not automatically disposed.
 
 ## Code format (for tools and LLMs)
 The public code value remains one version-1 JSON envelope:

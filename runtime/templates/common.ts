@@ -48,6 +48,25 @@ export const BASE_STYLES = `
     }
 `;
 
+// Shared by the kernel and the nested page-frame bridge so console output
+// reads the same in every mode.
+export const FORMAT_RUNTIME_VALUE_SOURCE = `
+    function formatRuntimeValue(value) {
+        if (
+            value !== null
+            && typeof value === 'object'
+            && typeof value.name === 'string'
+            && typeof value.message === 'string'
+        ) {
+            return value.name + ': ' + value.message;
+        }
+        if (typeof value === 'object' && value !== null) {
+            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
+        }
+        return String(value);
+    }
+`;
+
 export const KERNEL_SCRIPTS = `
     // --- Console & Module System ---
     window.messagePort = null;
@@ -66,21 +85,7 @@ export const KERNEL_SCRIPTS = `
         else window.parent.postMessage(message, '*');
     }
 
-    function formatRuntimeValue(value) {
-        if (
-            value !== null
-            && typeof value === 'object'
-            && typeof value.name === 'string'
-            && typeof value.message === 'string'
-        ) {
-            return value.name + ': ' + value.message;
-        }
-        if (typeof value === 'object' && value !== null) {
-            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
-        }
-        return String(value);
-    }
-
+    ${FORMAT_RUNTIME_VALUE_SOURCE}
     // Intercept standard logs
     ['log', 'error', 'warn', 'info'].forEach(method => {
         const original = console[method];
