@@ -53,43 +53,45 @@ change runtime behavior.
     *   The rendered document is parsed and re-serialized to splice the styles in (the single-file `html` mode remains byte-verbatim).
 
 ### `html-js` (HTML & JavaScript, two tabs: index.html + script.js)
-*   **Engine:** Native browser JavaScript in the existing sandbox DOM. The editor shows two editable tabs and packs them into the same version-1 file envelope used by `html-css`.
+*   **Engine:** Native browser JavaScript in an isolated nested page frame. The editor shows two editable tabs and packs them into the same version-1 file envelope used by `html-css`.
 *   **Code format:** `{"__csFiles__":1,"files":{"index.html":"…","script.js":"…"}}`. A plain string becomes `index.html` with an empty `script.js`.
 *   **Capabilities:**
     *   **Strict script semantics:** `script.js` runs only when the HTML contains a literal `<script src="script.js"></script>`. If code exists without that link, a blue hint shows the exact tag to add.
     *   Both files are editable and retain separate Monaco models and undo histories.
-    *   Pressing Run restores the current HTML body under the sandbox's `#root`, then executes `script.js` once with access to `root`, `document`, and `window`.
+    *   Each Run builds the page as its own document in a nested sandboxed iframe (same sandbox flags as the outer frame, never `allow-same-origin`), so `html`/`body` CSS, `<html>` attributes, `<head>` content, and scrolling behave as in a normal browser tab. `script.js` then runs once inside that page, after its HTML is parsed, with `root` set to the page's `document.body`.
+    *   Each Run replaces the page frame, so timers, listeners, and pending requests from the previous Run stop.
     *   The console captures logs, warnings, synchronous errors, and unhandled promise rejections.
 *   **Limitations:**
     *   This is manual-run; editing either tab never executes JavaScript automatically.
     *   All script elements are removed from parsed learner HTML. Inline, remote, data-URL, and differently named scripts do not execute; only the bundled `script.js` does.
-    *   The learner body is restored below `#root`; `<head>` metadata, `<title>`, body attributes, parser timing, `async`, and `defer` behavior are not reproduced.
+    *   Parser timing, `async`, and `defer` are not reproduced: `script.js` always runs once after the page is parsed.
+    *   The page renders on a white background regardless of the sandbox theme, like `html` and `html-css`.
     *   Native browser JavaScript only: no TypeScript, Babel, modules, `import`/`export`, packages, or additional files.
 
 ### `html-js-fetch` (HTML, JavaScript & Fetch, three tabs)
 *   **Engine:** The same bounded two-file page runner as `html-js`, with the async mock-fetch runtime used by `fetch` mode.
 *   **Workspace:** Editable `index.html`, editable `script.js`, and a read-only **API Server** tab. The code envelope contains only the two editable files.
 *   **Capabilities:**
-    *   The literal `<script src="script.js"></script>` link is required. Pressing Run rebuilds the learner page, installs the host's `mockApi`, and executes `script.js` with top-level `await`.
+    *   The literal `<script src="script.js"></script>` link is required. Pressing Run rebuilds the learner page frame, installs the host's `mockApi` inside it, and executes `script.js` with top-level `await`.
     *   Relative mock requests return genuine `Response` objects after the configured delay, and learner JavaScript can render the returned JSON into its own HTML.
-    *   A new Run aborts pending requests and uses correlated completion IDs, so learners can safely rerun during the default one-second delay.
+    *   A new Run discards the old page frame (ending its pending requests) and uses correlated completion IDs, so learners can safely rerun during the default one-second delay.
 *   **Containment and limitations:**
-    *   Routes stay outside the code envelope, persistence, and iframe `srcDoc`. `connect-src 'none'` and the fetch replacement prevent real API access.
+    *   Routes stay outside the code envelope, persistence, and every iframe `srcDoc`; they reach the page frame by `postMessage`. `connect-src 'none'` is set on the kernel and copied first into the page frame's head, and with the fetch replacement it prevents real API access.
     *   File/link restrictions match `html-js`; route matching, canned response behavior, and request limitations match `fetch`.
 
 ### `html-css-js` (HTML, CSS & JavaScript, three tabs)
-*   **Engine:** Native browser JavaScript in the existing sandbox DOM, with three editable files packed into the version-1 bundle: `index.html`, `style.css`, and `script.js`.
+*   **Engine:** Native browser JavaScript in an isolated nested page frame (as in `html-js`), with three editable files packed into the version-1 bundle: `index.html`, `style.css`, and `script.js`.
 *   **Code format:** `{"__csFiles__":1,"files":{"index.html":"…","style.css":"…","script.js":"…"}}`. A plain string becomes `index.html` with empty CSS and JS.
 *   **Capabilities:**
     *   **Independent explicit links:** bundled CSS requires literal `<link rel="stylesheet" href="style.css">`; bundled JS requires literal `<script src="script.js"></script>`. A missing non-empty file link shows its own blue hint without blocking the other linked file.
-    *   Pressing Run clears the previous page and installed head styles, restores stylesheet links and inline styles in source order (resolving exact `style.css` links from the CSS tab), restores HTML body children under `#root`, and executes linked `script.js` once. External CSS loads asynchronously; JavaScript does not wait for it.
+    *   Each Run builds the page as its own document in a nested sandboxed iframe (same sandbox flags as the outer frame, never `allow-same-origin`), so `html`/`body` CSS, `<html>` attributes, `<head>` content, and scrolling behave as in a normal browser tab. Exact `style.css` links become inline styles in place; other stylesheet links and `<style>` elements stay where they were authored. Linked `script.js` runs once after the page is parsed. External CSS loads asynchronously; JavaScript does not wait for it.
     *   All three tabs are editable with separate Monaco models and undo histories. The console captures logs, warnings, errors, and rejected promises.
 *   **Limitations:**
     *   Manual-run only. Editing does not update output or execute JavaScript automatically.
     *   Parsed script elements are removed. Bundled `script.js` is the only JavaScript execution path; external CSS stylesheet links are supported.
-    *   `<head>` metadata, title, body attributes, parser timing, `async`, and `defer` behavior are not reproduced. Stylesheet links and `<style>` elements in both head and body apply.
+    *   Parser timing, `async`, and `defer` behavior are not reproduced. The page renders on a white background regardless of the sandbox theme.
     *   Native JavaScript only: no TypeScript, Babel, modules, imports, JavaScript packages/CDNs, extra files, or renames.
-    *   Re-running replaces learner DOM and installed head styles, but learner timers or listeners attached directly to `window`/`document` are not automatically disposed.
+    *   Each Run replaces the whole page frame, so timers and listeners from the previous Run stop.
 
 ### `html-js-css-media` (HTML, CSS, JavaScript & Media, four tabs)
 *   **Engine:** The same native three-file sandbox recipe as `html-css-js`. `index.html`, `style.css`, and `script.js` remain in the version-1 code envelope; the fourth `Media` tab is host-owned UI and is never part of execution data.
@@ -105,7 +107,7 @@ change runtime behavior.
     *   External URLs cause normal browser requests. Cross-origin media may display or play while pixel/sample access through Canvas or Web Audio remains blocked by CORS.
     *   Media is not automatically added to learner output. The learner must paste the appropriate snippet into HTML/CSS/JavaScript.
 
-### `dom` (DOM / JS)
+### `dom` (DOM JavaScript)
 *   **Engine:** Native Browser JavaScript (executed via `new Function`).
 *   **Pre-loaded Libraries:** None.
 *   **Capabilities:**

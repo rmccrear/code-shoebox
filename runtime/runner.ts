@@ -1,6 +1,6 @@
 
 import { EnvironmentMode, EnvironmentRecipe } from "./types";
-import { BASE_HTML_WRAPPER } from "./templates/common";
+import { BASE_HTML_WRAPPER, FORMAT_RUNTIME_VALUE_SOURCE } from "./templates/common";
 import { EXPRESS_MOCK_SETUP } from "./templates/express";
 import { HONO_MOCK_SETUP } from "./templates/hono";
 import { FETCH_MOCK_SETUP } from "./templates/fetch";
@@ -87,30 +87,93 @@ const HTML_RUNTIME_STYLES = `
   }
 `;
 
-// Shared by the plain and mock-fetch two-file modes. The presence of the
-// fetch installer switches script.js to the async, abortable execution path;
-// plain html-js keeps its synchronous behavior and network permissions.
-const HTML_JS_RUNTIME_LOGIC = `
-  let activeHtmlJsRunController = null;
-  let htmlJsRunGeneration = 0;
-  const HtmlJsAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+// The html-js family renders the learner page in its own nested document, as
+// a real browser tab would. Learner html/body CSS, <html> attributes, and
+// scrolling then stay inside that page instead of restyling the kernel.
+//
+// Security rules for the nested page frame:
+// - Its sandbox matches the outer frame and never adds allow-same-origin, so
+//   the page is its own opaque origin and cannot reach the kernel or its port.
+// - The fixed bridge below is the first script in the page. Learner <script>
+//   tags are stripped; script.js arrives later by postMessage, never srcdoc.
+// - The kernel only relays known message types from the current frame.
+const PAGE_BRIDGE_SOURCE = `
+  (() => {
+    const post = (type, payload) => window.parent.postMessage({ type: type, payload: payload }, '*');
+    ['log', 'error', 'warn', 'info'].forEach((method) => {
+      const original = console[method];
+      console[method] = function (...args) {
+        original.apply(console, args);
+        post(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), args.map(formatRuntimeValue).join(' '));
+      };
+    });
+    window.onerror = (msg, src, line, column, error) => {
+      post('RUNTIME_ERROR', error
+        ? formatRuntimeValue(error)
+        : 'Error: ' + String(msg) + ' (Line ' + line + ', Column ' + column + ')');
+    };
+    window.addEventListener('unhandledrejection', (event) => {
+      post('RUNTIME_ERROR', formatRuntimeValue(event.reason));
+    });
+
+    const PageAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    let started = false;
+    window.addEventListener('message', (event) => {
+      if (event.source !== window.parent) return;
+      const data = event.data;
+      if (started || !data || data.type !== 'CS_PAGE_RUN') return;
+      started = true;
+      const finish = () => post('CS_PAGE_DONE');
+      if (typeof data.js !== 'string') { finish(); return; }
+      if (typeof window.__installFetchMock === 'function') {
+        window.__installFetchMock(data.mockApi);
+        Promise.resolve()
+          .then(() => new PageAsyncFunction('root', data.js)(document.body))
+          .catch((error) => console.error(error))
+          .then(finish);
+        return;
+      }
+      try { new Function('root', data.js)(document.body); } catch (error) { console.error(error); }
+      finish();
+    });
+
+    const ready = () => post('CS_PAGE_READY');
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true });
+    else ready();
+  })();
+`;
+
+// JSON is valid JS; escaping "<" keeps the literal from closing the kernel's
+// own <script> element.
+const toScriptLiteral = (value: string) => JSON.stringify(value).replace(/</g, '\\u003c');
+
+const buildHtmlPageLogic = ({ cssTab, mockFetch }: { cssTab: boolean; mockFetch: boolean }) => `
+  const PAGE_HAS_CSS_TAB = ${cssTab};
+  const PAGE_FRAME_SANDBOX = ${toScriptLiteral(SANDBOX_ATTRIBUTES)};
+  const PAGE_BRIDGE = ${toScriptLiteral((mockFetch ? FETCH_MOCK_SETUP : '') + FORMAT_RUNTIME_VALUE_SOURCE + PAGE_BRIDGE_SOURCE)};
+  let activePage = null;
+
+  window.addEventListener('message', (event) => {
+    const page = activePage;
+    if (!page || event.source !== page.frame.contentWindow) return;
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'CS_PAGE_READY') {
+      if (page.sent) return;
+      page.sent = true;
+      page.frame.contentWindow.postMessage({ type: 'CS_PAGE_RUN', js: page.js, mockApi: page.mockApi }, '*');
+    } else if (data.type === 'CS_PAGE_DONE') {
+      page.resolve();
+    } else if (data.type === 'CONSOLE_LOG' || data.type === 'CONSOLE_WARN' || data.type === 'RUNTIME_ERROR') {
+      sendPayload(data.type, String(data.payload));
+    }
+  });
 
   window.__RUN_MODE__ = (code, root, options = {}) => {
-    const usesMockFetch = typeof window.__installFetchMock === 'function';
-    let generation = htmlJsRunGeneration;
-    let runRoot = root;
-
-    if (usesMockFetch) {
-      generation = ++htmlJsRunGeneration;
-      if (activeHtmlJsRunController) activeHtmlJsRunController.abort();
-      activeHtmlJsRunController = new AbortController();
-      runRoot = document.createElement('div');
-      runRoot.style.width = '100%';
-      root.replaceChildren(runRoot);
-      window.__installFetchMock(options.mockApi, activeHtmlJsRunController.signal);
-    } else {
-      root.replaceChildren();
-    }
+    // Dropping the old frame ends its timers, listeners, and pending fetches.
+    if (activePage) activePage.resolve();
+    activePage = null;
+    root.replaceChildren();
 
     // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
     // The iframe kernel cannot import modules; keep both copies in sync.
@@ -118,37 +181,59 @@ const HTML_JS_RUNTIME_LOGIC = `
     try {
       const parsed = JSON.parse(code);
       files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-        ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
-        : { html: code, js: '' };
-    } catch (e) { files = { html: code, js: '' }; }
+        ? {
+            html: String(parsed.files['index.html'] ?? ''),
+            css: PAGE_HAS_CSS_TAB ? String(parsed.files['style.css'] ?? '') : '',
+            js: String(parsed.files['script.js'] ?? '')
+          }
+        : { html: code, css: '', js: '' };
+    } catch (e) { files = { html: code, css: '', js: '' }; }
 
     const doc = new DOMParser().parseFromString(files.html, 'text/html');
+    const linkedStyles = PAGE_HAS_CSS_TAB ? doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]') : [];
     const linkedScript = doc.querySelector('script[src="script.js"]');
 
-    // Learner HTML never creates a second execution path. The bundled
-    // script.js file is the only JavaScript this mode executes.
-    doc.querySelectorAll('script').forEach((script) => script.remove());
+    // Bundled script.js is the only learner JavaScript that runs. <noscript>
+    // goes too: it parses differently once the page frame runs scripts.
+    doc.querySelectorAll('script, noscript').forEach((node) => node.remove());
+    // Exact style.css links become inline styles. Other stylesheet links stay
+    // browser resources inside the page frame.
+    linkedStyles.forEach((link) => {
+      const style = doc.createElement('style');
+      style.textContent = files.css.replace(/<\\/style/gi, '<\\\\/style');
+      link.replaceWith(style);
+    });
+
+    if (PAGE_HAS_CSS_TAB && linkedStyles.length === 0 && files.css.trim()) {
+      const hint = document.createElement('div');
+      hint.className = 'cs-hint-banner';
+      hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+      root.appendChild(hint);
+    }
 
     if (!linkedScript && files.js.trim()) {
       const hint = document.createElement('div');
       hint.className = 'cs-hint-banner';
       hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-      runRoot.appendChild(hint);
+      root.appendChild(hint);
     }
 
-    doc.body.childNodes.forEach((node) => {
-      runRoot.appendChild(document.importNode(node, true));
-    });
+    // The bridge runs before any learner markup; the kernel's CSP (if any)
+    // goes first of all so it covers everything after it.
+    const bridge = doc.createElement('script');
+    bridge.textContent = PAGE_BRIDGE;
+    doc.head.prepend(bridge);
+    const policy = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (policy) doc.head.prepend(doc.importNode(policy, true));
 
-    if (!linkedScript) return;
-    if (!usesMockFetch) {
-      try { new Function('root', files.js)(runRoot); } catch (error) { console.error(error); }
-      return;
-    }
-
-    return new HtmlJsAsyncFunction('root', files.js)(runRoot).catch((error) => {
-      if (generation !== htmlJsRunGeneration || (error && error.name === 'AbortError')) return;
-      throw error;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', PAGE_FRAME_SANDBOX);
+    frame.className = 'cs-html-frame';
+    frame.title = 'Page preview';
+    return new Promise((resolve) => {
+      activePage = { frame, js: linkedScript ? files.js : null, mockApi: options.mockApi, sent: false, resolve };
+      frame.srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+      root.appendChild(frame);
     });
   };
 `;
@@ -175,7 +260,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         if (probe.querySelector('script')) {
           const banner = document.createElement('div');
           banner.className = 'cs-script-banner';
-          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to DOM JavaScript mode to write JavaScript.';
           root.appendChild(banner);
         }
         const frame = document.createElement('iframe');
@@ -208,7 +293,7 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
         if (doc.querySelector('script')) {
           const banner = document.createElement('div');
           banner.className = 'cs-script-banner';
-          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to DOM JavaScript mode to write JavaScript.';
           root.appendChild(banner);
         }
 
@@ -240,87 +325,23 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
     name: "HTML & JavaScript (script.js)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: HTML_JS_RUNTIME_LOGIC,
+    logic: buildHtmlPageLogic({ cssTab: false, mockFetch: false }),
   },
   'html-js-fetch': {
     name: "HTML, JavaScript & Fetch (Mock API)",
-    mocks: FETCH_MOCK_SETUP,
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
     contentSecurityPolicy: "connect-src 'none'",
-    logic: HTML_JS_RUNTIME_LOGIC,
+    logic: buildHtmlPageLogic({ cssTab: false, mockFetch: true }),
   },
   'html-css-js': {
     name: "HTML, CSS & JavaScript (3 files)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: `
-      let htmlCssHeadStyles = [];
-      window.__RUN_MODE__ = (code, root) => {
-        root.replaceChildren();
-        htmlCssHeadStyles.forEach((node) => node.remove());
-        htmlCssHeadStyles = [];
-
-        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
-        // The iframe kernel cannot import modules; keep both copies in sync.
-        let files;
-        try {
-          const parsed = JSON.parse(code);
-          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-            ? {
-                html: String(parsed.files['index.html'] ?? ''),
-                css: String(parsed.files['style.css'] ?? ''),
-                js: String(parsed.files['script.js'] ?? '')
-              }
-            : { html: code, css: '', js: '' };
-        } catch (e) { files = { html: code, css: '', js: '' }; }
-
-        const doc = new DOMParser().parseFromString(files.html, 'text/html');
-        const linkedStyles = doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]');
-        const linkedScript = doc.querySelector('script[src="script.js"]');
-
-        // Only bundled script.js executes. Stylesheet links remain browser
-        // resources, except exact style.css markers resolved from the CSS tab.
-        doc.querySelectorAll('script').forEach((script) => script.remove());
-        linkedStyles.forEach((link) => {
-          const style = doc.createElement('style');
-          style.textContent = files.css;
-          link.replaceWith(style);
-        });
-
-        // Restore head styles in source order; the body is imported below.
-        // Track node references so reruns remove only this recipe's resources.
-        doc.head.querySelectorAll('style, link[rel~="stylesheet"]').forEach((source) => {
-          const node = document.importNode(source, true);
-          htmlCssHeadStyles.push(node);
-          document.head.appendChild(node);
-        });
-
-        if (linkedStyles.length === 0 && files.css.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
-          root.appendChild(hint);
-        }
-
-        if (!linkedScript && files.js.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-          root.appendChild(hint);
-        }
-
-        doc.body.childNodes.forEach((node) => {
-          root.appendChild(document.importNode(node, true));
-        });
-
-        if (!linkedScript) return;
-        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
-      };
-    `
+    logic: buildHtmlPageLogic({ cssTab: true, mockFetch: false }),
   },
   dom: {
-    name: "DOM",
+    name: "DOM JavaScript",
     logic: `
       window.__RUN_MODE__ = (code, root, options = {}) => {
         root.replaceChildren();

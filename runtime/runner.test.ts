@@ -255,19 +255,36 @@ describe('getSandboxHtml', () => {
     expect(html).not.toContain('api/air-quality');
   });
 
-  it('combines bounded HTML/JS files with the abortable mock-fetch runtime', () => {
-    const html = getSandboxHtml('html-js-fetch');
+  it('builds the html-js family around one isolated nested page frame', () => {
+    for (const mode of ['html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media'] as EnvironmentMode[]) {
+      const html = getSandboxHtml(mode);
+      expect(html, mode).toContain('PAGE_FRAME_SANDBOX = "allow-scripts allow-modals allow-forms"');
+      expect(html, mode).toContain('event.source !== page.frame.contentWindow');
+      expect(html, mode).toContain('event.source !== window.parent');
+      expect(html, mode).not.toContain('allow-same-origin');
+      // The kernel no longer runs learner script.js itself.
+      expect(html, mode).not.toContain("new Function('root', files.js)");
+      // The bridge literal must never close the kernel's own script element.
+      expect(html.split('</script>').length - 1, mode).toBe(1);
+      expect(html, mode).not.toContain('unpkg.com');
+      expect(html, mode).not.toContain('esm.sh');
+      expect(html, mode).not.toContain('cdnjs');
+    }
+  });
 
-    expect(html).toContain('Content-Security-Policy');
+  it('ships the fetch mock only inside the html-js-fetch page bridge, under connect-src none', () => {
+    const html = getSandboxHtml('html-js-fetch');
     expect(html).toContain("connect-src 'none'");
     expect(html).toContain('window.__installFetchMock');
-    expect(html).toContain('__csFiles__');
-    expect(html).toContain('script[src="script.js"]');
-    expect(html).toContain("new HtmlJsAsyncFunction('root', files.js)");
-    expect(html).toContain('activeHtmlJsRunController.abort()');
-    expect(html).toContain('script.js is not linked');
-    expect(html).not.toContain('allow-same-origin');
     expect(html).not.toContain('api/air-quality');
+    expect(getSandboxHtml('html-js')).not.toContain('__installFetchMock = ');
+    expect(getSandboxHtml('html-css-js')).not.toContain('__installFetchMock = ');
+  });
+
+  it('keeps media assets out of the html-js-css-media sandbox', () => {
+    const html = getSandboxHtml('html-js-css-media');
+    expect(html).not.toContain('mediaAssets');
+    expect(html).not.toContain('interactive-examples.mdn.mozilla.net');
   });
 
   it('shows the output placeholder for visual modes but hides it for server modes', () => {
@@ -289,84 +306,6 @@ describe('getSandboxHtml', () => {
     expect(html).not.toContain('unpkg.com');
     expect(html).not.toContain('esm.sh');
     expect(html).not.toContain('cdnjs');
-  });
-
-  it('builds html-js as a manual DOM runner with strict local-script semantics', () => {
-    const html = getSandboxHtml('html-js');
-    const parseAt = html.indexOf('__csFiles__');
-    const linkAt = html.indexOf('script[src="script.js"]');
-    const removeAt = html.indexOf("querySelectorAll('script').forEach");
-    const importAt = html.indexOf('runRoot.appendChild(document.importNode(node, true))');
-    const executeAt = html.indexOf("new Function('root', files.js)(runRoot)");
-
-    expect(parseAt).toBeGreaterThan(-1);
-    expect(linkAt).toBeGreaterThan(parseAt);
-    expect(removeAt).toBeGreaterThan(linkAt);
-    expect(importAt).toBeGreaterThan(removeAt);
-    expect(executeAt).toBeGreaterThan(importAt);
-    expect(html).toContain('script.js is not linked');
-    expect(html).toContain('<script src="script.js"><\\/script>');
-    expect(html).not.toContain('<script src="script.js"></script> before </body>');
-    expect(html).toContain('cs-hint-banner');
-    expect(html).toContain('event.source !== window.parent');
-    expect(html).not.toContain('allow-same-origin');
-    expect(html).not.toContain("setAttribute('sandbox', '')");
-    expect(html).not.toContain('unpkg.com');
-    expect(html).not.toContain('esm.sh');
-    expect(html).not.toContain('cdnjs');
-  });
-
-  it('builds html-css-js with independent local style and script semantics', () => {
-    const html = getSandboxHtml('html-css-js');
-    const cleanupAt = html.indexOf("htmlCssHeadStyles.forEach");
-    const parseAt = html.indexOf('__csFiles__');
-    const styleLinkAt = html.indexOf('link[rel="stylesheet"][href="style.css"]');
-    const scriptLinkAt = html.indexOf('script[src="script.js"]');
-    const scriptRemoveAt = html.indexOf("querySelectorAll('script').forEach");
-    const styleTextAt = html.indexOf('style.textContent = files.css');
-    const styleAppendAt = html.indexOf('document.head.appendChild(node)');
-    const importAt = html.indexOf('root.appendChild(document.importNode(node, true))');
-    const executeAt = html.indexOf("new Function('root', files.js)(root)");
-
-    expect(cleanupAt).toBeGreaterThan(-1);
-    expect(parseAt).toBeGreaterThan(cleanupAt);
-    expect(styleLinkAt).toBeGreaterThan(parseAt);
-    expect(scriptLinkAt).toBeGreaterThan(styleLinkAt);
-    expect(scriptRemoveAt).toBeGreaterThan(scriptLinkAt);
-    expect(styleTextAt).toBeGreaterThan(scriptRemoveAt);
-    expect(styleAppendAt).toBeGreaterThan(styleTextAt);
-    expect(importAt).toBeGreaterThan(styleAppendAt);
-    expect(executeAt).toBeGreaterThan(importAt);
-    expect(html.indexOf('style.css is not linked')).toBeLessThan(html.indexOf('script.js is not linked'));
-    expect(html).toContain('<script src="script.js"><\\/script>');
-    expect(html).toContain('cs-hint-banner');
-    expect(html).toContain('event.source !== window.parent');
-    expect(html).not.toContain('allow-same-origin');
-    expect(html).not.toContain("setAttribute('sandbox', '')");
-    expect(html).not.toContain('unpkg.com');
-    expect(html).not.toContain('esm.sh');
-    expect(html).not.toContain('cdnjs');
-  });
-
-  it('reuses the three-file sandbox contract for html-js-css-media', () => {
-    const html = getSandboxHtml('html-js-css-media');
-
-    for (const marker of [
-      '__csFiles__',
-      'link[rel="stylesheet"][href="style.css"]',
-      'script[src="script.js"]',
-      "querySelectorAll('script').forEach",
-      'style.textContent = files.css',
-      "new Function('root', files.js)(root)",
-      'style.css is not linked',
-      'script.js is not linked',
-    ]) {
-      expect(html).toContain(marker);
-    }
-    expect(html).toContain('event.source !== window.parent');
-    expect(html).not.toContain('allow-same-origin');
-    expect(html).not.toContain('mediaAssets');
-    expect(html).not.toContain('interactive-examples.mdn.mozilla.net');
   });
 
   it('builds the html mode around a nested fully-sandboxed iframe with no CDNs', () => {
@@ -441,21 +380,31 @@ describe('getSandboxHtml', () => {
   });
 });
 
-describe('HTML stylesheet resources', () => {
+describe('HTML page rendering', () => {
   const bundle = (html: string, css = '', js = '') => JSON.stringify({
     __csFiles__: 1, files: { 'index.html': html, 'style.css': css, 'script.js': js },
   });
   const createRunner = (mode: EnvironmentMode) => {
     const html = getSandboxHtml(mode);
-    const stateAt = html.indexOf('let htmlCssHeadStyles = []');
+    const stateAt = html.indexOf('const PAGE_HAS_CSS_TAB');
     const logic = html.slice(stateAt >= 0 ? stateAt : html.indexOf('window.__RUN_MODE__ ='), html.lastIndexOf('</script>'));
-    const host = { __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement) => void };
-    new Function('window', 'document', 'DOMParser', logic)(host, document, DOMParser);
+    const listeners: Array<(event: { source: unknown; data: unknown }) => void> = [];
+    const sent: Array<[string, unknown]> = [];
+    const host = {
+      __RUN_MODE__: undefined as unknown as (code: string, root: HTMLElement, options?: object) => unknown,
+      addEventListener: (type: string, listener: (typeof listeners)[number]) => {
+        if (type === 'message') listeners.push(listener);
+      },
+    };
+    const sendPayload = (type: string, payload: unknown) => sent.push([type, payload]);
+    new Function('window', 'document', 'DOMParser', 'sendPayload', logic)(host, document, DOMParser, sendPayload);
     const root = document.createElement('div');
     document.body.appendChild(root);
     return {
       root,
-      run: (code: string) => host.__RUN_MODE__(code, root),
+      sent,
+      run: (code: string, options?: object) => host.__RUN_MODE__(code, root, options),
+      dispatch: (source: unknown, data: unknown) => listeners.forEach(listener => listener({ source, data })),
       cleanup: () => { host.__RUN_MODE__('', root); root.remove(); },
     };
   };
@@ -463,72 +412,196 @@ describe('HTML stylesheet resources', () => {
   it.each(['html', 'html-css'] as const)('%s preserves external stylesheet links', (mode) => {
     const runner = createRunner(mode);
     try {
-      const html = '<head><link rel="stylesheet" href="https://example.com/theme.css"></head><body><p>Page</p></body>';
+      const html = '<html data-theme="light" lang="fr"><head><link rel="stylesheet" href="https://example.com/theme.css"></head><body><p>Page</p></body></html>';
       runner.run(mode === 'html' ? html : bundle(html));
       const frame = runner.root.querySelector('iframe')!;
       const rendered = new DOMParser().parseFromString(frame.srcdoc, 'text/html');
       expect(rendered.querySelector('link')?.getAttribute('href')).toBe('https://example.com/theme.css');
+      expect(rendered.documentElement.getAttribute('data-theme')).toBe('light');
+      expect(rendered.documentElement.getAttribute('lang')).toBe('fr');
     } finally { runner.cleanup(); }
   });
 
-  describe.each(['html-css-js', 'html-js-css-media'] as const)('%s', (mode) => {
-    it('restores head styles in order, preserves link attributes, and cleans up only owned resources', () => {
-      const runner = createRunner(mode);
-      const hostStyle = document.createElement('style');
-      document.head.appendChild(hostStyle);
-      try {
-        runner.run(bundle(`<head>
-          <link rel="stylesheet" href="https://example.com/theme.css" media="screen" integrity="sha384-test" crossorigin="anonymous" referrerpolicy="no-referrer" disabled>
-          <style>p { color: blue; }</style>
-          <link rel="stylesheet" href="style.css">
-          <title>Do not import</title><script>throw new Error('Do not run')</script>
-          </head><body><p>Page</p><script src="script.js"></script></body>`,
-          'p { color: green; }', "root.dataset.runs = String(Number(root.dataset.runs || 0) + 1);"));
-        const nodes = Array.from(document.head.children).slice(Array.from(document.head.children).indexOf(hostStyle) + 1);
-        expect(nodes.map(node => node.tagName)).toEqual(['LINK', 'STYLE', 'STYLE']);
-        expect(nodes[0].getAttributeNames().sort()).toEqual(['crossorigin', 'disabled', 'href', 'integrity', 'media', 'referrerpolicy', 'rel']);
-        expect(nodes[0].getAttribute('media')).toBe('screen');
-        expect(nodes[0].getAttribute('integrity')).toBe('sha384-test');
-        expect(nodes[0].getAttribute('crossorigin')).toBe('anonymous');
-        expect(nodes[0].getAttribute('referrerpolicy')).toBe('no-referrer');
-        expect(nodes[1].textContent).toBe('p { color: blue; }');
-        expect(nodes[2].textContent).toBe('p { color: green; }');
-        expect(runner.root.querySelector('script, link')).toBeNull();
-        expect(runner.root.dataset.runs).toBe('1');
-        runner.run(bundle('<head><link rel="stylesheet" href="https://example.com/next.css"></head><body>Next</body>'));
-        expect(nodes.every(node => !node.isConnected)).toBe(true);
-        expect(document.head.querySelectorAll('link[href="https://example.com/next.css"]')).toHaveLength(1);
-        runner.run(bundle('<p>No styles</p>'));
-        expect(document.head.querySelector('link[href="https://example.com/next.css"]')).toBeNull();
-        expect(hostStyle.isConnected).toBe(true);
-      } finally { runner.cleanup(); hostStyle.remove(); }
-    });
+  const pageOf = (root: HTMLElement) => {
+    const frame = root.querySelector('iframe')!;
+    return { frame, doc: new DOMParser().parseFromString(frame.srcdoc, 'text/html') };
+  };
 
-    it('keeps body links and local replacements in place without duplicate injection', () => {
+  describe.each(['html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media'] as const)('%s page frame', (mode) => {
+    const cssTab = mode === 'html-css-js' || mode === 'html-js-css-media';
+
+    it('renders the page in its own sandboxed document, never same-origin', () => {
       const runner = createRunner(mode);
       try {
-        runner.run(bundle('<body><p>Page</p><link rel="stylesheet" href="https://example.com/body.css"><link rel="stylesheet" href="style.css"><style>p { color: blue; }</style></body>', 'p { color: green; }'));
-        expect(Array.from(runner.root.children).map(node => node.tagName)).toEqual(['P', 'LINK', 'STYLE', 'STYLE']);
-        expect(runner.root.querySelector('link')?.getAttribute('href')).toBe('https://example.com/body.css');
-        expect(runner.root.querySelector('style')?.textContent).toBe('p { color: green; }');
-        const bodyLink = runner.root.querySelector('link')!;
-        runner.run(bundle('<p>Next</p>'));
-        expect(bodyLink.isConnected).toBe(false);
-        runner.run(bundle('<link rel="stylesheet" href="https://example.com/fragment.css"><p>Fragment</p>'));
-        expect(document.head.querySelector('link[href="https://example.com/fragment.css"]')).not.toBeNull();
+        runner.run(bundle('<body><p>Page</p><script src="script.js"></script></body>', '', 'root.dataset.x = 1;'));
+        const { frame } = pageOf(runner.root);
+        expect(frame.getAttribute('sandbox')).toBe(SANDBOX_ATTRIBUTES);
+        expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin');
+        expect(frame.className).toBe('cs-html-frame');
+        // Learner markup lives in the frame, not in the kernel's root.
+        expect(runner.root.querySelector('p')).toBeNull();
+        expect(document.head.querySelector('style:not([data-code-shoebox-fixture])')).toBeNull();
       } finally { runner.cleanup(); }
     });
 
-    it('keeps missing-file hints independent of external styles', () => {
+    it('keeps html and body rules, html attributes, and head content in the page document', () => {
+      const runner = createRunner(mode);
+      const kernelHtml = document.documentElement;
+      try {
+        runner.run(bundle(`<html data-theme="light" lang="fr"><head><title>Planner</title>
+          <style>body { min-height: 100vh; display: grid; place-items: center; }</style>
+          <link rel="stylesheet" href="https://example.com/theme.css" media="screen" crossorigin="anonymous">
+          </head><body class="lesson"><h1>Top</h1></body></html>`));
+        const { doc } = pageOf(runner.root);
+        expect(doc.documentElement.getAttribute('data-theme')).toBe('light');
+        expect(doc.documentElement.getAttribute('lang')).toBe('fr');
+        expect(doc.body.className).toBe('lesson');
+        expect(doc.title).toBe('Planner');
+        expect(doc.querySelector('style')?.textContent).toContain('place-items: center');
+        const link = doc.querySelector('link[rel="stylesheet"]')!;
+        expect(link.getAttribute('href')).toBe('https://example.com/theme.css');
+        expect(link.getAttribute('media')).toBe('screen');
+        expect(link.getAttribute('crossorigin')).toBe('anonymous');
+        // The kernel document is untouched.
+        expect(kernelHtml.hasAttribute('data-theme')).toBe(false);
+        expect(kernelHtml.hasAttribute('lang')).toBe(false);
+      } finally { runner.cleanup(); }
+    });
+
+    it('puts the fixed bridge first, strips learner scripts, and keeps script.js out of srcdoc', () => {
       const runner = createRunner(mode);
       try {
-        runner.run(bundle('<link rel="stylesheet" href="https://example.com/theme.css"><p>Page</p>', 'p { color: red; }', 'throw new Error("unlinked");'));
-        expect(document.head.querySelector('link[href="https://example.com/theme.css"]')).not.toBeNull();
-        expect(runner.root.querySelectorAll('.cs-hint-banner')).toHaveLength(2);
-        expect(runner.root.textContent).toContain('style.css is not linked');
+        runner.run(bundle(
+          '<head><script>window.inline = 1</script></head><body><p>Page</p><noscript><p>No JS</p></noscript><script src="https://example.com/x.js"></script><script src="script.js"></script></body>',
+          '', 'window.SECRET_MARKER_FROM_SCRIPT_JS = 1;'));
+        const { frame, doc } = pageOf(runner.root);
+        const scripts = Array.from(doc.querySelectorAll('script'));
+        expect(scripts).toHaveLength(1);
+        expect(scripts[0].hasAttribute('src')).toBe(false);
+        expect(scripts[0].textContent).toContain("data.type !== 'CS_PAGE_RUN'");
+        expect(doc.head.firstElementChild).toBe(scripts[0]);
+        expect(doc.querySelector('noscript')).toBeNull();
+        expect(frame.srcdoc).not.toContain('SECRET_MARKER_FROM_SCRIPT_JS');
+        expect(frame.srcdoc).not.toContain('window.inline');
+        expect(scripts[0].textContent!.includes('window.__installFetchMock = ')).toBe(mode === 'html-js-fetch');
+      } finally { runner.cleanup(); }
+    });
+
+    it('copies the kernel CSP into the page head ahead of the bridge', () => {
+      const runner = createRunner(mode);
+      const policy = document.createElement('meta');
+      policy.setAttribute('http-equiv', 'Content-Security-Policy');
+      policy.setAttribute('content', "connect-src 'none'");
+      document.head.appendChild(policy);
+      try {
+        runner.run(bundle('<head><link rel="stylesheet" href="https://example.com/a.css"></head><body>x</body>'));
+        const first = pageOf(runner.root).doc.head.firstElementChild!;
+        expect(first.tagName).toBe('META');
+        expect(first.getAttribute('content')).toBe("connect-src 'none'");
+        expect(first.nextElementSibling?.tagName).toBe('SCRIPT');
+      } finally { runner.cleanup(); policy.remove(); }
+    });
+
+    it('sends script.js and mock routes to the current frame only after it reports ready', async () => {
+      const runner = createRunner(mode);
+      try {
+        const mockApi = { routes: [{ path: '/api/x', body: { ok: true } }] };
+        const done = vi.fn();
+        const execution = Promise.resolve(runner.run(
+          bundle('<body><script src="script.js"></script></body>', '', 'root.dataset.ran = "yes";'),
+          { mockApi },
+        )).then(done);
+        const { frame } = pageOf(runner.root);
+        const post = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => {});
+
+        // Messages from anything other than the current page frame are ignored.
+        runner.dispatch(window, { type: 'CS_PAGE_READY' });
+        runner.dispatch(window, { type: 'CONSOLE_LOG', payload: 'forged' });
+        expect(post).not.toHaveBeenCalled();
+
+        runner.dispatch(frame.contentWindow, { type: 'CS_PAGE_READY' });
+        runner.dispatch(frame.contentWindow, { type: 'CS_PAGE_READY' });
+        expect(post).toHaveBeenCalledTimes(1);
+        expect(post).toHaveBeenCalledWith(
+          { type: 'CS_PAGE_RUN', js: 'root.dataset.ran = "yes";', mockApi }, '*');
+
+        runner.dispatch(frame.contentWindow, { type: 'CONSOLE_LOG', payload: 'hello' });
+        runner.dispatch(frame.contentWindow, { type: 'RUNTIME_ERROR', payload: { toString: () => 'Boom' } });
+        runner.dispatch(frame.contentWindow, { type: 'EXECUTION_COMPLETE', payload: {} });
+        runner.dispatch(frame.contentWindow, { type: 'SERVER_READY' });
+        expect(runner.sent).toEqual([['CONSOLE_LOG', 'hello'], ['RUNTIME_ERROR', 'Boom']]);
+
+        await Promise.resolve();
+        expect(done).not.toHaveBeenCalled();
+        runner.dispatch(frame.contentWindow, { type: 'CS_PAGE_DONE' });
+        await execution;
+        expect(done).toHaveBeenCalled();
+      } finally { runner.cleanup(); }
+    });
+
+    it('replaces the frame on rerun and ignores the old one', async () => {
+      const runner = createRunner(mode);
+      try {
+        const first = runner.run(bundle('<body>One<script src="script.js"></script></body>', '', 'x()'));
+        const oldWindow = pageOf(runner.root).frame.contentWindow;
+        runner.run(bundle('<body>Two</body>'));
+        await first; // superseded runs settle instead of hanging
+        expect(runner.root.querySelectorAll('iframe')).toHaveLength(1);
+        runner.dispatch(oldWindow, { type: 'CONSOLE_LOG', payload: 'stale' });
+        expect(runner.sent).toEqual([]);
+        expect(pageOf(runner.root).doc.body.textContent).toContain('Two');
+      } finally { runner.cleanup(); }
+    });
+
+    it('sends no script when script.js is not linked and shows the hint', () => {
+      const runner = createRunner(mode);
+      try {
+        runner.run(bundle('<p>Page</p>', '', 'throw new Error("unlinked");'));
+        const { frame } = pageOf(runner.root);
+        const post = vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(() => {});
+        runner.dispatch(frame.contentWindow, { type: 'CS_PAGE_READY' });
+        expect(post).toHaveBeenCalledWith(expect.objectContaining({ js: null }), '*');
         expect(runner.root.textContent).toContain('script.js is not linked');
       } finally { runner.cleanup(); }
     });
+
+    if (cssTab) {
+      it('inlines exact style.css links in place and cannot break out of the style element', () => {
+        const runner = createRunner(mode);
+        try {
+          runner.run(bundle(
+            '<head><link rel="stylesheet" href="https://example.com/a.css"><link rel="stylesheet" href="style.css"><style>p { color: blue; }</style></head><body><p>Page</p></body>',
+            'p { color: green; } /* </style><script>window.escaped = 1</script> */'));
+          const { doc } = pageOf(runner.root);
+          const sheets = Array.from(doc.head.querySelectorAll('link[rel="stylesheet"], style'));
+          expect(sheets.map(node => node.tagName)).toEqual(['LINK', 'STYLE', 'STYLE']);
+          expect(sheets[1].textContent).toContain('p { color: green; }');
+          expect(sheets[2].textContent).toBe('p { color: blue; }');
+          expect(doc.querySelectorAll('script')).toHaveLength(1);
+          expect(runner.root.querySelector('.cs-hint-banner')).toBeNull();
+        } finally { runner.cleanup(); }
+      });
+
+      it('shows the style.css hint before the script.js hint', () => {
+        const runner = createRunner(mode);
+        try {
+          runner.run(bundle('<p>Page</p>', 'p { color: red; }', 'x()'));
+          const hints = Array.from(runner.root.querySelectorAll('.cs-hint-banner')).map(node => node.textContent);
+          expect(hints).toHaveLength(2);
+          expect(hints[0]).toContain('style.css is not linked');
+          expect(hints[1]).toContain('script.js is not linked');
+        } finally { runner.cleanup(); }
+      });
+    } else {
+      it('has no CSS tab: style.css links stay as plain links', () => {
+        const runner = createRunner(mode);
+        try {
+          runner.run(bundle('<head><link rel="stylesheet" href="style.css"></head><body>x</body>', 'p { color: red; }'));
+          expect(pageOf(runner.root).doc.querySelector('link[href="style.css"]')).not.toBeNull();
+          expect(runner.root.textContent).not.toContain('style.css is not linked');
+        } finally { runner.cleanup(); }
+      });
+    }
   });
 });
 

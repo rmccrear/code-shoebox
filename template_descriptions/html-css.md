@@ -15,7 +15,7 @@ A two-file web page: the editor shows an **index.html** tab and a **style.css** 
 - **Console:** none — this mode has no console panel.
 
 ## Limitations
-- **No JavaScript:** `<script>` tags never execute (blocked by the browser sandbox); an amber banner points to the DOM mode.
+- **No JavaScript:** `<script>` tags never execute (blocked by the browser sandbox); an amber banner points to DOM JavaScript mode.
 - **Only `style.css` resolves:** a relative href like `main.css` loads nothing. Use the one provided filename.
 - **No extra files:** tabs can't be added, removed, or renamed.
 - **Links navigate away:** clicking a link loads that page in the output frame; press Run (or keep typing) to get your page back.
