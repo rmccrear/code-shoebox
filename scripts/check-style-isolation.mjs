@@ -134,7 +134,8 @@ try {
   assert.equal(await page.getByAltText('Fixture media').evaluate(element => element.complete && element.naturalWidth > 0), true);
   await page.getByRole('button', { name: 'script.js', exact: true }).click();
   await page.getByRole('button', { name: 'RUN CODE', exact: true }).click();
-  await page.locator('iframe').contentFrame().getByText('Editable sandbox ran', { exact: true }).waitFor();
+  await page.locator('iframe').contentFrame().locator('iframe.cs-html-frame')
+    .contentFrame().getByText('Editable sandbox ran', { exact: true }).waitFor();
   await page.locator('.break-all.whitespace-pre').filter({ hasText: 'editable smoke' }).waitFor();
   await page.getByTitle('Clear Console').click();
   await page.getByText('No output', { exact: true }).waitFor();
