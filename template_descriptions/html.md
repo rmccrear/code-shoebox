@@ -16,7 +16,7 @@ A real web page environment: write HTML and CSS in one document and watch it ren
 - **Console:** None — this mode has no console panel.
 
 ## Limitations
-- **No JavaScript:** `<script>` tags never execute (blocked by the browser sandbox). A banner above the page says so and points to the DOM mode.
+- **No JavaScript:** `<script>` tags never execute (blocked by the browser sandbox). A banner above the page says so and points to DOM JavaScript mode.
 - **Links navigate away:** Clicking a link loads that page inside the output frame; press Run (or keep typing) to get your page back.
 - **No forms submission, no popups:** the sandbox blocks them.
 

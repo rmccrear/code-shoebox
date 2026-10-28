@@ -125,7 +125,7 @@ const App: React.FC = () => {
                     <option value="html-js-fetch">HTML, JavaScript & Fetch (Mock API)</option>
                     <option value="html-css-js">HTML, CSS & JavaScript (3 files)</option>
                     <option value="html-js-css-media">HTML, CSS, JavaScript & Media (4 tabs)</option>
-                    <option value="dom">DOM / JS</option>
+                    <option value="dom">DOM JavaScript</option>
                     <option value="fetch">Fetch API (Mock Server)</option>
                     <option value="typescript">TypeScript</option>
                     <option value="p5">p5.js</option>
