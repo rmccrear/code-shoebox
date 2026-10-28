@@ -13,7 +13,7 @@ CodeShoebox is a self-contained, secure code playground component for React. Thi
   - `html-js`: Two-tab HTML & JavaScript editing (`index.html` + `script.js`) with manual execution and console output.
   - `html-css-js`: Three-tab HTML, CSS & JavaScript editing with explicit local-file links, manual execution, and console output.
   - `html-js-css-media`: Three editable web files plus a read-only Media tab with up to three image, audio, or video assets and usage snippets.
-  - `dom`: Standard JavaScript manipulation.
+  - `dom`: DOM JavaScript — write JavaScript against an optional lesson-provided page.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
@@ -32,11 +32,11 @@ CodeShoebox is a self-contained, secure code playground component for React. Thi
 
 ## Installation
 
-The experimental **v1.0.38-c** release defaults to CodeMirror 6 without changing
+The experimental **v1.0.39-c** release defaults to CodeMirror 6 without changing
 `CodeShoebox` props. Install the compiled QA release:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.38-c
+npm install github:rmccrear/code-shoebox#v1.0.39-c
 ```
 
 Keep importing `code-shoebox/styles.css`. Emmet lessons retain `enableEmmet` for
@@ -46,13 +46,13 @@ hovers remain unavailable. Exercise execution, including TypeScript transpilatio
 is unchanged.
 
 The QA distribution is also available on `dist-c`. Stable Monaco remains at
-`v1.0.37` and `dist`. The QA tag points to compiled package files; the source is
-on `codex/codemirror6-prototype`. This QA release includes the v1.0.37 external
-stylesheet fixes for HTML + CSS + JavaScript and its Media variant.
+`v1.0.39` and `dist`. The QA tag points to compiled package files; the source is
+on `codex/codemirror6-prototype`. This QA release matches stable v1.0.39's runtime,
+including the isolated page frame for the HTML + JavaScript modes (issue #26).
 
 ## Optional TypeScript diagnostics (Vite)
 
-Version `v1.0.38-c` includes a separately bundled, opt-in checker. Import its
+Since `v1.0.38-c`, the QA release includes a separately bundled, opt-in checker. Import its
 worker through your application's bundler:
 
 ```tsx
@@ -355,7 +355,7 @@ const state = useSandboxState('interactive-page', undefined, 'html-js');
 
 ## HTML + CSS + JavaScript Mode
 
-Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors. External stylesheet links and inline styles in head or body also apply in source order. Each Run replaces previous head styles and learner DOM. External CSS loads asynchronously; bundled JavaScript does not wait for it.
+Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors. External stylesheet links and inline styles in head or body also apply in source order. Each Run replaces previous head styles and learner DOM. Authored `<html>` attributes, including `data-theme`, `lang`, and `dir`, are preserved and reset on rerun. External CSS loads asynchronously; bundled JavaScript does not wait for it.
 
 ```tsx
 const state = useSandboxState('complete-web-page', undefined, 'html-css-js');

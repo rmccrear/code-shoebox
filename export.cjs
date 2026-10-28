@@ -1048,6 +1048,22 @@ var BASE_STYLES = `
         border-radius: 4px;
     }
 `;
+var FORMAT_RUNTIME_VALUE_SOURCE = `
+    function formatRuntimeValue(value) {
+        if (
+            value !== null
+            && typeof value === 'object'
+            && typeof value.name === 'string'
+            && typeof value.message === 'string'
+        ) {
+            return value.name + ': ' + value.message;
+        }
+        if (typeof value === 'object' && value !== null) {
+            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
+        }
+        return String(value);
+    }
+`;
 var KERNEL_SCRIPTS = `
     // --- Console & Module System ---
     window.messagePort = null;
@@ -1066,21 +1082,7 @@ var KERNEL_SCRIPTS = `
         else window.parent.postMessage(message, '*');
     }
 
-    function formatRuntimeValue(value) {
-        if (
-            value !== null
-            && typeof value === 'object'
-            && typeof value.name === 'string'
-            && typeof value.message === 'string'
-        ) {
-            return value.name + ': ' + value.message;
-        }
-        if (typeof value === 'object' && value !== null) {
-            try { return JSON.stringify(value, null, 2); } catch (e) { return String(value); }
-        }
-        return String(value);
-    }
-
+    ${FORMAT_RUNTIME_VALUE_SOURCE}
     // Intercept standard logs
     ['log', 'error', 'warn', 'info'].forEach(method => {
         const original = console[method];
@@ -1681,27 +1683,79 @@ var HTML_RUNTIME_STYLES = `
     background: #fff;
   }
 `;
-var HTML_JS_RUNTIME_LOGIC = `
-  let activeHtmlJsRunController = null;
-  let htmlJsRunGeneration = 0;
-  const HtmlJsAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+var PAGE_BRIDGE_SOURCE = `
+  (() => {
+    const post = (type, payload) => window.parent.postMessage({ type: type, payload: payload }, '*');
+    ['log', 'error', 'warn', 'info'].forEach((method) => {
+      const original = console[method];
+      console[method] = function (...args) {
+        original.apply(console, args);
+        post(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), args.map(formatRuntimeValue).join(' '));
+      };
+    });
+    window.onerror = (msg, src, line, column, error) => {
+      post('RUNTIME_ERROR', error
+        ? formatRuntimeValue(error)
+        : 'Error: ' + String(msg) + ' (Line ' + line + ', Column ' + column + ')');
+    };
+    window.addEventListener('unhandledrejection', (event) => {
+      post('RUNTIME_ERROR', formatRuntimeValue(event.reason));
+    });
+
+    const PageAsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    let started = false;
+    window.addEventListener('message', (event) => {
+      if (event.source !== window.parent) return;
+      const data = event.data;
+      if (started || !data || data.type !== 'CS_PAGE_RUN') return;
+      started = true;
+      const finish = () => post('CS_PAGE_DONE');
+      if (typeof data.js !== 'string') { finish(); return; }
+      if (typeof window.__installFetchMock === 'function') {
+        window.__installFetchMock(data.mockApi);
+        Promise.resolve()
+          .then(() => new PageAsyncFunction('root', data.js)(document.body))
+          .catch((error) => console.error(error))
+          .then(finish);
+        return;
+      }
+      try { new Function('root', data.js)(document.body); } catch (error) { console.error(error); }
+      finish();
+    });
+
+    const ready = () => post('CS_PAGE_READY');
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true });
+    else ready();
+  })();
+`;
+var toScriptLiteral = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
+var buildHtmlPageLogic = ({ cssTab, mockFetch }) => `
+  const PAGE_HAS_CSS_TAB = ${cssTab};
+  const PAGE_FRAME_SANDBOX = ${toScriptLiteral(SANDBOX_ATTRIBUTES)};
+  const PAGE_BRIDGE = ${toScriptLiteral((mockFetch ? FETCH_MOCK_SETUP : "") + FORMAT_RUNTIME_VALUE_SOURCE + PAGE_BRIDGE_SOURCE)};
+  let activePage = null;
+
+  window.addEventListener('message', (event) => {
+    const page = activePage;
+    if (!page || event.source !== page.frame.contentWindow) return;
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'CS_PAGE_READY') {
+      if (page.sent) return;
+      page.sent = true;
+      page.frame.contentWindow.postMessage({ type: 'CS_PAGE_RUN', js: page.js, mockApi: page.mockApi }, '*');
+    } else if (data.type === 'CS_PAGE_DONE') {
+      page.resolve();
+    } else if (data.type === 'CONSOLE_LOG' || data.type === 'CONSOLE_WARN' || data.type === 'RUNTIME_ERROR') {
+      sendPayload(data.type, String(data.payload));
+    }
+  });
 
   window.__RUN_MODE__ = (code, root, options = {}) => {
-    const usesMockFetch = typeof window.__installFetchMock === 'function';
-    let generation = htmlJsRunGeneration;
-    let runRoot = root;
-
-    if (usesMockFetch) {
-      generation = ++htmlJsRunGeneration;
-      if (activeHtmlJsRunController) activeHtmlJsRunController.abort();
-      activeHtmlJsRunController = new AbortController();
-      runRoot = document.createElement('div');
-      runRoot.style.width = '100%';
-      root.replaceChildren(runRoot);
-      window.__installFetchMock(options.mockApi, activeHtmlJsRunController.signal);
-    } else {
-      root.replaceChildren();
-    }
+    // Dropping the old frame ends its timers, listeners, and pending fetches.
+    if (activePage) activePage.resolve();
+    activePage = null;
+    root.replaceChildren();
 
     // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
     // The iframe kernel cannot import modules; keep both copies in sync.
@@ -1709,37 +1763,59 @@ var HTML_JS_RUNTIME_LOGIC = `
     try {
       const parsed = JSON.parse(code);
       files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-        ? { html: String(parsed.files['index.html'] ?? ''), js: String(parsed.files['script.js'] ?? '') }
-        : { html: code, js: '' };
-    } catch (e) { files = { html: code, js: '' }; }
+        ? {
+            html: String(parsed.files['index.html'] ?? ''),
+            css: PAGE_HAS_CSS_TAB ? String(parsed.files['style.css'] ?? '') : '',
+            js: String(parsed.files['script.js'] ?? '')
+          }
+        : { html: code, css: '', js: '' };
+    } catch (e) { files = { html: code, css: '', js: '' }; }
 
     const doc = new DOMParser().parseFromString(files.html, 'text/html');
+    const linkedStyles = PAGE_HAS_CSS_TAB ? doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]') : [];
     const linkedScript = doc.querySelector('script[src="script.js"]');
 
-    // Learner HTML never creates a second execution path. The bundled
-    // script.js file is the only JavaScript this mode executes.
-    doc.querySelectorAll('script').forEach((script) => script.remove());
+    // Bundled script.js is the only learner JavaScript that runs. <noscript>
+    // goes too: it parses differently once the page frame runs scripts.
+    doc.querySelectorAll('script, noscript').forEach((node) => node.remove());
+    // Exact style.css links become inline styles. Other stylesheet links stay
+    // browser resources inside the page frame.
+    linkedStyles.forEach((link) => {
+      const style = doc.createElement('style');
+      style.textContent = files.css.replace(/<\\/style/gi, '<\\\\/style');
+      link.replaceWith(style);
+    });
+
+    if (PAGE_HAS_CSS_TAB && linkedStyles.length === 0 && files.css.trim()) {
+      const hint = document.createElement('div');
+      hint.className = 'cs-hint-banner';
+      hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
+      root.appendChild(hint);
+    }
 
     if (!linkedScript && files.js.trim()) {
       const hint = document.createElement('div');
       hint.className = 'cs-hint-banner';
       hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-      runRoot.appendChild(hint);
+      root.appendChild(hint);
     }
 
-    doc.body.childNodes.forEach((node) => {
-      runRoot.appendChild(document.importNode(node, true));
-    });
+    // The bridge runs before any learner markup; the kernel's CSP (if any)
+    // goes first of all so it covers everything after it.
+    const bridge = doc.createElement('script');
+    bridge.textContent = PAGE_BRIDGE;
+    doc.head.prepend(bridge);
+    const policy = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (policy) doc.head.prepend(doc.importNode(policy, true));
 
-    if (!linkedScript) return;
-    if (!usesMockFetch) {
-      try { new Function('root', files.js)(runRoot); } catch (error) { console.error(error); }
-      return;
-    }
-
-    return new HtmlJsAsyncFunction('root', files.js)(runRoot).catch((error) => {
-      if (generation !== htmlJsRunGeneration || (error && error.name === 'AbortError')) return;
-      throw error;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', PAGE_FRAME_SANDBOX);
+    frame.className = 'cs-html-frame';
+    frame.title = 'Page preview';
+    return new Promise((resolve) => {
+      activePage = { frame, js: linkedScript ? files.js : null, mockApi: options.mockApi, sent: false, resolve };
+      frame.srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+      root.appendChild(frame);
     });
   };
 `;
@@ -1761,7 +1837,7 @@ var ENV_RECIPES = {
         if (probe.querySelector('script')) {
           const banner = document.createElement('div');
           banner.className = 'cs-script-banner';
-          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to DOM JavaScript mode to write JavaScript.';
           root.appendChild(banner);
         }
         const frame = document.createElement('iframe');
@@ -1794,7 +1870,7 @@ var ENV_RECIPES = {
         if (doc.querySelector('script')) {
           const banner = document.createElement('div');
           banner.className = 'cs-script-banner';
-          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to the DOM mode to write JavaScript.';
+          banner.textContent = '\\u26a0 <script> is ignored in HTML & CSS mode \\u2014 switch to DOM JavaScript mode to write JavaScript.';
           root.appendChild(banner);
         }
 
@@ -1826,87 +1902,23 @@ var ENV_RECIPES = {
     name: "HTML & JavaScript (script.js)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: HTML_JS_RUNTIME_LOGIC
+    logic: buildHtmlPageLogic({ cssTab: false, mockFetch: false })
   },
   "html-js-fetch": {
     name: "HTML, JavaScript & Fetch (Mock API)",
-    mocks: FETCH_MOCK_SETUP,
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
     contentSecurityPolicy: "connect-src 'none'",
-    logic: HTML_JS_RUNTIME_LOGIC
+    logic: buildHtmlPageLogic({ cssTab: false, mockFetch: true })
   },
   "html-css-js": {
     name: "HTML, CSS & JavaScript (3 files)",
     showPlaceholder: false,
     styles: HTML_RUNTIME_STYLES,
-    logic: `
-      let htmlCssHeadStyles = [];
-      window.__RUN_MODE__ = (code, root) => {
-        root.replaceChildren();
-        htmlCssHeadStyles.forEach((node) => node.remove());
-        htmlCssHeadStyles = [];
-
-        // Inline copy of the bounded bundle parser from runtime/fileBundle.ts.
-        // The iframe kernel cannot import modules; keep both copies in sync.
-        let files;
-        try {
-          const parsed = JSON.parse(code);
-          files = (parsed && parsed.__csFiles__ === 1 && parsed.files)
-            ? {
-                html: String(parsed.files['index.html'] ?? ''),
-                css: String(parsed.files['style.css'] ?? ''),
-                js: String(parsed.files['script.js'] ?? '')
-              }
-            : { html: code, css: '', js: '' };
-        } catch (e) { files = { html: code, css: '', js: '' }; }
-
-        const doc = new DOMParser().parseFromString(files.html, 'text/html');
-        const linkedStyles = doc.querySelectorAll('link[rel="stylesheet"][href="style.css"]');
-        const linkedScript = doc.querySelector('script[src="script.js"]');
-
-        // Only bundled script.js executes. Stylesheet links remain browser
-        // resources, except exact style.css markers resolved from the CSS tab.
-        doc.querySelectorAll('script').forEach((script) => script.remove());
-        linkedStyles.forEach((link) => {
-          const style = doc.createElement('style');
-          style.textContent = files.css;
-          link.replaceWith(style);
-        });
-
-        // Restore head styles in source order; the body is imported below.
-        // Track node references so reruns remove only this recipe's resources.
-        doc.head.querySelectorAll('style, link[rel~="stylesheet"]').forEach((source) => {
-          const node = document.importNode(source, true);
-          htmlCssHeadStyles.push(node);
-          document.head.appendChild(node);
-        });
-
-        if (linkedStyles.length === 0 && files.css.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'style.css is not linked \\u2014 add <link rel="stylesheet" href="style.css"> inside <head>.';
-          root.appendChild(hint);
-        }
-
-        if (!linkedScript && files.js.trim()) {
-          const hint = document.createElement('div');
-          hint.className = 'cs-hint-banner';
-          hint.textContent = 'script.js is not linked \\u2014 add <script src="script.js"><\\/script> before </body>.';
-          root.appendChild(hint);
-        }
-
-        doc.body.childNodes.forEach((node) => {
-          root.appendChild(document.importNode(node, true));
-        });
-
-        if (!linkedScript) return;
-        try { new Function('root', files.js)(root); } catch (e) { console.error(e); }
-      };
-    `
+    logic: buildHtmlPageLogic({ cssTab: true, mockFetch: false })
   },
   dom: {
-    name: "DOM",
+    name: "DOM JavaScript",
     logic: `
       window.__RUN_MODE__ = (code, root, options = {}) => {
         root.replaceChildren();
