@@ -614,6 +614,9 @@ video:where([data-code-shoebox], [data-code-shoebox] *) {
 .table:where([data-code-shoebox], [data-code-shoebox] *) {
   display: table;
 }
+.grid:where([data-code-shoebox], [data-code-shoebox] *) {
+  display: grid;
+}
 .hidden:where([data-code-shoebox], [data-code-shoebox] *) {
   display: none;
 }

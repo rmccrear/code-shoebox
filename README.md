@@ -13,7 +13,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `html-js`: Two-tab HTML & JavaScript editing (`index.html` + `script.js`) with manual execution and console output.
   - `html-css-js`: Three-tab HTML, CSS & JavaScript editing with explicit local-file links, manual execution, and console output.
   - `html-js-css-media`: Three editable web files plus a read-only Media tab with up to three image, audio, or video assets and usage snippets.
-  - `dom`: Standard JavaScript manipulation.
+  - `dom`: DOM JavaScript — write JavaScript against an optional lesson-provided page.
   - `typescript`: TypeScript compilation and execution.
   - `p5`: p5.js creative coding environment with auto-canvas detection.
   - `react`: Live React component rendering with in-browser Babel transpilation.
@@ -32,12 +32,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.37**:
+To install version **v1.0.39**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.37
+npm install github:rmccrear/code-shoebox#v1.0.39
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.37
+yarn add github:rmccrear/code-shoebox#v1.0.39
 ```
 
 ## Maintenance & Releases
@@ -299,7 +299,7 @@ const state = useSandboxState('interactive-page', undefined, 'html-js');
 
 ## HTML + CSS + JavaScript Mode
 
-Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors. External stylesheet links and inline styles in head or body also apply in source order. Each Run replaces previous head styles and learner DOM. External CSS loads asynchronously; bundled JavaScript does not wait for it.
+Use `html-css-js` when learners should own a page's structure, presentation, and behavior as three fixed files: `index.html`, `style.css`, and `script.js`. Pressing Run rebuilds the page, applies the CSS when HTML contains `<link rel="stylesheet" href="style.css">`, and executes JavaScript when HTML contains `<script src="script.js"></script>`. The two links resolve independently, and the console captures logs and runtime errors. External stylesheet links and inline styles in head or body also apply in source order. Each Run replaces previous head styles and learner DOM. Authored `<html>` attributes, including `data-theme`, `lang`, and `dir`, are preserved and reset on rerun. External CSS loads asynchronously; bundled JavaScript does not wait for it.
 
 ```tsx
 const state = useSandboxState('complete-web-page', undefined, 'html-css-js');
