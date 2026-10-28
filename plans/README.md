@@ -6,6 +6,13 @@ merged to `main` — the 001–005 stack, then 006/007). Round 2 generated on
 Plan 013 was added after executing plan 010 exposed a separate Vite/esbuild
 audit-remediation slice. Plan 014 is a focused product handoff for host-owned
 DOM fixtures, bounded fixture tabs, and learner-readable runtime errors.
+Plan 015 is the selected follow-on product direction for a bounded, editable
+HTML + JavaScript mode built from the HTML/CSS bundle tabs and DOM runtime; it
+merged as PR #4 at `ea5c8a9`. Plan 016 is the bounded three-file follow-on for
+learners who should own HTML, CSS, and JavaScript together. Plan 017 adds a
+fourth, read-only Media tab with up to three host-supplied image/audio/video
+assets and usage snippets, while preserving Plan 016's three-file envelope and
+sandbox recipe.
 
 Round 2 ran non-interactively; per the skill's default, plans were written
 for the top findings by leverage (two confirmed bugs, one dependency-security
@@ -35,6 +42,10 @@ your row when done.
 | 012  | Component tests for iframe hosts (ServerOutput, OutputFrame, routing) | P2 | M | 008, 009 | DONE (implemented 2026-06-12; 57 tests pass) |
 | 013  | Harden build-toolchain audit findings (Vite + esbuild) | P2 | S-M | 010 | TODO |
 | 014  | DOM fixtures, bounded file tabs, and useful runtime errors | P1 | M-L | 012 | DONE (implemented 2026-07-16; typecheck/lint/builds/70 tests pass; browser smoke passed) |
+| 015  | Add an editable HTML + JavaScript environment mode | P1 | M-L | 007, 014 | DONE (merged as PR #4 @ ea5c8a9; CI + 78 tests + browser smoke passed) |
+| 016  | Add a bounded HTML + CSS + JavaScript environment mode | P1 | M | 015 | DONE (draft PR #5 @ 1a18475; CI + 86 tests + browser smoke passed) |
+| 017  | Add a four-tab HTML + CSS + JavaScript + Media mode | P1 | M-L | 016 | TODO |
+| 018  | Persistence-key lifecycle contract: docs, save guard, tests | P2 | S–M | — | DONE (2026-08-17; 101 tests + typecheck/lint/build/package/browser checks pass) |
 | 019  | Isolate distributed styles from host applications (issue #20) | P1 | M | — | DONE (2026-10-09; 174 tests, 16 browser scenarios + editable smoke; host QA passed; font inheritance corrected; 1.0.35 prepared) |
 | 020  | Allow external stylesheet links across HTML modes | P2 | S–M | 016 | DONE — 2026-10-18; 191 tests + Chromium checks pass; see [plan](020-html-stylesheet-link-parity.md) |
 
@@ -54,8 +65,23 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 014 depends on 012 because it changes the iframe host and editor routing;
   the existing component tests are its regression safety net. It is otherwise
   independent of the unfinished build-toolchain plan 013.
+- 015 depends on 007 for the versioned multi-file envelope/editable tabs and on
+  014 for DOM restoration plus readable console errors. Both dependencies are
+  DONE. It is independent of the unfinished build-toolchain plan 013.
+- 016 depends on 015 because it extends the verified bounded bundle, tab,
+  manual-run, console, and DOM-restoration paths from two files to three. It is
+  independent of the unfinished build-toolchain plan 013.
+- 017 depends on 016 because it reuses that plan's exact three-file envelope,
+  editable tab order, manual-run output, and sandbox recipe. Media remains a
+  host-owned read-only UI concern, so 017 is otherwise independent of the
+  unfinished build-toolchain plan 013. If implemented before PR #5 merges, use
+  a stacked branch/PR based on `codex/016-html-css-js-mode` at `1a18475`.
 - 008/009 carry manual browser smoke-test steps because there is still no
   browser-level automation (Playwright deferred again this round — see below).
+- 018 has no in-repo dependency. Its external sequencing gate cleared when
+  Lesson Architect PR #157 merged as `b240f6e0`; a Code Shoebox dist publish is
+  allowed, while a Lesson Architect dependency-pin bump remains optional
+  follow-up hardening. Details are in Plan 018's coordination section.
 
 ## Findings considered — vetted but not planned this round
 
@@ -119,10 +145,10 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   marginal; same edge behavior as several real-Express cases.
 - **Prettier / husky / pre-commit hooks** — low leverage for a solo repo with CI.
 
-## Direction options (presented, not selected — maintainer's call)
+## Direction options (one selected; remaining options are maintainer's call)
 
-Round 2 direction findings, grounded in the repo. None were turned into plans
-(non-interactive run; features are the maintainer's choice). Top candidates:
+Round 2 direction findings, grounded in the repo. The HTML + JavaScript option
+was selected on 2026-08-16 and is now plan 015; the others remain unplanned.
 
 1. **HTTP method selector + request body for ServerOutput** —
    `ServerOutput.tsx:48` hardcodes `const [method] = useState('GET')` with no
@@ -138,11 +164,11 @@ Round 2 direction findings, grounded in the repo. None were turned into plans
    toolbar toggle and grow `docs.ts` per mode (M, extends the learner-facing
    theme of plans 006/007), or delete both files as dead code (S). Keeping
    unwired ships dead weight and confuses contributors — pick one.
-3. **Third tab (JS) on the multi-file infrastructure** — `runtime/fileBundle.ts`
-   just shipped a fixed two-file `WebFileBundle` (`index.html` + `style.css`)
-   with an envelope format designed for extension; an `html-css-js` mode is
-   the natural next step and directly extends the round-1 investment. Coarse
-   effort: M–L (bundle generalization + a third Monaco tab + recipe).
+3. **Selected — editable HTML + JavaScript mode (plan 015)** —
+   `runtime/fileBundle.ts` shipped a versioned envelope and editable tab
+   infrastructure, while plan 014 added safe DOM restoration and readable
+   runtime errors. Plan 015 combines those seams as two editable files
+   (`index.html` + `script.js`) without expanding to a generic project model.
 4. **Share-code-via-URL** — `useEditorHashPresets.ts` already round-trips
    hash ↔ presets one way; serializing user code (e.g. lz-string) into the
    hash plus a Share button makes learner work shareable without a backend.

@@ -1,4 +1,4 @@
-# Environment: DOM / Vanilla JS
+# Environment: DOM JavaScript
 **ID:** `dom`
 
 ## Overview

@@ -7,18 +7,18 @@ A two-file interactive page: edit the structure in **index.html**, edit the beha
 ## Features
 - **Two editable tabs:** `index.html` and `script.js`, each with its own undo history.
 - **Explicit connection:** JavaScript runs only when `index.html` includes `<script src="script.js"></script>`. A blue hint provides the tag when it is missing.
-- **Fresh page per Run:** the current HTML is restored before the current JavaScript executes.
-- **Real browser APIs:** `document`, `window`, and the sandbox `root` element are available.
+- **Fresh page per Run:** each Run builds the page as its own document, as in a normal browser tab, then runs the current JavaScript. Timers and listeners from the previous Run stop.
+- **Real browser APIs:** `document`, `window`, and `root` (the page's `document.body`) are available.
 - **Console:** captures logs, warnings, errors, and rejected promises.
 
 ## Output UI
-- **Visual:** body content from `index.html` renders inside the sandbox output.
+- **Visual:** `index.html` renders as its own page, so `html`/`body` styles, the title, and scrolling work as in a real tab.
 - **Console:** visible below the page output.
 - **Execution:** manual only. Editing does not run JavaScript; press Run when ready.
 
 ## Limitations
 - **Only script.js executes:** inline scripts, remote scripts, data URLs, and other filenames are removed and never run.
-- **Body content only:** learner body children render under `#root`; head metadata, title, body attributes, and parser timing are not reproduced.
+- **Run timing:** `script.js` always runs once after the page is parsed; `async`/`defer` timing is not reproduced.
 - **Native JavaScript:** no TypeScript, Babel, JSX, modules, `import`/`export`, packages, or additional files.
 - **Fixed files:** tabs cannot be added, removed, or renamed.
 
