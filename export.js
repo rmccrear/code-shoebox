@@ -260,6 +260,23 @@ var FORMAT_RUNTIME_VALUE_SOURCE = `
         }
         return String(value);
     }
+
+    // One typed part per console argument, so the host console can show
+    // string "1" and number 1 the way DevTools does (issue #29).
+    function describeRuntimeValue(value) {
+        if (value === null) return { kind: 'null', text: 'null' };
+        const kind = typeof value;
+        if (kind === 'string') return { kind: 'string', text: value };
+        if (
+            kind === 'number' || kind === 'bigint' || kind === 'boolean'
+            || kind === 'undefined' || kind === 'symbol' || kind === 'function'
+        ) {
+            return { kind: kind, text: String(value) };
+        }
+        const text = formatRuntimeValue(value);
+        const isError = typeof value.name === 'string' && typeof value.message === 'string';
+        return { kind: isError ? 'error' : 'object', text: text };
+    }
 `;
 var KERNEL_SCRIPTS = `
     // --- Console & Module System ---
@@ -273,8 +290,9 @@ var KERNEL_SCRIPTS = `
         throw new Error('Module not found: ' + module);
     };
 
-    function sendPayload(type, payload) {
+    function sendPayload(type, payload, parts) {
         const message = { type, payload };
+        if (Array.isArray(parts)) message.parts = parts;
         if (window.messagePort) window.messagePort.postMessage(message);
         else window.parent.postMessage(message, '*');
     }
@@ -286,7 +304,11 @@ var KERNEL_SCRIPTS = `
         console[method] = function(...args) {
             original.apply(console, args);
             const content = args.map(formatRuntimeValue).join(' ');
-            sendPayload(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), content);
+            sendPayload(
+                method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
+                content,
+                args.map(describeRuntimeValue)
+            );
         };
     });
 
@@ -882,12 +904,20 @@ var HTML_RUNTIME_STYLES = `
 `;
 var PAGE_BRIDGE_SOURCE = `
   (() => {
-    const post = (type, payload) => window.parent.postMessage({ type: type, payload: payload }, '*');
+    const post = (type, payload, parts) => {
+      const message = { type: type, payload: payload };
+      if (parts) message.parts = parts;
+      window.parent.postMessage(message, '*');
+    };
     ['log', 'error', 'warn', 'info'].forEach((method) => {
       const original = console[method];
       console[method] = function (...args) {
         original.apply(console, args);
-        post(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), args.map(formatRuntimeValue).join(' '));
+        post(
+          method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
+          args.map(formatRuntimeValue).join(' '),
+          args.map(describeRuntimeValue)
+        );
       };
     });
     window.onerror = (msg, src, line, column, error) => {
@@ -944,7 +974,7 @@ var buildHtmlPageLogic = ({ cssTab, mockFetch }) => `
     } else if (data.type === 'CS_PAGE_DONE') {
       page.resolve();
     } else if (data.type === 'CONSOLE_LOG' || data.type === 'CONSOLE_WARN' || data.type === 'RUNTIME_ERROR') {
-      sendPayload(data.type, String(data.payload));
+      sendPayload(data.type, String(data.payload), Array.isArray(data.parts) ? data.parts : undefined);
     }
   });
 
@@ -1689,6 +1719,47 @@ var Button = ({
 
 // components/Console.tsx
 import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+var LOG_PART_KINDS = /* @__PURE__ */ new Set([
+  "string",
+  "number",
+  "bigint",
+  "boolean",
+  "null",
+  "undefined",
+  "symbol",
+  "function",
+  "object",
+  "error"
+]);
+var toLogParts = (raw) => {
+  if (!Array.isArray(raw)) return void 0;
+  const parts = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || typeof item.text !== "string" || !LOG_PART_KINDS.has(item.kind)) {
+      return void 0;
+    }
+    parts.push({ kind: item.kind, text: item.text });
+  }
+  return parts;
+};
+var PART_COLORS = {
+  number: { light: "#1a1aa6", dark: "#9980ff" },
+  bigint: { light: "#1a1aa6", dark: "#9980ff" },
+  boolean: { light: "#1a1aa6", dark: "#9980ff" },
+  null: { light: "#80868b", dark: "#9aa0a6" },
+  undefined: { light: "#80868b", dark: "#9aa0a6" }
+};
+var renderLogText = (log, themeMode) => {
+  if (log.type !== "log" || !log.parts || log.parts.length === 0) return log.content;
+  return log.parts.map((part, index) => {
+    const colors = PART_COLORS[part.kind];
+    const color = colors ? themeMode === "dark" ? colors.dark : colors.light : void 0;
+    return /* @__PURE__ */ jsxs5(React2.Fragment, { children: [
+      index > 0 && " ",
+      /* @__PURE__ */ jsx6("span", { "data-log-kind": part.kind, style: color ? { color } : void 0, children: part.text })
+    ] }, index);
+  });
+};
 var Console = React2.memo(function Console2({
   logs,
   onClear,
@@ -1719,7 +1790,7 @@ var Console = React2.memo(function Console2({
             ${log.type === "warn" ? "text-yellow-500 bg-yellow-500/5" : ""}
           `, children: [
             /* @__PURE__ */ jsx6("span", { className: "opacity-50 mr-2 select-none", children: ">" }),
-            log.content
+            renderLogText(log, themeMode)
           ] }, i))
         ]
       }
@@ -1779,6 +1850,7 @@ var OutputFrame = ({
       setLogs((prev) => appendLog(prev, {
         type: type === "RUNTIME_ERROR" ? "error" : type === "CONSOLE_WARN" ? "warn" : "log",
         content: payload,
+        parts: toLogParts(data.parts),
         timestamp: Date.now()
       }));
     } else if (type === "READY_SIGNAL" && debugMode) {
@@ -2013,7 +2085,12 @@ var ServerOutput = ({
         setRuntimeError(payload);
         setIsLoading(false);
         setPendingRequest(null);
-        setLogs((prev) => appendLog2(prev, { type: "error", content: payload, timestamp: Date.now() }));
+        setLogs((prev) => appendLog2(prev, {
+          type: "error",
+          content: payload,
+          parts: toLogParts(data.parts),
+          timestamp: Date.now()
+        }));
         setServerReady(false);
         break;
       case "CONSOLE_LOG":
@@ -2021,6 +2098,7 @@ var ServerOutput = ({
         setLogs((prev) => appendLog2(prev, {
           type: type === "CONSOLE_WARN" ? "warn" : "log",
           content: payload,
+          parts: toLogParts(data.parts),
           timestamp: Date.now()
         }));
         break;
