@@ -65,6 +65,23 @@ export const FORMAT_RUNTIME_VALUE_SOURCE = `
         }
         return String(value);
     }
+
+    // One typed part per console argument, so the host console can show
+    // string "1" and number 1 the way DevTools does (issue #29).
+    function describeRuntimeValue(value) {
+        if (value === null) return { kind: 'null', text: 'null' };
+        const kind = typeof value;
+        if (kind === 'string') return { kind: 'string', text: value };
+        if (
+            kind === 'number' || kind === 'bigint' || kind === 'boolean'
+            || kind === 'undefined' || kind === 'symbol' || kind === 'function'
+        ) {
+            return { kind: kind, text: String(value) };
+        }
+        const text = formatRuntimeValue(value);
+        const isError = typeof value.name === 'string' && typeof value.message === 'string';
+        return { kind: isError ? 'error' : 'object', text: text };
+    }
 `;
 
 export const KERNEL_SCRIPTS = `
@@ -79,8 +96,9 @@ export const KERNEL_SCRIPTS = `
         throw new Error('Module not found: ' + module);
     };
 
-    function sendPayload(type, payload) {
+    function sendPayload(type, payload, parts) {
         const message = { type, payload };
+        if (Array.isArray(parts)) message.parts = parts;
         if (window.messagePort) window.messagePort.postMessage(message);
         else window.parent.postMessage(message, '*');
     }
@@ -92,7 +110,11 @@ export const KERNEL_SCRIPTS = `
         console[method] = function(...args) {
             original.apply(console, args);
             const content = args.map(formatRuntimeValue).join(' ');
-            sendPayload(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), content);
+            sendPayload(
+                method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
+                content,
+                args.map(describeRuntimeValue)
+            );
         };
     });
 

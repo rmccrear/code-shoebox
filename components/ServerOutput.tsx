@@ -5,7 +5,7 @@ import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../run
 import { ThemeMode, EnvironmentMode } from '../types';
 import { PreviewContainer } from './PreviewContainer';
 import { Button } from './Button';
-import { Console, LogEntry } from './Console';
+import { Console, LogEntry, toLogParts } from './Console';
 
 const MAX_CONSOLE_LOGS = 500;
 const appendLog = (prev: LogEntry[], entry: LogEntry): LogEntry[] =>
@@ -107,7 +107,12 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
             setRuntimeError(payload);
             setIsLoading(false);
             setPendingRequest(null); // Cancel any pending request
-            setLogs(prev => appendLog(prev, { type: 'error', content: payload, timestamp: Date.now() }));
+            setLogs(prev => appendLog(prev, {
+                type: 'error',
+                content: payload,
+                parts: toLogParts(data.parts),
+                timestamp: Date.now()
+            }));
             setServerReady(false); 
             break;
             
@@ -116,6 +121,7 @@ export const ServerOutput: React.FC<ServerOutputProps> = ({
             setLogs(prev => appendLog(prev, {
                 type: type === 'CONSOLE_WARN' ? 'warn' : 'log',
                 content: payload,
+                parts: toLogParts(data.parts),
                 timestamp: Date.now()
             }));
             break;

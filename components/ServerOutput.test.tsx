@@ -183,4 +183,19 @@ describe('ServerOutput', () => {
     expect(screen.getByText('log-10')).toBeInTheDocument();
     expect(screen.getByText('log-509')).toBeInTheDocument();
   });
+
+  it('stores typed console parts from the sandbox', () => {
+    const { channel, container } = renderServerOutput({ themeMode: 'light' });
+
+    postFromSandbox(channel, {
+      type: 'CONSOLE_LOG',
+      payload: '1 1',
+      parts: [{ kind: 'string', text: '1' }, { kind: 'number', text: '1' }],
+    });
+
+    const spans = Array.from(container.querySelectorAll<HTMLElement>('[data-log-kind]'));
+    expect(spans.map((span) => span.dataset.logKind)).toEqual(['string', 'number']);
+    expect(spans[1].style.color).toBe('rgb(26, 26, 166)');
+  });
 });
+

@@ -512,4 +512,21 @@ describe('OutputFrame', () => {
     expect(screen.getByText('first log')).toBeInTheDocument();
     expect(screen.getByText('second log')).toBeInTheDocument();
   });
+
+  it('stores typed parts from the kernel and colors them in the console', () => {
+    const { container } = renderOutputFrame({ themeMode: 'light' });
+    const { channel } = loadFrame(container);
+
+    act(() => {
+      channel.port2.postMessage({
+        type: 'CONSOLE_LOG',
+        payload: '1 1',
+        parts: [{ kind: 'string', text: '1' }, { kind: 'number', text: '1' }]
+      });
+    });
+
+    const spans = Array.from(container.querySelectorAll<HTMLElement>('[data-log-kind]'));
+    expect(spans.map((span) => span.dataset.logKind)).toEqual(['string', 'number']);
+    expect(spans[1].style.color).toBe('rgb(26, 26, 166)');
+  });
 });

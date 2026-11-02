@@ -99,12 +99,20 @@ const HTML_RUNTIME_STYLES = `
 // - The kernel only relays known message types from the current frame.
 const PAGE_BRIDGE_SOURCE = `
   (() => {
-    const post = (type, payload) => window.parent.postMessage({ type: type, payload: payload }, '*');
+    const post = (type, payload, parts) => {
+      const message = { type: type, payload: payload };
+      if (parts) message.parts = parts;
+      window.parent.postMessage(message, '*');
+    };
     ['log', 'error', 'warn', 'info'].forEach((method) => {
       const original = console[method];
       console[method] = function (...args) {
         original.apply(console, args);
-        post(method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'), args.map(formatRuntimeValue).join(' '));
+        post(
+          method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
+          args.map(formatRuntimeValue).join(' '),
+          args.map(describeRuntimeValue)
+        );
       };
     });
     window.onerror = (msg, src, line, column, error) => {
@@ -165,7 +173,7 @@ const buildHtmlPageLogic = ({ cssTab, mockFetch }: { cssTab: boolean; mockFetch:
     } else if (data.type === 'CS_PAGE_DONE') {
       page.resolve();
     } else if (data.type === 'CONSOLE_LOG' || data.type === 'CONSOLE_WARN' || data.type === 'RUNTIME_ERROR') {
-      sendPayload(data.type, String(data.payload));
+      sendPayload(data.type, String(data.payload), Array.isArray(data.parts) ? data.parts : undefined);
     }
   });
 
