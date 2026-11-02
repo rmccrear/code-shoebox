@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.40-c — 2026-11-02 (CodeMirror QA)
+
+- Fix [#29](https://github.com/rmccrear/code-shoebox/issues/29)
+  ([#30](https://github.com/rmccrear/code-shoebox/pull/30)): the Console shows
+  value types the way DevTools does. Top-level strings print plain, numbers,
+  bigints and booleans print blue, and `null`/`undefined` print gray, so
+  `console.log("1")` and `console.log(1)` no longer look the same.
+- Console messages keep the joined string in `payload` and add a `parts` array
+  (`{ kind, text }` per argument); log entries gain an optional `parts` field.
+  Hosts and messages without `parts` render as before.
+- Retain CodeMirror defaults, opt-in HTML Emmet and the optional TypeScript checker.
+
 ## 1.0.39-c — 2026-10-28 (CodeMirror QA)
 
 - Incorporate the v1.0.39 fix for [#26](https://github.com/rmccrear/code-shoebox/issues/26)
