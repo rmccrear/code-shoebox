@@ -4,7 +4,7 @@ import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../run
 import { ThemeMode, EnvironmentMode, MockApiConfig } from '../types';
 import { isMockApiEnabled } from '../runtime/mockApi';
 import { PreviewContainer } from './PreviewContainer';
-import { Console, LogEntry } from './Console';
+import { Console, LogEntry, toLogParts } from './Console';
 import { GripHorizontal } from 'lucide-react';
 
 const MAX_CONSOLE_LOGS = 500;
@@ -83,6 +83,7 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       setLogs(prev => appendLog(prev, {
         type: type === 'RUNTIME_ERROR' ? 'error' : (type === 'CONSOLE_WARN' ? 'warn' : 'log'),
         content: payload,
+        parts: toLogParts(data.parts),
         timestamp: Date.now()
       }));
     } else if (type === 'READY_SIGNAL' && debugMode) {
