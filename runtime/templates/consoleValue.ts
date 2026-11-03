@@ -21,7 +21,8 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
         treeString: 10000,
         inlineText: 80,   // an element whose only child is short text prints inline
         depth: 6,         // tree levels below the logged value
-        nodes: 2000       // tree nodes per console call
+        nodes: 2000,      // tree nodes per console call
+        accessors: 200    // prototype accessors read per object
     };
     var CS_ELLIPSIS = '…';
     var CS_ESCAPES = { '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t', '\v': '\\v', "'": "\\'", '\\': '\\\\' };
@@ -240,6 +241,60 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
         try { return Reflect.ownKeys(value); } catch (e) { return []; }
     }
 
+    function csIsNativeFunction(fn) {
+        try { return typeof fn === 'function' && /\{\s*\[native code\]\s*\}\s*$/.test(Function.prototype.toString.call(fn)); } catch (e) { return false; }
+    }
+
+    function csIsWindow(value) {
+        try { return csTag(value) === 'Window' || (value.window === value && value.self === value); } catch (e) { return false; }
+    }
+
+    // A plain object's properties as Chrome lists them: own properties first,
+    // then accessors from the prototype chain (nearest first, stopping before
+    // Object.prototype). Native getters, like Response.status or
+    // Event.isTrusted, are read; user-defined getters never run.
+    // Each row: { key, enumerable, state: 'value' | 'getter', value }.
+    function csObjectRows(value, withPrototypes) {
+        var rows = [];
+        var seen = new Set();
+        var addAccessor = function (key, desc, enumerable) {
+            if (csIsNativeFunction(desc.get)) {
+                try {
+                    rows.push({ key: key, enumerable: enumerable, state: 'value', value: desc.get.call(value) });
+                    return;
+                } catch (e) { /* a throwing getter shows (...) */ }
+            }
+            rows.push({ key: key, enumerable: enumerable, state: 'getter' });
+        };
+        var keys = csOwnKeys(value);
+        for (var i = 0; i < keys.length; i++) {
+            var desc = csDescriptor(value, keys[i]);
+            if (!desc) continue;
+            seen.add(keys[i]);
+            if ('value' in desc) rows.push({ key: keys[i], enumerable: desc.enumerable, state: 'value', value: desc.value });
+            else if (desc.get) addAccessor(keys[i], desc, desc.enumerable || csIsNativeFunction(desc.get));
+            else rows.push({ key: keys[i], enumerable: desc.enumerable, state: 'getter' });
+        }
+        if (!withPrototypes) return rows;
+        var proto;
+        try { proto = Object.getPrototypeOf(value); } catch (e) { proto = null; }
+        var read = 0;
+        while (proto && proto !== Object.prototype && read < CS_CONSOLE_LIMITS.accessors) {
+            var protoKeys = csOwnKeys(proto);
+            for (var j = 0; j < protoKeys.length && read < CS_CONSOLE_LIMITS.accessors; j++) {
+                var key = protoKeys[j];
+                if (key === 'constructor' || typeof key === 'symbol' || seen.has(key)) continue;
+                var protoDesc = csDescriptor(proto, key);
+                if (!protoDesc || !protoDesc.get) continue;
+                seen.add(key);
+                read++;
+                addAccessor(key, protoDesc, true);
+            }
+            try { proto = Object.getPrototypeOf(proto); } catch (e) { proto = null; }
+        }
+        return rows;
+    }
+
     function csPushItem(segs, count) { if (count > 0) segs.push(csSeg('text', ', ')); }
 
     // Chrome's one-line preview of an object, array, Map, Set, or element.
@@ -322,17 +377,18 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
             segs.push(csSeg('text', '}'));
             return segs;
         }
+        if (csIsWindow(value)) return [csSeg('subtle', 'Window')];
         var className = csClassName(value);
         if (className !== 'Object') segs.push(csSeg('subtle', className + ' '));
         segs.push(csSeg('text', '{'));
-        var objectKeys = csOwnKeys(value);
+        var objectRows = csObjectRows(value, true);
         var picked = [];
-        for (var m = 0; m < objectKeys.length; m++) {
-            var desc = csDescriptor(value, objectKeys[m]);
-            // Chrome leaves getters out of the preview; the tree shows (...).
-            if (!desc || !desc.enumerable || !('value' in desc)) continue;
+        for (var m = 0; m < objectRows.length; m++) {
+            var objectRow = objectRows[m];
+            // Chrome leaves user getters out of the preview; the tree shows (...).
+            if (!objectRow.enumerable || objectRow.state !== 'value') continue;
             if (picked.length >= CS_CONSOLE_LIMITS.props) { overflow = true; break; }
-            picked.push({ key: objectKeys[m], value: desc.value });
+            picked.push({ key: objectRow.key, value: objectRow.value });
         }
         // Chrome lists functions after other properties.
         var ordered = picked.filter(function (p) { return typeof p.value !== 'function'; })
@@ -383,17 +439,10 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
     }
 
     function csPropertyChildren(value, node, ctx, depth) {
-        var keys = csOwnKeys(value);
         var isArray = csKindOf(value) === 'array';
-        var rows = [];
-        for (var i = 0; i < keys.length; i++) {
-            var key = keys[i];
-            var desc = csDescriptor(value, key);
-            if (!desc) continue;
-            rows.push({ key: key, desc: desc });
-        }
+        var rows = csObjectRows(value, !isArray);
         rows.sort(function (a, b) {
-            if (a.desc.enumerable !== b.desc.enumerable) return a.desc.enumerable ? -1 : 1;
+            if (a.enumerable !== b.enumerable) return a.enumerable ? -1 : 1;
             var sa = typeof a.key === 'symbol';
             var sb = typeof b.key === 'symbol';
             if (sa !== sb) return sa ? 1 : -1;
@@ -405,9 +454,9 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
             if (!csReserve(node, ctx)) return;
             var label = typeof row.key === 'symbol' ? '[' + csSymbolText(row.key) + ']' : csKeyName(row.key);
             var child = { name: label, value: null };
-            if (!row.desc.enumerable) child.subtle = true;
-            if ('value' in row.desc) {
-                child.value = csChildValue(row.desc.value, ctx, depth + 1, typeof row.key === 'string' && !isArray ? row.key : undefined);
+            if (!row.enumerable) child.subtle = true;
+            if (row.state === 'value') {
+                child.value = csChildValue(row.value, ctx, depth + 1, typeof row.key === 'string' && !isArray ? row.key : undefined);
             } else {
                 child.value = { preview: [csSeg('subtle', '(...)')] };
             }
@@ -461,7 +510,8 @@ export const CONSOLE_VALUE_SOURCE = String.raw`
     }
 
     function csExpandable(value, kind) {
-        if (kind === 'array' || kind === 'object' || kind === 'map' || kind === 'set') return true;
+        if (kind === 'object') return !csIsWindow(value);
+        if (kind === 'array' || kind === 'map' || kind === 'set') return true;
         if (kind === 'node') {
             try {
                 if (value.nodeType === 1) return !csElementInline(value);

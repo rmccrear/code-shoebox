@@ -252,6 +252,108 @@ describe('console tree', () => {
   });
 });
 
+/**
+ * A stand-in platform object. Node's and jsdom's Response/Event getters are
+ * JavaScript, not native, so bound functions (which print "[native code]")
+ * play the browser's native getters here.
+ */
+const platformObject = (
+  name: string,
+  chain: Array<Record<string, () => unknown>>,
+  own: Record<string, () => unknown> = {}
+) => {
+  let proto: object = Object.prototype;
+  for (const layer of [...chain].reverse()) {
+    const next = Object.create(proto);
+    for (const [key, read] of Object.entries(layer)) {
+      Object.defineProperty(next, key, { get: read.bind(null), configurable: true, enumerable: false });
+    }
+    proto = next;
+  }
+  const ctor = { [name]: function () {} }[name];
+  Object.defineProperty(proto, 'constructor', { value: ctor });
+  const instance = Object.create(proto);
+  for (const [key, read] of Object.entries(own)) {
+    Object.defineProperty(instance, key, { get: read.bind(null), enumerable: true });
+  }
+  return instance;
+};
+
+describe('console platform objects', () => {
+  const response = (status: number, statusText: string) => platformObject('Response', [{
+    type: () => 'basic',
+    url: () => 'http://localhost/api/pets',
+    redirected: () => false,
+    status: () => status,
+    ok: () => status >= 200 && status < 300,
+    statusText: () => statusText,
+    headers: () => platformObject('Headers', [{}]),
+    body: () => platformObject('ReadableStream', [{ locked: () => false }]),
+    bodyUsed: () => false
+  }]);
+
+  it('reads native getters into the preview and the tree, own properties first', () => {
+    expect(text(response(200, 'OK'))).toBe(
+      "Response {type: 'basic', url: 'http://localhost/api/pets', redirected: false, status: 200, ok: true, …}"
+    );
+    expect(text(response(404, 'Not Found'))).toContain('status: 404, ok: false, …}');
+    expect(rows(tree(response(200, 'OK')))).toEqual([
+      'body: ReadableStream {locked: false}',
+      'bodyUsed: false',
+      'headers: Headers {}',
+      'ok: true',
+      'redirected: false',
+      'status: 200',
+      'statusText: "OK"',
+      'type: "basic"',
+      'url: "http://localhost/api/pets"'
+    ]);
+  });
+
+  it('keeps events bounded and leaves the window as a leaf', () => {
+    document.body.innerHTML = '<button id="go">Go</button>';
+    const button = document.getElementById('go');
+    const many = Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`p${i}`, () => i]));
+    const event = platformObject('PointerEvent', [
+      { pointerId: () => 1, width: () => 1, height: () => 1 },
+      { clientX: () => 10, target: () => button, view: () => window },
+      many
+    ], { isTrusted: () => true });
+
+    expect(text(event)).toBe('PointerEvent {isTrusted: true, pointerId: 1, width: 1, height: 1, clientX: 10, …}');
+    const eventRows = rows(tree(event));
+    expect(eventRows).toContain('target: button#go');
+    expect(eventRows).toContain('view: Window');
+    expect(eventRows).toHaveLength(67);
+    expect(tree(event).children!.find((row) => row.name === 'view')!.value.children).toBeUndefined();
+  });
+
+  it('never runs user-defined getters, own or inherited', () => {
+    const getter = vi.fn(() => 1);
+    class Cart {
+      qty = 2;
+      get total() { return getter(); }
+    }
+    expect(text(new Cart())).toBe('Cart {qty: 2}');
+    expect(rows(tree(new Cart()))).toEqual(['qty: 2', 'total: (...)']);
+    expect(getter).not.toHaveBeenCalled();
+  });
+
+  it('shows a throwing native getter as (...)', () => {
+    const value = platformObject('Thing', [{ broken: () => { throw new Error('nope'); }, fine: () => 1 }]);
+    expect(text(value)).toBe('Thing {fine: 1}');
+    expect(rows(tree(value))).toEqual(['broken: (...)', 'fine: 1']);
+  });
+
+  it('stays sane on real jsdom and Node platform objects', () => {
+    expect(text(new Event('click'))).toMatch(/^Event \{/);
+    expect(text(new Headers())).toBe('Headers {}');
+    expect(text(new Map([['a', 1]]))).toBe("Map(1) {'a' => 1}");
+    expect(text(new Error('boom'))).toBe('Error: boom');
+    expect(text(Promise.resolve())).toBe('Promise {<pending>}');
+  });
+});
+
 describe('console value source', () => {
   it('cannot close or confuse the kernel script element', () => {
     expect(CONSOLE_VALUE_SOURCE).not.toMatch(/<\/script/i);
