@@ -143,6 +143,23 @@ describe('Console value trees', () => {
     expect(container.querySelector<HTMLElement>('[data-seg-kind="subtle"]')?.style.color).toBe('rgb(143, 143, 143)');
   });
 
+  it('wraps rows like Chrome and keeps wrapped tree rows aligned', () => {
+    const { container } = renderLogs([treeLog(records)]);
+    const row = container.querySelector<HTMLElement>('[data-console-message]')!;
+    expect(row.style.whiteSpace).toBe('pre-wrap');
+    expect(row.style.overflowWrap).toBe('break-word');
+
+    const toggle = toggleFor('(2)');
+    // The arrow sits in the toggle's left padding, so wrapped lines hang after it.
+    expect(toggle.style.paddingLeft).toBe('1.1em');
+    expect(toggle.style.whiteSpace).toBe('pre-wrap');
+    expect((toggle.firstElementChild as HTMLElement).style.position).toBe('absolute');
+
+    fireEvent.click(toggle);
+    const childRows = Array.from(container.querySelectorAll<HTMLElement>('[data-console-row]'));
+    expect(childRows.map((child) => child.style.paddingLeft)).toEqual(['0px', '0px', '1.1em']);
+  });
+
   it('shows element HTML as text, with start and end tags while open', () => {
     const element: LogValue = {
       preview: [seg('node', '<div class="card">'), seg('subtle', '…'), seg('node', '</div>')],

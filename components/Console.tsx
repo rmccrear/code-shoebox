@@ -223,26 +223,39 @@ const Segments = ({ segments, palette }: { segments: LogSegment[]; palette: Cons
   </>
 );
 
+// Width of the ▶ marker, so leaf rows line up with expandable siblings.
+const ARROW_WIDTH = '1.1em';
+
 const toggleStyle: React.CSSProperties = {
   appearance: 'none',
   background: 'transparent',
   border: 0,
-  padding: 0,
+  paddingTop: 0,
+  paddingRight: 0,
+  paddingBottom: 0,
   margin: 0,
   font: 'inherit',
   color: 'inherit',
   textAlign: 'left',
   cursor: 'pointer',
-  whiteSpace: 'pre'
+  // A wrapped preview hangs after the ▶, which sits in the left padding.
+  position: 'relative',
+  display: 'inline-block',
+  maxWidth: '100%',
+  verticalAlign: 'top',
+  paddingLeft: ARROW_WIDTH,
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'break-word'
 };
 
-// Width of the ▶ marker, so leaf rows line up with expandable siblings.
-const ARROW_WIDTH = '1.1em';
+// Chrome's console wraps rows (consoleView.css: #console-messages
+// overflow-wrap: break-word; message text pre-wrap) instead of scrolling.
+const ROW_WRAP_STYLE: React.CSSProperties = { whiteSpace: 'pre-wrap', overflowWrap: 'break-word' };
 
 const Arrow = ({ open, palette }: { open: boolean; palette: ConsolePalette }) => (
   <span
     aria-hidden="true"
-    style={{ display: 'inline-block', width: ARROW_WIDTH, fontSize: '0.75em', color: palette.toggle }}
+    style={{ position: 'absolute', left: 0, top: 0, width: ARROW_WIDTH, fontSize: '0.75em', color: palette.toggle }}
   >
     {open ? '▼' : '▶'}
   </span>
@@ -255,17 +268,14 @@ interface ConsoleValueProps {
   value: LogValue;
   palette: ConsolePalette;
   label?: React.ReactNode;
-  /** Child rows reserve the arrow's width when they cannot expand. */
-  indentLeaf?: boolean;
 }
 
 /** One console value: Chrome's ▶ preview that toggles to ▼ and its children. */
-const ConsoleValue = ({ value, palette, label, indentLeaf = false }: ConsoleValueProps) => {
+const ConsoleValue = ({ value, palette, label }: ConsoleValueProps) => {
   const [open, setOpen] = React.useState(false);
   if (!isExpandable(value)) {
     return (
       <>
-        {indentLeaf && <span aria-hidden="true" style={{ display: 'inline-block', width: ARROW_WIDTH }} />}
         {label}
         <Segments segments={value.preview} palette={palette} />
       </>
@@ -273,7 +283,10 @@ const ConsoleValue = ({ value, palette, label, indentLeaf = false }: ConsoleValu
   }
   const header = open && value.open ? value.open : value.preview;
   return (
-    <span data-console-tree="" style={{ display: open ? 'inline-block' : 'inline', verticalAlign: 'top' }}>
+    <span
+      data-console-tree=""
+      style={open ? { display: 'inline-block', maxWidth: '100%', verticalAlign: 'top' } : undefined}
+    >
       <button type="button" aria-expanded={open} onClick={() => setOpen(current => !current)} style={toggleStyle}>
         <Arrow open={open} palette={palette} />
         {label}
@@ -282,11 +295,15 @@ const ConsoleValue = ({ value, palette, label, indentLeaf = false }: ConsoleValu
       {open && (
         <span role="group" style={{ display: 'block', paddingLeft: ARROW_WIDTH }}>
           {value.children?.map((child, index) => (
-            <span key={index} style={{ display: 'block' }} data-console-row="">
+            <span
+              key={index}
+              // Leaf rows indent by the arrow's width, wrapped lines included.
+              style={{ display: 'block', paddingLeft: isExpandable(child.value) ? 0 : ARROW_WIDTH }}
+              data-console-row=""
+            >
               <ConsoleValue
                 value={child.value}
                 palette={palette}
-                indentLeaf
                 label={child.name === undefined ? undefined : (
                   <>
                     <span data-seg-kind="name" style={colorStyle(child.subtle ? palette.subtle : palette.name)}>
@@ -369,8 +386,8 @@ export const Console = React.memo(function Console({
         )}
         
         {logs.map((log, i) => (
-          <div key={i} style={log.type === 'log' ? { color: CHROME_PALETTES[themeMode === 'dark' ? 'dark' : 'light'].base } : undefined} className={`
-            border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5 break-all whitespace-pre
+          <div key={i} data-console-message="" style={log.type === 'log' ? { ...ROW_WRAP_STYLE, color: CHROME_PALETTES[themeMode === 'dark' ? 'dark' : 'light'].base } : ROW_WRAP_STYLE} className={`
+            border-b border-transparent hover:bg-black/5 dark:hover:bg-white/5 px-1 py-0.5
             ${log.type === 'error' ? 'text-red-500 bg-red-500/5' : ''}
             ${log.type === 'warn' ? 'text-yellow-500 bg-yellow-500/5' : ''}
           `}>
