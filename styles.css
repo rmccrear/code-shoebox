@@ -605,6 +605,9 @@ video:where([data-code-shoebox], [data-code-shoebox] *) {
 .block:where([data-code-shoebox], [data-code-shoebox] *) {
   display: block;
 }
+.inline-block:where([data-code-shoebox], [data-code-shoebox] *) {
+  display: inline-block;
+}
 .inline:where([data-code-shoebox], [data-code-shoebox] *) {
   display: inline;
 }
