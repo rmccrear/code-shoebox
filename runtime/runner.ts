@@ -108,10 +108,11 @@ const PAGE_BRIDGE_SOURCE = `
       const original = console[method];
       console[method] = function (...args) {
         original.apply(console, args);
+        const described = describeConsoleArgs(args);
         post(
           method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
-          args.map(formatRuntimeValue).join(' '),
-          args.map(describeRuntimeValue)
+          described.payload,
+          described.parts
         );
       };
     });

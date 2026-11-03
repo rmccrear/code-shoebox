@@ -195,7 +195,7 @@ describe('ServerOutput', () => {
 
     const spans = Array.from(container.querySelectorAll<HTMLElement>('[data-log-kind]'));
     expect(spans.map((span) => span.dataset.logKind)).toEqual(['string', 'number']);
-    expect(spans[1].style.color).toBe('rgb(26, 26, 166)');
+    expect(spans[1].style.color).toBe('rgb(8, 66, 160)');
   });
 });
 
