@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.41-c — 2026-11-03 (CodeMirror QA)
+
+- The Console copies Chrome DevTools (follow-up to
+  [#29](https://github.com/rmccrear/code-shoebox/issues/29)). Plain log rows
+  use Chrome's base text (`#1f1f1f` light, `#e3e3e3` dark) and its exact value
+  colors, so numbers read as blue against the text.
+- Console text is Chrome's one-line format: `(3) [1, 2, 3]`, `[1]`, `{qty: '1'}`,
+  `(2) [{…}, {…}]`, `Map(2) {'a' => 1, 'b' => 2}`, `5n`, `-0`, `ƒ greet() {…}`.
+  `console.log(element)` prints the element's HTML (`<input id="tickets">`)
+  instead of `{}`. The plain-text `payload`/`content` changes accordingly;
+  uncaught errors and rejections keep their text.
+- Objects, arrays, Maps, Sets and elements expand with ▶/▼ to one row per
+  property or child node. The tree is a snapshot taken at log time (depth 6,
+  2000 nodes per call; circular references are marked). Like Chrome, native
+  platform getters are read, so `console.log(response)` shows
+  `Response {…, status: 200, ok: true, …}`; user-defined getters never run.
+- Log rows wrap like Chrome's console (pre-wrap, breaking long words only when
+  needed) instead of running past the panel; wrapped tree rows stay aligned.
+  Console parts gain an optional `value` tree; older hosts ignore it.
+- Retain CodeMirror defaults, opt-in HTML Emmet and the optional TypeScript checker.
+
 ## 1.0.40-c — 2026-11-02 (CodeMirror QA)
 
 - Fix [#29](https://github.com/rmccrear/code-shoebox/issues/29)
