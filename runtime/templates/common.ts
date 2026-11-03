@@ -1,4 +1,6 @@
 
+import { CONSOLE_VALUE_SOURCE } from "./consoleValue";
+
 /**
  * Shared HTML/CSS/JS for the sandbox environment.
  * This acts as the "Kernel" for all execution modes.
@@ -49,7 +51,9 @@ export const BASE_STYLES = `
 `;
 
 // Shared by the kernel and the nested page-frame bridge so console output
-// reads the same in every mode.
+// reads the same in every mode. formatRuntimeValue formats uncaught errors and
+// rejections; console arguments go through describeConsoleArgs, which prints
+// them the way Chrome DevTools does (consoleValue.ts).
 export const FORMAT_RUNTIME_VALUE_SOURCE = `
     function formatRuntimeValue(value) {
         if (
@@ -65,23 +69,7 @@ export const FORMAT_RUNTIME_VALUE_SOURCE = `
         }
         return String(value);
     }
-
-    // One typed part per console argument, so the host console can show
-    // string "1" and number 1 the way DevTools does (issue #29).
-    function describeRuntimeValue(value) {
-        if (value === null) return { kind: 'null', text: 'null' };
-        const kind = typeof value;
-        if (kind === 'string') return { kind: 'string', text: value };
-        if (
-            kind === 'number' || kind === 'bigint' || kind === 'boolean'
-            || kind === 'undefined' || kind === 'symbol' || kind === 'function'
-        ) {
-            return { kind: kind, text: String(value) };
-        }
-        const text = formatRuntimeValue(value);
-        const isError = typeof value.name === 'string' && typeof value.message === 'string';
-        return { kind: isError ? 'error' : 'object', text: text };
-    }
+${CONSOLE_VALUE_SOURCE}
 `;
 
 export const KERNEL_SCRIPTS = `
@@ -109,11 +97,11 @@ export const KERNEL_SCRIPTS = `
         const original = console[method];
         console[method] = function(...args) {
             original.apply(console, args);
-            const content = args.map(formatRuntimeValue).join(' ');
+            const described = describeConsoleArgs(args);
             sendPayload(
                 method === 'error' ? 'RUNTIME_ERROR' : (method === 'warn' ? 'CONSOLE_WARN' : 'CONSOLE_LOG'),
-                content,
-                args.map(describeRuntimeValue)
+                described.payload,
+                described.parts
             );
         };
     });

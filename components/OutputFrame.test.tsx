@@ -527,6 +527,34 @@ describe('OutputFrame', () => {
 
     const spans = Array.from(container.querySelectorAll<HTMLElement>('[data-log-kind]'));
     expect(spans.map((span) => span.dataset.logKind)).toEqual(['string', 'number']);
-    expect(spans[1].style.color).toBe('rgb(26, 26, 166)');
+    expect(spans[1].style.color).toBe('rgb(8, 66, 160)');
+  });
+
+  it('keeps the object tree from the kernel and expands it on click', () => {
+    const { container } = renderOutputFrame({ themeMode: 'light' });
+    const { channel } = loadFrame(container);
+
+    act(() => {
+      channel.port2.postMessage({
+        type: 'CONSOLE_LOG',
+        payload: "{qty: '1'}",
+        parts: [{
+          kind: 'object',
+          text: "{qty: '1'}",
+          value: {
+            preview: [
+              { kind: 'text', text: '{' }, { kind: 'subtle', text: 'qty' }, { kind: 'text', text: ': ' },
+              { kind: 'string', text: "'1'" }, { kind: 'text', text: '}' }
+            ],
+            children: [{ name: 'qty', value: { preview: [{ kind: 'string', text: '"1"' }] } }]
+          }
+        }]
+      });
+    });
+
+    const toggle = container.querySelector<HTMLButtonElement>('button[aria-expanded]')!;
+    expect(toggle.textContent).toBe("▶{qty: '1'}");
+    act(() => { toggle.click(); });
+    expect(container.querySelector('[data-console-row]')?.textContent).toBe('qty: "1"');
   });
 });
