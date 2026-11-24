@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CodingEnvironment } from './CodingEnvironment';
-import { CodeShoeboxProps } from '../types';
+import { CodeShoeboxProps, EnvironmentMode, RuntimeStatus } from '../types';
+import { PYTHON_RUN_TIME_LIMIT_MS } from '../runtime/templates/python';
 import { isMockApiEnabled } from '../runtime/mockApi';
 
 export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
@@ -17,17 +18,25 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
   themeMode,
   sessionId = 0,
   prediction_prompt,
-  debugMode = false
+  debugMode = false,
+  pythonInput,
 }) => {
   const [runTrigger, setRunTrigger] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>(() => initialRuntimeStatus(environmentMode));
+  const [stopTrigger, setStopTrigger] = useState<number>(0);
+  const [retryTrigger, setRetryTrigger] = useState<number>(0);
   const runFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPython = environmentMode === 'python';
 
   useEffect(() => {
     setRunTrigger(0);
     setIsRunning(false);
+    setStopTrigger(0);
+    setRetryTrigger(0);
+    setRuntimeStatus(initialRuntimeStatus(environmentMode));
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
-  }, [sessionId]);
+  }, [sessionId, environmentMode]);
 
   useEffect(() => () => {
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
@@ -41,7 +50,17 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, isMockApiEnabled(environmentMode, mockApi) ? 10000 : 500);
+    }, isPython
+      // Python reports completion; this only guards against a lost message.
+      ? PYTHON_RUN_TIME_LIMIT_MS + 5000
+      : isMockApiEnabled(environmentMode, mockApi) ? 10000 : 500);
+  };
+
+  const handleStop = () => setStopTrigger(prev => prev + 1);
+
+  const handleRetry = () => {
+    setRuntimeStatus({ state: 'loading' });
+    setRetryTrigger(prev => prev + 1);
   };
 
   const handleExecutionComplete = () => {
@@ -91,7 +110,17 @@ export const CodeShoebox: React.FC<CodeShoeboxProps> = ({
         predictionPrompt={prediction_prompt}
         debugMode={debugMode}
         onExecutionComplete={handleExecutionComplete}
+        runtimeStatus={runtimeStatus}
+        onRuntimeStatus={setRuntimeStatus}
+        onStop={handleStop}
+        onRetry={handleRetry}
+        stopTrigger={stopTrigger}
+        retryTrigger={retryTrigger}
+        pythonInput={pythonInput}
       />
     </div>
   );
 };
+
+const initialRuntimeStatus = (mode: EnvironmentMode): RuntimeStatus =>
+  ({ state: mode === 'python' ? 'loading' : 'ready' });

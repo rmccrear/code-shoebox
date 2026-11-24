@@ -1,5 +1,6 @@
 import { EnvironmentMode, MediaAsset, MockApiConfig } from './types';
 import { serializeFileBundle, serializeReactAppBundle } from './runtime/fileBundle';
+import { PYTHON_STARTER_CODE } from './constants';
 
 export const HTML_JS_CSS_MEDIA_DEMO_ASSETS = [
   {
@@ -79,6 +80,8 @@ export interface EditorDemoPreset {
   code: string;
   mediaAssets?: readonly MediaAsset[];
   mockApi?: MockApiConfig;
+  /** Initial Program input lines for python presets. */
+  pythonInput?: string;
   aliases?: string[];
 }
 
@@ -522,6 +525,12 @@ function draw() {
   }
   drawSprites();
 }`
+  },
+  {
+    id: 'python-console-demo',
+    mode: 'python',
+    code: PYTHON_STARTER_CODE,
+    pythonInput: 'Ada',
   }
 ];
 
@@ -548,4 +557,8 @@ export const getPresetMediaAssetsForMode = (mode: EnvironmentMode): readonly Med
 
 export const getPresetMockApiForMode = (mode: EnvironmentMode): MockApiConfig | undefined => {
   return PRESET_BY_MODE.get(mode)?.mockApi;
+};
+
+export const getPresetPythonInputForMode = (mode: EnvironmentMode): string | undefined => {
+  return PRESET_BY_MODE.get(mode)?.pythonInput;
 };

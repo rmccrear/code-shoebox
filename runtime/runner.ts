@@ -4,6 +4,7 @@ import { BASE_HTML_WRAPPER, FORMAT_RUNTIME_VALUE_SOURCE } from "./templates/comm
 import { EXPRESS_MOCK_SETUP } from "./templates/express";
 import { HONO_MOCK_SETUP } from "./templates/hono";
 import { FETCH_MOCK_SETUP } from "./templates/fetch";
+import { PYTHON_CONTENT_SECURITY_POLICY, PYTHON_RECIPE_LOGIC } from "./templates/python";
 import type { MockApiConfig } from "../types";
 
 export const SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
@@ -842,6 +843,14 @@ const ENV_RECIPES: Record<string, EnvironmentRecipe> = {
   }
 };
 
+ENV_RECIPES.python = {
+  name: "Python (Console)",
+  showPlaceholder: false,
+  headless: true,
+  contentSecurityPolicy: PYTHON_CONTENT_SECURITY_POLICY,
+  logic: PYTHON_RECIPE_LOGIC,
+};
+
 ENV_RECIPES['html-js-css-media'] = {
   ...ENV_RECIPES['html-css-js'],
   name: "HTML, CSS, JavaScript & Media (4 tabs)",
@@ -872,6 +881,8 @@ export interface SandboxExecutionOptions {
   fixtureHtml?: string;
   fixtureCss?: string;
   mockApi?: MockApiConfig;
+  /** Lines answering python input() calls. Sent per run; never stored in srcDoc. */
+  stdin?: string;
 }
 
 export const executeCodeInSandbox = (
@@ -887,4 +898,14 @@ export const executeCodeInSandbox = (
     ...(executionId === undefined ? {} : { executionId }),
   };
   iframeContentWindow.postMessage(message, '*');
+};
+
+export type SandboxControlMessage = 'STOP' | 'RETRY';
+
+/** Sends a run-control message to the kernel; modes without a hook ignore it. */
+export const postSandboxControl = (
+  iframeContentWindow: Window,
+  type: SandboxControlMessage,
+) => {
+  iframeContentWindow.postMessage({ type }, '*');
 };

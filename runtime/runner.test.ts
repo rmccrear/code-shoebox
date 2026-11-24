@@ -1,12 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { executeCodeInSandbox, getSandboxHtml, SANDBOX_ATTRIBUTES } from './runner';
+import { executeCodeInSandbox, getSandboxHtml, postSandboxControl, SANDBOX_ATTRIBUTES } from './runner';
 import { EnvironmentMode } from '../types';
 import type { MockApiConfig } from '../types';
 import { FETCH_MOCK_SETUP } from './templates/fetch';
+import { PYODIDE_INDEX_URL, PYTHON_SETUP_SOURCE, PYTHON_WORKER_SOURCE } from './templates/python';
 
 const ALL_MODES: EnvironmentMode[] = [
   'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'p5play', 'react', 'react-app', 'react-ts',
-  'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
+  'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts', 'python'
 ];
 
 describe('getSandboxHtml', () => {
@@ -380,6 +381,56 @@ describe('getSandboxHtml', () => {
   });
 });
 
+describe('python recipe', () => {
+  const html = getSandboxHtml('python');
+
+  it('pins Pyodide and allows network access only to jsDelivr', () => {
+    expect(PYODIDE_INDEX_URL).toBe('https://cdn.jsdelivr.net/pyodide/v314.0.8/full/');
+    expect(html).toContain('<meta http-equiv="Content-Security-Policy" content="connect-src https://cdn.jsdelivr.net">');
+    expect(html).not.toContain('allow-same-origin');
+    // The index URL lives only inside the encoded worker source.
+    expect(html).not.toContain('<script src=');
+  });
+
+  it('runs Pyodide in a data: URL module worker with snapshots and no JS globals', () => {
+    expect(html).toContain("'data:text/javascript;charset=utf-8,' + encodeURIComponent(");
+    expect(html).toContain("{ type: 'module' }");
+    expect(PYTHON_WORKER_SOURCE).toContain("import(INDEX_URL + 'pyodide.mjs')");
+    expect(PYTHON_WORKER_SOURCE).toContain('jsglobals: {}');
+    expect(PYTHON_WORKER_SOURCE).toContain('_makeSnapshot = true');
+    expect(PYTHON_WORKER_SOURCE).toContain('_loadSnapshot = snapshot');
+    expect(PYTHON_WORKER_SOURCE).toContain('makeMemorySnapshot()');
+  });
+
+  it('defines run, stop, retry, and port hooks and reports runtime status', () => {
+    for (const hook of ['__RUN_MODE__', '__STOP_MODE__', '__RETRY_MODE__', '__ON_PORT_READY__']) {
+      expect(html).toContain(`window.${hook} = function`);
+    }
+    expect(html).toContain("sendPayload('RUNTIME_STATUS', status)");
+    expect(html).toContain('const RUN_TIME_LIMIT_MS = 10000;');
+    expect(html).toContain('const BOOT_TIMEOUT_MS = 30000;');
+    expect(PYTHON_WORKER_SOURCE).toContain('const LINE_LIMIT = 5000;');
+  });
+
+  it('trims tracebacks to main.py and routes input() through the Program input lines', () => {
+    expect(PYTHON_SETUP_SOURCE).toContain('compile(source, "main.py", "exec")');
+    expect(PYTHON_SETUP_SOURCE).toContain('frame.filename == "main.py"');
+    expect(PYTHON_SETUP_SOURCE).toContain('builtins.input = _cs_input');
+    expect(PYTHON_SETUP_SOURCE).toContain('Add more to the Program input box.');
+  });
+
+  it('never embeds a closing script tag from the encoded worker or setup source', () => {
+    const scriptBody = html.slice(html.indexOf('<script>') + '<script>'.length, html.lastIndexOf('</script>'));
+    expect(scriptBody).not.toMatch(/<\/script/i);
+  });
+
+  it('keeps learner code out of the generated document', () => {
+    const sentinel = 'print("sentinel-learner-code-7f3a")';
+    executeCodeInSandbox({ postMessage: vi.fn() } as unknown as Window, sentinel, { stdin: 'x' }, 1);
+    expect(getSandboxHtml('python')).not.toContain('sentinel-learner-code');
+  });
+});
+
 describe('HTML page rendering', () => {
   const bundle = (html: string, css = '', js = '') => JSON.stringify({
     __csFiles__: 1, files: { 'index.html': html, 'style.css': css, 'script.js': js },
@@ -658,5 +709,38 @@ describe('executeCodeInSandbox', () => {
       executionId: 7,
     }, '*');
     expect(getSandboxHtml('fetch')).not.toContain('/api/readings');
+  });
+
+  it('sends python stdin as payload data with an execution id', () => {
+    const postMessage = vi.fn();
+    const stdin = 'Grace\n` ${not-a-template}';
+
+    executeCodeInSandbox({ postMessage } as unknown as Window, 'print(input())', { stdin }, 3);
+
+    expect(postMessage).toHaveBeenCalledWith({
+      type: 'EXECUTE',
+      code: 'print(input())',
+      payload: { stdin },
+      executionId: 3,
+    }, '*');
+    expect(getSandboxHtml('python')).not.toContain(stdin);
+  });
+});
+
+describe('run-control messages', () => {
+  it('posts STOP and RETRY as plain control messages', () => {
+    const postMessage = vi.fn();
+    postSandboxControl({ postMessage } as unknown as Window, 'STOP');
+    postSandboxControl({ postMessage } as unknown as Window, 'RETRY');
+    expect(postMessage).toHaveBeenNthCalledWith(1, { type: 'STOP' }, '*');
+    expect(postMessage).toHaveBeenNthCalledWith(2, { type: 'RETRY' }, '*');
+  });
+
+  it('dispatches STOP and RETRY to optional per-mode hooks in every kernel', () => {
+    for (const mode of ALL_MODES) {
+      const html = getSandboxHtml(mode);
+      expect(html, mode).toContain("type === 'STOP' && typeof window.__STOP_MODE__ === 'function'");
+      expect(html, mode).toContain("type === 'RETRY' && typeof window.__RETRY_MODE__ === 'function'");
+    }
   });
 });

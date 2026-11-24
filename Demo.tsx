@@ -6,6 +6,7 @@ import { themes } from './theme';
 import { useSandboxState } from './hooks/useSandboxState';
 import { serializeFileBundle } from './runtime/fileBundle';
 import { resolvePresetFromHash } from './demoPresets';
+import { PYTHON_STARTER_CODE } from './constants';
 
 const HTML_DEMO_CODE = `<!DOCTYPE html>
 <html>
@@ -431,6 +432,7 @@ export const Demo: React.FC = () => {
     const honoState = useSandboxState('demo_hono_v2', HONO_DEMO_CODE, 'hono');
     const nodeJsState = useSandboxState('demo_node_js_v2', NODE_JS_DEMO_CODE, 'node-js');
     const nodeTsState = useSandboxState('demo_node_ts_v2', NODE_TS_DEMO_CODE, 'node-ts');
+    const pythonState = useSandboxState('demo_python_v1', PYTHON_STARTER_CODE, 'python');
     const persistenceState = useSandboxState('demo_persistence_v2', PERSISTENCE_DEMO_CODE, 'dom');
 
     const handleResetAll = () => {
@@ -447,6 +449,7 @@ export const Demo: React.FC = () => {
             expressPredictionState.resetCode();
             honoState.resetCode();
             nodeJsState.resetCode();
+            pythonState.resetCode();
             nodeTsState.resetCode();
             persistenceState.resetCode();
         }
@@ -563,6 +566,13 @@ export const Demo: React.FC = () => {
                     <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-teal-500" /> Logic (Headless TS)</h2></div>
                     <div className="h-[400px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
                         <CodeShoebox code={nodeTsState.code} onCodeChange={nodeTsState.setCode} environmentMode={nodeTsState.environmentMode} theme={themes[2]} themeMode="dark" sessionId={nodeTsState.sessionId} />
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-6"><h2 className="text-2xl font-semibold flex items-center gap-2"><Code2 className="w-6 h-6 text-blue-400" /> Python (Console)</h2></div>
+                    <div className="h-[500px] border rounded-xl overflow-hidden shadow-xl dark:border-white/10">
+                        <CodeShoebox code={pythonState.code} onCodeChange={pythonState.setCode} environmentMode={pythonState.environmentMode} pythonInput="Ada" theme={themes[0]} themeMode="dark" sessionId={pythonState.sessionId} />
                     </div>
                 </section>
 

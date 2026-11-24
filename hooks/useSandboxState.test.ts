@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useSandboxState } from './useSandboxState';
 import {
   HTML_STARTER_CODE,
+  PYTHON_STARTER_CODE,
   HTML_CSS_STARTER_CODE,
   HTML_JS_STARTER_CODE,
   HTML_JS_FETCH_STARTER_CODE,
@@ -42,6 +43,16 @@ describe('useSandboxState', () => {
     expect(result.current.environmentMode).toBe('p5');
     expect(result.current.code).not.toBe(domCode);
     expect(result.current.sessionId).toBe(initialSession + 1);
+  });
+
+  it('switching to python loads its starter and persists under its own key', () => {
+    const { result } = renderHook(() => useSandboxState('lesson-1'));
+    act(() => result.current.setEnvironmentMode('python'));
+    expect(result.current.environmentMode).toBe('python');
+    expect(result.current.code).toBe(PYTHON_STARTER_CODE);
+    expect(result.current.code).toContain('input(');
+    act(() => result.current.setCode('print("mine")'));
+    expect(localStorage.getItem('cs_lesson-1_code_python')).toBe('print("mine")');
   });
 
   it('switching to html mode loads its starter and persists under its own key', () => {

@@ -1,12 +1,13 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { executeCodeInSandbox, getSandboxHtml } from '../runtime/runner';
+import { executeCodeInSandbox, getSandboxHtml, postSandboxControl } from '../runtime/runner';
 import { OutputFrame } from './OutputFrame';
 
 vi.mock('../runtime/runner', () => ({
   getSandboxHtml: vi.fn(() => '<!doctype html><html><body></body></html>'),
   executeCodeInSandbox: vi.fn(),
+  postSandboxControl: vi.fn(),
   SANDBOX_ATTRIBUTES: 'allow-scripts',
 }));
 
@@ -80,6 +81,7 @@ describe('OutputFrame', () => {
     vi.stubGlobal('MessageChannel', FakeMessageChannel);
     mockedExecuteCodeInSandbox.mockClear();
     vi.mocked(getSandboxHtml).mockClear();
+    vi.mocked(postSandboxControl).mockClear();
   });
 
   afterEach(() => {
@@ -511,5 +513,88 @@ describe('OutputFrame', () => {
 
     expect(screen.getByText('first log')).toBeInTheDocument();
     expect(screen.getByText('second log')).toBeInTheDocument();
+  });
+
+  describe('python mode', () => {
+    const pythonProps = { code: 'print("hi")', environmentMode: 'python' as const };
+
+    it('renders a hidden sandbox, the Program input box, and the console', () => {
+      const { container } = renderOutputFrame({ ...pythonProps, pythonInput: 'Grace' });
+      const iframe = container.querySelector('iframe');
+      expect(iframe).toHaveClass('hidden');
+      expect(screen.getByLabelText(/Program input/)).toHaveValue('Grace');
+    });
+
+    it('forwards runtime status reports to the host', () => {
+      const onRuntimeStatus = vi.fn();
+      const { container } = renderOutputFrame({ ...pythonProps, onRuntimeStatus });
+      const { channel } = loadFrame(container);
+      act(() => channel.port2.postMessage({ type: 'RUNTIME_STATUS', payload: { state: 'ready' } }));
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'ready' });
+      act(() => channel.port2.postMessage({ type: 'RUNTIME_STATUS', payload: { state: 'failed', message: 'blocked' } }));
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'failed', message: 'blocked' });
+    });
+
+    it('reports loading again when the sandbox iframe is recreated', () => {
+      const onRuntimeStatus = vi.fn();
+      const props = { ...pythonProps, themeMode: 'dark' as const, runTrigger: 0, onRuntimeStatus };
+      const { container, rerender } = renderOutputFrame(props);
+      const { iframe, channel } = loadFrame(container);
+      act(() => channel.port2.postMessage({ type: 'RUNTIME_STATUS', payload: { state: 'ready' } }));
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'ready' });
+
+      rerender(<OutputFrame {...props} isPredictionMode />);
+      expect(container.querySelector('iframe')).not.toBe(iframe);
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'loading' });
+    });
+
+    it('reconnects headless console modes after prediction mode toggles', () => {
+      const props = { code: 'console.log(1)', environmentMode: 'node-js' as const, themeMode: 'dark' as const, runTrigger: 0 };
+      const { container, rerender } = renderOutputFrame(props);
+      const { iframe, channel } = loadFrame(container);
+      rerender(<OutputFrame {...props} isPredictionMode />);
+      expect(channel.port1.closed).toBe(true);
+      expect(container.querySelector('iframe')).not.toBe(iframe);
+      const { channel: newChannel } = loadFrame(container);
+      act(() => newChannel.port2.postMessage({ type: 'CONSOLE_LOG', payload: 'after toggle' }));
+      expect(screen.getByText('after toggle')).toBeInTheDocument();
+    });
+
+    it('ignores runtime status reports outside python mode', () => {
+      const onRuntimeStatus = vi.fn();
+      const { container } = renderOutputFrame({ onRuntimeStatus });
+      const { channel } = loadFrame(container);
+      act(() => channel.port2.postMessage({ type: 'RUNTIME_STATUS', payload: { state: 'failed' } }));
+      expect(onRuntimeStatus).not.toHaveBeenCalled();
+    });
+
+    it('sends the current Program input with an execution id and completes only that run', () => {
+      const onExecutionComplete = vi.fn();
+      const props = { ...pythonProps, pythonInput: 'Ada', onExecutionComplete };
+      const { container, rerender } = renderOutputFrame(props);
+      const { channel } = loadFrame(container);
+      fireEvent.change(screen.getByLabelText(/Program input/), { target: { value: 'Grace\n7' } });
+
+      rerender(<OutputFrame {...props} themeMode="dark" runTrigger={1} />);
+      expect(mockedExecuteCodeInSandbox).toHaveBeenLastCalledWith(expect.anything(), 'print("hi")', { stdin: 'Grace\n7' }, 1);
+
+      rerender(<OutputFrame {...props} themeMode="dark" runTrigger={2} />);
+      act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 1 } }));
+      expect(onExecutionComplete).not.toHaveBeenCalled();
+      act(() => channel.port2.postMessage({ type: 'EXECUTION_COMPLETE', payload: { executionId: 2 } }));
+      expect(onExecutionComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it('posts STOP and RETRY when their triggers change', () => {
+      const props = { ...pythonProps, themeMode: 'dark' as const, runTrigger: 0 };
+      const { container, rerender } = renderOutputFrame(props);
+      loadFrame(container);
+      expect(postSandboxControl).not.toHaveBeenCalled();
+      rerender(<OutputFrame {...props} stopTrigger={1} />);
+      expect(postSandboxControl).toHaveBeenLastCalledWith(expect.anything(), 'STOP');
+      rerender(<OutputFrame {...props} stopTrigger={1} retryTrigger={1} />);
+      expect(postSandboxControl).toHaveBeenLastCalledWith(expect.anything(), 'RETRY');
+      expect(postSandboxControl).toHaveBeenCalledTimes(2);
+    });
   });
 });
