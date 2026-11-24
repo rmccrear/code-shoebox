@@ -9,8 +9,11 @@
 // browsers, launched through Playwright's channels).
 //
 // Pyodide is served from node_modules/pyodide by intercepting the pinned
-// jsDelivr URLs, so the check needs no network. PYODIDE_SOURCE=cdn uses the
-// real CDN instead.
+// jsDelivr URLs, so the check needs almost no network. Exception: Playwright's
+// Firefox does not intercept ES module imports made inside a worker, so there
+// pyodide.mjs and pyodide.asm.mjs (~270 KB) still come from jsDelivr; the WASM
+// and standard library are always served locally. PYODIDE_SOURCE=cdn uses the
+// real CDN for everything.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -83,8 +86,8 @@ const servePyodideLocally = async (context, indexUrl, version) => {
   return served;
 };
 
-const runScenarios = async (page, { served, log }) => {
-  // Host side of the kernel contract, as OutputFrame implements it.
+const runScenarios = async (page, { served, log, browserName, mountSandbox }) => {
+  const sandboxFrame = () => page.frames().find((f) => f !== page.mainFrame() && !f.isDetached());
   const statuses = () => page.evaluate(() => window.__messages.filter((m) => m.type === 'RUNTIME_STATUS').map((m) => m.payload));
   const waitForReady = async (afterIndex = 0, timeout = 60000) => {
     const handle = await page.waitForFunction((after) => {
@@ -140,7 +143,10 @@ const runScenarios = async (page, { served, log }) => {
     assert.equal((await statuses())[0].state, 'loading');
     if (served) {
       // Proves this engine routed the worker's requests to the local files.
-      for (const file of ['pyodide.mjs', 'pyodide.asm.wasm', 'python_stdlib.zip']) {
+      // Firefox's Playwright build can't intercept module imports in workers.
+      const required = ['pyodide.asm.wasm', 'python_stdlib.zip'];
+      if (browserName !== 'firefox') required.push('pyodide.mjs');
+      for (const file of required) {
         assert.ok(served.includes(file), `${file} was not served locally (served: ${served.join(', ') || 'nothing'})`);
       }
     }
@@ -233,8 +239,7 @@ const runScenarios = async (page, { served, log }) => {
 
   await scenario('falls back to a full boot when the snapshot cannot be restored', async () => {
     // Corrupt the copy the recipe sends to the next worker.
-    const frame = page.frames().find((f) => f !== page.mainFrame());
-    await frame.evaluate(() => {
+    await sandboxFrame().evaluate(() => {
       const slice = Uint8Array.prototype.slice;
       Uint8Array.prototype.slice = function (...args) {
         const copy = slice.apply(this, args);
@@ -246,6 +251,27 @@ const runScenarios = async (page, { served, log }) => {
     await waitForReady(endIndex, 60000);
     const { logs } = await run('print("fallback ok")');
     assert.deepEqual(texts(logs), ['fallback ok']);
+  });
+
+  await scenario('falls back to a full boot when a snapshot restore hangs', async () => {
+    await mountSandbox();
+    await waitForReady();
+    // Swallow the next snapshot boot message so that restore never finishes.
+    await sandboxFrame().evaluate(() => {
+      const post = Worker.prototype.postMessage;
+      let swallowed = false;
+      Worker.prototype.postMessage = function (data, ...rest) {
+        if (!swallowed && data && data.type === 'boot' && data.snapshot) { swallowed = true; return; }
+        return post.call(this, data, ...rest);
+      };
+    });
+    const started = Date.now();
+    const { endIndex } = await run('while True:\n    pass', { stopAfterMs: 300 });
+    await waitForReady(endIndex, 60000);
+    const elapsed = Date.now() - started;
+    assert.ok(elapsed >= 9500, `fell back after only ${elapsed} ms; expected the 10 s restore limit`);
+    const { logs } = await run('print("restore hang recovered")');
+    assert.deepEqual(texts(logs), ['restore hang recovered']);
   });
 
   return timings;
@@ -271,7 +297,10 @@ try {
       const pageErrors = [];
       page.on('pageerror', (error) => pageErrors.push(error.message));
       await page.goto(`${origin}/__python-check`);
-      await page.evaluate(async ({ html, sandbox }) => {
+      // Host side of the kernel contract, as OutputFrame implements it.
+      // Replaces any previous sandbox, so a scenario can start from a fresh boot.
+      const mountSandbox = () => page.evaluate(async ({ html, sandbox }) => {
+        window.__frame?.remove();
         window.__messages = [];
         const frame = document.createElement('iframe');
         frame.setAttribute('sandbox', sandbox);
@@ -284,8 +313,9 @@ try {
         frame.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
         window.__frame = frame;
       }, { html: getSandboxHtml('python'), sandbox: SANDBOX_ATTRIBUTES });
+      await mountSandbox();
 
-      const timings = await runScenarios(page, { served, log });
+      const timings = await runScenarios(page, { served, log, browserName: name, mountSandbox });
       assert.deepEqual(pageErrors, []);
       summary.push({ name, version: browser.version(), ok: true, ...timings });
     } catch (error) {

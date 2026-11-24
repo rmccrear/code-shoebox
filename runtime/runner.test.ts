@@ -409,6 +409,9 @@ describe('python recipe', () => {
     expect(html).toContain("sendPayload('RUNTIME_STATUS', status)");
     expect(html).toContain('const RUN_TIME_LIMIT_MS = 10000;');
     expect(html).toContain('const BOOT_TIMEOUT_MS = 30000;');
+    expect(html).toContain('const SNAPSHOT_RESTORE_TIMEOUT_MS = 10000;');
+    // A restore that errors, crashes, or hangs falls back to a full boot.
+    expect(html.match(/abandonSnapshot\(\)/g)?.length).toBeGreaterThanOrEqual(3);
     expect(PYTHON_WORKER_SOURCE).toContain('const LINE_LIMIT = 5000;');
   });
 
