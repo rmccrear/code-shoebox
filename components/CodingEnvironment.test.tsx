@@ -17,6 +17,7 @@ import {
 vi.mock('../runtime/runner', () => ({
   getSandboxHtml: vi.fn(() => '<!doctype html><html><body></body></html>'),
   executeCodeInSandbox: vi.fn(),
+  postSandboxControl: vi.fn(),
   SANDBOX_ATTRIBUTES: 'allow-scripts',
 }));
 
@@ -612,5 +613,56 @@ describe('CodingEnvironment routing', () => {
       'style.css': 'main { color: teal; }',
       'script.js': 'console.log("media lesson")',
     });
+  });
+});
+
+describe('CodingEnvironment python run controls', () => {
+  beforeEach(() => {
+    vi.stubGlobal('MessageChannel', FakeMessageChannel);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows main.py, edits as Python, and disables Run while Python loads', async () => {
+    renderCodingEnvironment('python', { code: 'print(1)', runtimeStatus: { state: 'loading' } });
+    expect(screen.getByText('main.py')).toBeInTheDocument();
+    const editor = await screen.findByLabelText('Code editor');
+    expect(editor).toHaveAttribute('data-language', 'python');
+    expect(editor.getAttribute('data-path')).toMatch(/\.py$/);
+    expect(screen.getByRole('button', { name: /loading python/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /run code/i })).not.toBeInTheDocument();
+  });
+
+  it('runs when ready and offers STOP while running', () => {
+    const onRun = vi.fn();
+    const onStop = vi.fn();
+    const { rerender } = renderCodingEnvironment('python', { onRun, onStop, runtimeStatus: { state: 'ready' } });
+    fireEvent.click(screen.getByRole('button', { name: 'RUN CODE' }));
+    expect(onRun).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <CodingEnvironment
+        code="" onChange={() => {}} onRun={onRun} onStop={onStop} isRunning runTrigger={1}
+        themeMode="dark" environmentMode="python" sessionId={1} runtimeStatus={{ state: 'ready' }}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'STOP' }));
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers RETRY LOADING after a load failure', () => {
+    const onRetry = vi.fn();
+    renderCodingEnvironment('python', { onRetry, runtimeStatus: { state: 'failed', message: 'blocked' } });
+    fireEvent.click(screen.getByRole('button', { name: 'RETRY LOADING' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps other modes on the plain Run button even if a status is passed', () => {
+    renderCodingEnvironment('node-js', { runtimeStatus: { state: 'loading' }, isRunning: true });
+    expect(screen.queryByRole('button', { name: /loading python|stop/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'RUNNING...' })).toBeDisabled();
   });
 });

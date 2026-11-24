@@ -138,7 +138,7 @@ try {
   await page.getByRole('button', { name: 'RUN CODE', exact: true }).click();
   await page.locator('iframe').contentFrame().locator('iframe.cs-html-frame')
     .contentFrame().getByText('Editable sandbox ran', { exact: true }).waitFor();
-  await page.locator('.break-all.whitespace-pre').filter({ hasText: 'editable smoke' }).waitFor();
+  await page.locator('[data-console-message]').filter({ hasText: 'editable smoke' }).waitFor();
   await page.getByTitle('Clear Console').click();
   await page.getByText('No output', { exact: true }).waitFor();
   assert.deepEqual(editorErrors, [], 'Editable fixture runtime errors');
