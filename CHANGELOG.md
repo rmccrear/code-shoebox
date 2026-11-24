@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.42-c — 2026-11-24 (CodeMirror QA)
+
+- Adds the Python console mode from stable v1.0.40
+  ([#32](https://github.com/rmccrear/code-shoebox/pull/32), ported in
+  [#33](https://github.com/rmccrear/code-shoebox/pull/33)): real Python 3.14
+  (Pyodide 314.0.8) in a Web Worker inside the sandbox, a Program input box
+  for `input()` (optional `pythonInput` prop), LOADING PYTHON… / STOP /
+  RETRY LOADING run controls, 10 s and 5,000-line limits, and snapshot
+  restarts in about a quarter of a second.
+- CodeMirror edits Python as `main.py` with `@codemirror/lang-python`; Monaco
+  uses its built-in Python language.
+- Python output appears in the DevTools-style console as plain text.
+- Toggling prediction mode no longer cuts off console output in console-only
+  modes.
+- Retain CodeMirror defaults, opt-in HTML Emmet, the optional TypeScript
+  checker, and the DevTools-style console.
+
 ## 1.0.41-c — 2026-11-03 (CodeMirror QA)
 
 - The Console copies Chrome DevTools (follow-up to
