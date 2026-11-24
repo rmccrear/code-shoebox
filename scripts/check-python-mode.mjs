@@ -89,7 +89,7 @@ const servePyodideLocally = async (context, indexUrl, version) => {
   return served;
 };
 
-const runScenarios = async (page, { served, log, browserName, mountSandbox }) => {
+const runScenarios = async (page, { served, log, browserName, group }) => {
   const sandboxFrame = () => page.frames().find((f) => f !== page.mainFrame() && !f.isDetached());
   const statuses = () => page.evaluate(() => window.__messages.filter((m) => m.type === 'RUNTIME_STATUS').map((m) => m.payload));
   const waitForReady = async (afterIndex = 0, timeout = 60000) => {
@@ -132,7 +132,9 @@ const runScenarios = async (page, { served, log, browserName, mountSandbox }) =>
   };
 
   const timings = {};
-  const scenario = async (name, fn) => {
+  // Scenarios run in groups; each group gets a fresh browser context.
+  const scenario = async (name, fn, scenarioGroup = 'main') => {
+    if (scenarioGroup !== group) return;
     const started = Date.now();
     await fn();
     log(`  ✓ ${name} (${Date.now() - started} ms)`);
@@ -241,6 +243,7 @@ const runScenarios = async (page, { served, log, browserName, mountSandbox }) =>
   });
 
   await scenario('falls back to a full boot when the snapshot cannot be restored', async () => {
+    await waitForReady();
     // Corrupt the copy the recipe sends to the next worker.
     await sandboxFrame().evaluate(() => {
       const slice = Uint8Array.prototype.slice;
@@ -254,10 +257,9 @@ const runScenarios = async (page, { served, log, browserName, mountSandbox }) =>
     await waitForReady(endIndex, 60000);
     const { logs } = await run('print("fallback ok")');
     assert.deepEqual(texts(logs), ['fallback ok']);
-  });
+  }, 'snapshot-error');
 
   await scenario('falls back to a full boot when a snapshot restore hangs', async () => {
-    await mountSandbox();
     await waitForReady();
     // Swallow the next snapshot boot message so that restore never finishes.
     await sandboxFrame().evaluate(() => {
@@ -275,7 +277,7 @@ const runScenarios = async (page, { served, log, browserName, mountSandbox }) =>
     assert.ok(elapsed >= 9500, `fell back after only ${elapsed} ms; expected the 10 s restore limit`);
     const { logs } = await run('print("restore hang recovered")');
     assert.deepEqual(texts(logs), ['restore hang recovered']);
-  });
+  }, 'snapshot-hang');
 
   return timings;
 };
@@ -292,42 +294,12 @@ try {
     const log = (line) => { lines.push(line); console.log(line); };
     let browser;
     const diagnostics = {};
-    try {
-      browser = await LAUNCHERS[name]();
-      log(`python [${name} ${browser.version()}, pyodide from ${pyodideSource}]`);
-      const context = await browser.newContext();
-      const served = pyodideSource === 'local' ? await servePyodideLocally(context, PYODIDE_INDEX_URL, PYODIDE_VERSION) : null;
-      const page = await context.newPage();
-      diagnostics.page = page;
-      diagnostics.served = served;
-      page.on('console', (message) => { if (message.type() === 'error') log(`    [${name} console] ${message.text().slice(0, 300)}`); });
-      const pageErrors = [];
-      page.on('pageerror', (error) => pageErrors.push(error.message));
-      await page.goto(`${origin}/__python-check`);
-      // Host side of the kernel contract, as OutputFrame implements it.
-      // Replaces any previous sandbox, so a scenario can start from a fresh boot.
-      const mountSandbox = () => page.evaluate(async ({ html, sandbox }) => {
-        window.__frame?.remove();
-        window.__messages = [];
-        const frame = document.createElement('iframe');
-        frame.setAttribute('sandbox', sandbox);
-        frame.srcdoc = html;
-        const loaded = new Promise((resolve) => frame.addEventListener('load', resolve, { once: true }));
-        document.body.appendChild(frame);
-        await loaded;
-        const channel = new MessageChannel();
-        channel.port1.onmessage = (event) => window.__messages.push({ ...event.data, at: performance.now() });
-        frame.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
-        window.__frame = frame;
-      }, { html: getSandboxHtml('python'), sandbox: SANDBOX_ATTRIBUTES });
-      await mountSandbox();
-
-      const timings = await runScenarios(page, { served, log, browserName: name, mountSandbox });
-      assert.deepEqual(pageErrors, []);
-      summary.push({ name, version: browser.version(), ok: true, ...timings });
-    } catch (error) {
+    let reported = false;
+    const reportDiagnostics = async (error) => {
+      if (reported) return;
+      reported = true;
       log(`  ✗ ${name}: ${error.message.split('\n')[0]}`);
-      // Diagnostics: which Pyodide files each boot fetched, and the status history.
+      // Which Pyodide files each boot fetched, and the status history.
       if (diagnostics.served) log(`    pyodide requests: ${diagnostics.served.log.join(' | ')}`);
       if (diagnostics.page) {
         const history = await diagnostics.page.evaluate(() => (window.__messages || [])
@@ -335,6 +307,55 @@ try {
           .map((m) => `${Math.round(m.at)}ms ${m.type === 'RUNTIME_STATUS' ? m.payload.state + (m.payload.detail ? ' (' + m.payload.detail + ')' : '') : m.payload}`)).catch(() => []);
         log(`    status history: ${history.join(' | ')}`);
       }
+    };
+    try {
+      browser = await LAUNCHERS[name]();
+      log(`python [${name} ${browser.version()}, pyodide from ${pyodideSource}]`);
+      // WebKit gets slower with every Pyodide worker a page creates (measured:
+      // restarts ~1.2 s → ~2.9 s over 12 STOPs; a fresh iframe does not reset
+      // it, a fresh page does). Each group therefore gets its own context, so
+      // the recovery scenarios don't inherit the main group's workers.
+      let timings;
+      for (const group of ['main', 'snapshot-error', 'snapshot-hang']) {
+        const context = await browser.newContext();
+        try {
+          const served = pyodideSource === 'local' ? await servePyodideLocally(context, PYODIDE_INDEX_URL, PYODIDE_VERSION) : null;
+          const page = await context.newPage();
+          diagnostics.page = page;
+          diagnostics.served = served;
+          page.on('console', (message) => { if (message.type() === 'error') log(`    [${name} console] ${message.text().slice(0, 300)}`); });
+          const pageErrors = [];
+          page.on('pageerror', (error) => pageErrors.push(error.message));
+          await page.goto(`${origin}/__python-check`);
+          // Host side of the kernel contract, as OutputFrame implements it.
+          await page.evaluate(async ({ html, sandbox }) => {
+            window.__messages = [];
+            const frame = document.createElement('iframe');
+            frame.setAttribute('sandbox', sandbox);
+            frame.srcdoc = html;
+            const loaded = new Promise((resolve) => frame.addEventListener('load', resolve, { once: true }));
+            document.body.appendChild(frame);
+            await loaded;
+            const channel = new MessageChannel();
+            channel.port1.onmessage = (event) => window.__messages.push({ ...event.data, at: performance.now() });
+            frame.contentWindow.postMessage({ type: 'INIT_PORT' }, '*', [channel.port2]);
+            window.__frame = frame;
+          }, { html: getSandboxHtml('python'), sandbox: SANDBOX_ATTRIBUTES });
+
+          const groupTimings = await runScenarios(page, { served, log, browserName: name, group });
+          if (group === 'main') timings = groupTimings;
+          assert.deepEqual(pageErrors, []);
+        } catch (error) {
+          // Collect diagnostics before the context closes.
+          await reportDiagnostics(error);
+          throw error;
+        } finally {
+          await context.close();
+        }
+      }
+      summary.push({ name, version: browser.version(), ok: true, ...timings });
+    } catch (error) {
+      await reportDiagnostics(error);
       summary.push({ name, version: browser?.version?.() ?? '-', ok: false, error: error.message.split('\n')[0] });
     } finally {
       await browser?.close();

@@ -299,7 +299,7 @@ Environments optimized for teaching pure logic without DOM distractions.
     *   `loadPyodide({ jsglobals: {} })` leaves `import js` empty, and the recipe CSP is `connect-src https://cdn.jsdelivr.net`, so learner code cannot call browser APIs or reach other hosts.
     *   Tracebacks are rebuilt in Python to keep only `main.py` frames. stdout → console log; stderr and errors → console errors.
 *   **Capabilities:** Most of the standard library (`math`, `random`, `json`, `re`, `collections`, `dataclasses`, `statistics`, …), classes, f-strings, big integers.
-*   **Limitations:** Single file. No packages (numpy, matplotlib, micropip), `turtle`, `tkinter`, graphics, top-level `await`, or interactive input while a program runs. Each instance on a page loads its own Pyodide.
+*   **Limitations:** Single file. No packages (numpy, matplotlib, micropip), `turtle`, `tkinter`, graphics, top-level `await`, or interactive input while a program runs. Each instance on a page loads its own Pyodide. In WebKit (Safari), every STOP or limit restart creates a new worker and the page gets gradually slower: restarts went from about 1.2 s to 2.9 s over 12 STOPs in testing, and recreating the iframe does not reset it; reloading the page does. Chromium and Firefox do not slow down.
 
 React App workspaces may optionally include `App.css` and `index.html`.
 Only explicitly supplied files get tabs; an empty supplied `App.css` still
