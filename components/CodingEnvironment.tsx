@@ -43,13 +43,17 @@ const BUNDLE_MODE_CONFIG = {
 }>>;
 
 const getDisplayFilename = (mode: EnvironmentMode): string =>
-  mode === 'html' ? 'index.html' : mode === 'react-app' ? 'App.jsx' : `${mode}.script`;
+  mode === 'html' ? 'index.html'
+    : mode === 'react-app' ? 'App.jsx'
+    : mode === 'python' ? 'main.py'
+    : `${mode}.script`;
 
 const getCodeLanguage = (mode: EnvironmentMode, filename?: string): string => {
   if (filename?.endsWith('.html')) return 'html';
   if (filename?.endsWith('.css')) return 'css';
   if (filename?.endsWith('.js')) return 'javascript';
   if (mode === 'html') return 'html';
+  if (mode === 'python') return 'python';
   if (['typescript', 'react-ts', 'express-ts', 'hono-ts', 'node-ts', 'p5-ts'].includes(mode)) {
     return 'typescript';
   }

@@ -9,7 +9,7 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
-export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'react-app' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'react-app' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts' | 'python';
 
 export type JsonValue =
   | null
@@ -87,4 +87,9 @@ export interface CodeShoeboxProps {
   prediction_prompt?: React.ReactNode;
   /** Enables verbose system logging for debugging communication issues */
   debugMode?: boolean;
+  /**
+   * Initial text for python mode's Program input box. Each line answers one
+   * input() call. Learners can edit it; it is not persisted.
+   */
+  pythonInput?: string;
 }

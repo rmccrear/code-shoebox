@@ -116,12 +116,16 @@ export const KERNEL_SCRIPTS = `
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
             window.messagePort = event.ports[0];
             window.messagePort.postMessage({ type: 'READY_SIGNAL' });
+            if (typeof window.__ON_PORT_READY__ === 'function') window.__ON_PORT_READY__();
             if (window.__SERVER_READY__) {
                 console.log("[Kernel] Server already ready, resending SERVER_READY signal via Port.");
                 window.messagePort.postMessage({ type: 'SERVER_READY' });
             }
         }
         if (type === 'THEME') document.body.className = mode === 'dark' ? 'dark' : '';
+        // Optional per-mode control hooks (only python defines them today).
+        if (type === 'STOP' && typeof window.__STOP_MODE__ === 'function') window.__STOP_MODE__();
+        if (type === 'RETRY' && typeof window.__RETRY_MODE__ === 'function') window.__RETRY_MODE__();
         if (type === 'EXECUTE' && window.__RUN_MODE__) {
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
