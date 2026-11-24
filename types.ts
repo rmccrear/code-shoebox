@@ -9,6 +9,15 @@ export interface ExecutionMessage {
 
 export type ThemeMode = 'light' | 'dark';
 
+/** Load state of a mode's runtime. Only python reports anything but 'ready'. */
+export interface RuntimeStatus {
+  state: 'loading' | 'ready' | 'failed';
+  /** Learner-facing explanation, e.g. why loading failed. */
+  message?: string;
+  /** Technical detail shown only in debug mode. */
+  detail?: string;
+}
+
 export type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'react-app' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts' | 'python';
 
 export type JsonValue =

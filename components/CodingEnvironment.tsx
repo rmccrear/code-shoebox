@@ -7,7 +7,10 @@ import {
   Columns,
   Rows,
   GripVertical,
-  GripHorizontal
+  GripHorizontal,
+  LoaderCircle,
+  RotateCcw,
+  Square
 } from 'lucide-react';
 import { ReadOnlyCodeViewer } from './ReadOnlyCodeViewer';
 import { MediaPanel } from './MediaPanel';
@@ -16,7 +19,7 @@ import { isMockApiEnabled } from '../runtime/mockApi';
 import { OutputFrame } from './OutputFrame';
 import { ServerOutput } from './ServerOutput';
 import { Button } from './Button';
-import { ThemeMode, EnvironmentMode, MediaAsset, MockApiConfig } from '../types';
+import { ThemeMode, EnvironmentMode, MediaAsset, MockApiConfig, RuntimeStatus } from '../types';
 import {
   HTML_CSS_FILE_NAMES,
   HTML_JS_FILE_NAMES,
@@ -60,6 +63,8 @@ const getCodeLanguage = (mode: EnvironmentMode, filename?: string): string => {
   return 'javascript';
 };
 
+const READY_STATUS: RuntimeStatus = { state: 'ready' };
+
 const CodeEditor = React.lazy(() => import('./CodeEditor').then((module) => ({
   default: module.CodeEditor,
 })));
@@ -81,6 +86,13 @@ interface CodingEnvironmentProps {
   predictionPrompt?: React.ReactNode;
   debugMode?: boolean;
   onExecutionComplete?: () => void;
+  runtimeStatus?: RuntimeStatus;
+  onRuntimeStatus?: (status: RuntimeStatus) => void;
+  onStop?: () => void;
+  onRetry?: () => void;
+  stopTrigger?: number;
+  retryTrigger?: number;
+  pythonInput?: string;
 }
 
 export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({ 
@@ -100,6 +112,13 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   predictionPrompt,
   debugMode = false,
   onExecutionComplete,
+  runtimeStatus = READY_STATUS,
+  onRuntimeStatus,
+  onStop,
+  onRetry,
+  stopTrigger = 0,
+  retryTrigger = 0,
+  pythonInput,
 }) => {
   const [predictionAnswer, setPredictionAnswer] = useState('');
   const [isPredictionLocked, setIsPredictionLocked] = useState(false);
@@ -231,6 +250,7 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const isServerMode = environmentMode.startsWith('express') || environmentMode.startsWith('hono');
+  const isPython = environmentMode === 'python';
 
   return (
     <div className={`flex-1 flex flex-col overflow-hidden ${themeMode === 'dark' ? 'bg-[#1e1e1e]' : 'bg-white'}`}>
@@ -308,7 +328,28 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
             </button>
           </div>
           
-          {!isServerMode && (
+          {isPython && runtimeStatus.state !== 'ready' ? (
+            <Button
+              onClick={runtimeStatus.state === 'failed' ? onRetry : undefined}
+              disabled={runtimeStatus.state === 'loading'}
+              variant="primary"
+              className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
+              icon={runtimeStatus.state === 'loading'
+                ? <LoaderCircle className="animate-spin" size={14}/>
+                : <RotateCcw size={14}/>}
+            >
+              {runtimeStatus.state === 'loading' ? 'LOADING PYTHON…' : 'RETRY LOADING'}
+            </Button>
+          ) : isPython && isRunning ? (
+            <Button
+              onClick={onStop}
+              variant="primary"
+              className="h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20"
+              icon={<Square size={14}/>}
+            >
+              STOP
+            </Button>
+          ) : !isServerMode && (
             <Button 
               onClick={handleRunClick} 
               disabled={(isRunning && !mockApiEnabled) || !isPredictionFulfilled}
@@ -397,7 +438,11 @@ export const CodingEnvironment: React.FC<CodingEnvironmentProps> = ({
                 isBlurred={!isPredictionFulfilled}
                 isPredictionMode={!!predictionPrompt}
                 debugMode={debugMode}
-                onExecutionComplete={mockApiEnabled ? onExecutionComplete : undefined}
+                onExecutionComplete={mockApiEnabled || isPython ? onExecutionComplete : undefined}
+                onRuntimeStatus={isPython ? onRuntimeStatus : undefined}
+                stopTrigger={stopTrigger}
+                retryTrigger={retryTrigger}
+                pythonInput={pythonInput}
               />
             )}
           </div>
