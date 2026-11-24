@@ -287,6 +287,20 @@ Environments optimized for teaching pure logic without DOM distractions.
 *   **Visuals:** Headless (Console only).
 *   **Capabilities:** Pure TypeScript. Excellent for teaching interfaces, types, and classes without UI overhead.
 
+### `python` (Python Console)
+*   **Engine:** Pyodide `314.0.8` (CPython 3.14 compiled to WebAssembly), loaded from `cdn.jsdelivr.net`.
+*   **Visuals:** Headless (Console only), plus a **Program input** box above the console.
+*   **Architecture:**
+    *   The sandbox iframe owns a module Web Worker created from a `data:` URL (blob URLs and classic workers do not work from the opaque-origin sandbox). Pyodide never runs on the iframe's main thread.
+    *   Loading starts when the iframe loads. The kernel reports `RUNTIME_STATUS` (`loading` / `ready` / `failed`) and the host keeps RUN CODE disabled until `ready`. A load that fails or takes longer than 30 s reports `failed`; RETRY LOADING sends `RETRY`.
+    *   The first boot runs setup code (`_cs_run`, `_cs_input`) and saves a ~30 MB memory snapshot (experimental `_makeSnapshot` / `makeMemorySnapshot` / `_loadSnapshot` APIs). Runs reuse the warm worker with a fresh `__main__` namespace.
+    *   STOP (`STOP` message → `__STOP_MODE__`), the 10 s run limit, and the 5,000-line output limit terminate the worker and restore a new one from the snapshot (~250 ms measured). If the snapshot cannot be made or restored, the recipe falls back to a full boot.
+    *   `EXECUTE.payload.stdin` carries the Program input text. Learner code and stdin never enter `srcDoc`, localStorage, or the code envelope.
+    *   `loadPyodide({ jsglobals: {} })` leaves `import js` empty, and the recipe CSP is `connect-src https://cdn.jsdelivr.net`, so learner code cannot call browser APIs or reach other hosts.
+    *   Tracebacks are rebuilt in Python to keep only `main.py` frames. stdout → console log; stderr and errors → console errors.
+*   **Capabilities:** Most of the standard library (`math`, `random`, `json`, `re`, `collections`, `dataclasses`, `statistics`, …), classes, f-strings, big integers.
+*   **Limitations:** Single file. No packages (numpy, matplotlib, micropip), `turtle`, `tkinter`, graphics, top-level `await`, or interactive input while a program runs. Each instance on a page loads its own Pyodide.
+
 React App workspaces may optionally include `App.css` and `index.html`.
 Only explicitly supplied files get tabs; an empty supplied `App.css` still
 shows its tab. Existing two-file bundles retain both tabs. Plain JSX source
