@@ -351,6 +351,8 @@ var init_MonacoCodeEditor = __esm({
             return `${basePath}.tsx`;
           case "html":
             return `${basePath}.html`;
+          case "python":
+            return `${basePath}.py`;
           case "react":
           case "react-app":
             return `${basePath}.jsx`;
@@ -367,6 +369,7 @@ var init_MonacoCodeEditor = __esm({
         if (activeFile?.endsWith(".jsx")) return "jsx";
         if (environmentMode === "html") return "html";
         if (environmentMode === "react-app") return "jsx";
+        if (environmentMode === "python") return "python";
         const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
         if (tsModes.includes(environmentMode)) return "typescript";
         return "javascript";
@@ -598,6 +601,7 @@ __export(CodeMirrorCodeEditor_exports, {
 function editorFilename({ activeFile, environmentMode }) {
   if (activeFile) return `/${activeFile}`;
   if (environmentMode === "html") return "/index.html";
+  if (environmentMode === "python") return "/main.py";
   if (environmentMode === "react-ts") return "/App.tsx";
   if (["react", "react-app"].includes(environmentMode)) return "/App.jsx";
   return ["typescript", "express-ts", "hono-ts", "p5-ts", "node-ts"].includes(environmentMode) ? "/script.ts" : "/script.js";
@@ -605,11 +609,12 @@ function editorFilename({ activeFile, environmentMode }) {
 function editorLanguage({ activeFile, environmentMode }) {
   if (activeFile?.endsWith(".html") || environmentMode === "html") return (0, import_lang_html.html)();
   if (activeFile?.endsWith(".css")) return (0, import_lang_css.css)();
+  if (activeFile?.endsWith(".py") || environmentMode === "python") return (0, import_lang_python.python)();
   const typescript = activeFile ? /\.tsx?$/.test(activeFile) : ["typescript", "react-ts", "express-ts", "hono-ts", "p5-ts", "node-ts"].includes(environmentMode);
   const jsx14 = activeFile ? /\.[jt]sx$/.test(activeFile) : ["react", "react-app", "react-ts"].includes(environmentMode);
   return (0, import_lang_javascript.javascript)({ typescript, jsx: jsx14 });
 }
-var import_react8, import_codemirror, import_state3, import_view2, import_commands, import_lang_html, import_lang_css, import_lang_javascript, import_theme_one_dark, import_jsx_runtime10, emptyWorkspace, typeScriptModes, externalChange, CodeMirrorCodeEditor;
+var import_react8, import_codemirror, import_state3, import_view2, import_commands, import_lang_html, import_lang_css, import_lang_javascript, import_lang_python, import_theme_one_dark, import_jsx_runtime10, emptyWorkspace, typeScriptModes, externalChange, CodeMirrorCodeEditor;
 var init_CodeMirrorCodeEditor = __esm({
   "components/CodeMirrorCodeEditor.tsx"() {
     "use strict";
@@ -621,6 +626,7 @@ var init_CodeMirrorCodeEditor = __esm({
     import_lang_html = require("@codemirror/lang-html");
     import_lang_css = require("@codemirror/lang-css");
     import_lang_javascript = require("@codemirror/lang-javascript");
+    import_lang_python = require("@codemirror/lang-python");
     import_theme_one_dark = require("@codemirror/theme-one-dark");
     init_codeMirrorKeys();
     import_jsx_runtime10 = require("react/jsx-runtime");
@@ -1694,12 +1700,16 @@ var KERNEL_SCRIPTS = `
             console.log("[Kernel] Received INIT_PORT. Establishing MessageChannel.");
             window.messagePort = event.ports[0];
             window.messagePort.postMessage({ type: 'READY_SIGNAL' });
+            if (typeof window.__ON_PORT_READY__ === 'function') window.__ON_PORT_READY__();
             if (window.__SERVER_READY__) {
                 console.log("[Kernel] Server already ready, resending SERVER_READY signal via Port.");
                 window.messagePort.postMessage({ type: 'SERVER_READY' });
             }
         }
         if (type === 'THEME') document.body.className = mode === 'dark' ? 'dark' : '';
+        // Optional per-mode control hooks (only python defines them today).
+        if (type === 'STOP' && typeof window.__STOP_MODE__ === 'function') window.__STOP_MODE__();
+        if (type === 'RETRY' && typeof window.__RETRY_MODE__ === 'function') window.__RETRY_MODE__();
         if (type === 'EXECUTE' && window.__RUN_MODE__) {
             const root = document.getElementById('root');
             const placeholder = document.getElementById('placeholder');
@@ -2194,6 +2204,273 @@ var FETCH_MOCK_SETUP = `
     })();
 `;
 
+// runtime/templates/python.ts
+var PYODIDE_VERSION = "314.0.8";
+var PYODIDE_INDEX_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+var PYTHON_CONTENT_SECURITY_POLICY = "connect-src https://cdn.jsdelivr.net";
+var PYTHON_BOOT_TIMEOUT_MS = 3e4;
+var PYTHON_RUN_TIME_LIMIT_MS = 1e4;
+var PYTHON_OUTPUT_LINE_LIMIT = 5e3;
+var LINE_SEPARATOR = String.fromCharCode(8232);
+var PARAGRAPH_SEPARATOR = String.fromCharCode(8233);
+var toScriptLiteral = (value) => JSON.stringify(value).replace(/</g, "\\u003c").split(LINE_SEPARATOR).join("\\u2028").split(PARAGRAPH_SEPARATOR).join("\\u2029");
+var PYTHON_SETUP_SOURCE = String.raw`
+import builtins, linecache, sys, traceback
+
+def _cs_input(prompt=""):
+    line = sys.stdin.readline()
+    if line == "":
+        raise EOFError("input() ran out of lines. Add more to the Program input box.")
+    if line.endswith("\n"):
+        line = line[:-1]
+    print(f"{prompt}{line}")
+    return line
+
+builtins.input = _cs_input
+
+def _cs_format_error(exc):
+    report = traceback.TracebackException.from_exception(exc)
+    report.stack = traceback.StackSummary.from_list(
+        [frame for frame in report.stack if frame.filename == "main.py"]
+    )
+    report.__cause__ = None
+    report.__context__ = None
+    report.__suppress_context__ = True
+    lines = list(report.format())
+    if not report.stack:
+        lines = [line for line in lines if not line.startswith("Traceback")]
+    return "".join(lines).rstrip("\n")
+
+def _cs_run(source):
+    linecache.cache["main.py"] = (len(source), None, source.splitlines(True), "main.py")
+    try:
+        code = compile(source, "main.py", "exec")
+    except SyntaxError as exc:
+        return "".join(traceback.format_exception_only(type(exc), exc)).rstrip("\n")
+    namespace = {"__name__": "__main__", "__builtins__": builtins}
+    try:
+        exec(code, namespace)
+    except SystemExit:
+        pass
+    except BaseException as exc:
+        return _cs_format_error(exc)
+    finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    return None
+`;
+var PYTHON_WORKER_SOURCE = String.raw`
+const INDEX_URL = ${toScriptLiteral(PYODIDE_INDEX_URL)};
+const SETUP = ${toScriptLiteral(PYTHON_SETUP_SOURCE)};
+const LINE_LIMIT = ${PYTHON_OUTPUT_LINE_LIMIT};
+let pyodide = null;
+let lineCount = 0;
+let limitHit = false;
+
+// Python blocks this worker while it runs, so a buffered line could wait
+// forever behind a long loop. Post every line as soon as it is printed.
+function emit(stream, text) {
+  if (limitHit) return;
+  lineCount += 1;
+  if (lineCount > LINE_LIMIT) {
+    limitHit = true;
+    postMessage({ type: 'output-limit' });
+    return;
+  }
+  postMessage({ type: 'output', lines: [[stream, text]] });
+}
+
+async function boot(snapshot) {
+  const started = Date.now();
+  const { loadPyodide } = await import(INDEX_URL + 'pyodide.mjs');
+  const options = { indexURL: INDEX_URL, jsglobals: {} };
+  if (snapshot) options._loadSnapshot = snapshot;
+  else options._makeSnapshot = true;
+  pyodide = await loadPyodide(options);
+  pyodide.setStdout({ batched: (text) => emit('out', text) });
+  pyodide.setStderr({ batched: (text) => emit('err', text) });
+  if (!pyodide.globals.has('_cs_run')) pyodide.runPython(SETUP);
+  let madeSnapshot;
+  let snapshotError;
+  if (!snapshot) {
+    try { madeSnapshot = pyodide.makeMemorySnapshot(); }
+    catch (error) { snapshotError = String((error && error.message) || error); }
+  }
+  const message = { type: 'ready', restored: !!snapshot, bootMs: Date.now() - started, snapshotError, snapshot: madeSnapshot };
+  postMessage(message, madeSnapshot ? [madeSnapshot.buffer] : []);
+}
+
+function run(id, code, stdin) {
+  lineCount = 0;
+  limitHit = false;
+  const text = String(stdin || '').replace(/\r\n?/g, '\n');
+  const lines = text === '' ? [] : text.split('\n');
+  if (text.endsWith('\n')) lines.pop();
+  // Return the newline ourselves so a blank answer is not read as EOF.
+  pyodide.setStdin({ stdin: () => (lines.length ? lines.shift() + '\n' : undefined) });
+  let error = null;
+  let fatal = false;
+  const runner = pyodide.globals.get('_cs_run');
+  try {
+    const result = runner(String(code));
+    if (typeof result === 'string') error = result;
+  } catch (failure) {
+    fatal = true;
+    error = 'Python stopped unexpectedly: ' + String((failure && failure.message) || failure);
+  } finally {
+    if (runner && runner.destroy) runner.destroy();
+  }
+  postMessage({ type: 'done', id, error, fatal });
+}
+
+self.onmessage = (event) => {
+  const data = event.data || {};
+  if (data.type === 'boot') {
+    boot(data.snapshot).catch((error) => {
+      postMessage({ type: 'boot-error', fromSnapshot: !!data.snapshot, message: String((error && error.message) || error) });
+    });
+  } else if (data.type === 'run' && pyodide) {
+    run(data.id, data.code, data.stdin);
+  }
+};
+`;
+var PYTHON_RECIPE_LOGIC = String.raw`
+(function () {
+  const WORKER_URL = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(${toScriptLiteral(PYTHON_WORKER_SOURCE)});
+  const BOOT_TIMEOUT_MS = ${PYTHON_BOOT_TIMEOUT_MS};
+  const RUN_TIME_LIMIT_MS = ${PYTHON_RUN_TIME_LIMIT_MS};
+  const LOAD_FAILED = 'Python could not load. Check that this device can reach cdn.jsdelivr.net, then click RETRY LOADING.';
+  let worker = null;
+  let snapshot = null;
+  let snapshotBroken = false;
+  let status = { state: 'loading' };
+  let bootTimer = null;
+  let current = null;
+  let runCount = 0;
+
+  function setStatus(state, message, detail) {
+    status = { state: state };
+    if (message) status.message = message;
+    if (detail) status.detail = detail;
+    sendPayload('RUNTIME_STATUS', status);
+  }
+
+  function fail(message) {
+    clearTimeout(bootTimer);
+    if (worker) worker.terminate();
+    worker = null;
+    setStatus('failed', LOAD_FAILED, message);
+    sendPayload('RUNTIME_ERROR', LOAD_FAILED);
+    finishRun();
+  }
+
+  function finishRun() {
+    if (!current) return;
+    clearTimeout(current.timer);
+    const resolve = current.resolve;
+    current = null;
+    resolve();
+  }
+
+  function stopRun(message) {
+    if (!current) return;
+    if (worker) worker.terminate();
+    worker = null;
+    sendPayload('CONSOLE_WARN', message);
+    finishRun();
+    startWorker(true);
+  }
+
+  function handle(data) {
+    if (!data) return;
+    if (data.type === 'ready') {
+      clearTimeout(bootTimer);
+      if (data.snapshot) snapshot = data.snapshot;
+      setStatus('ready', null, data.snapshotError ? 'snapshot-unavailable: ' + data.snapshotError : null);
+    } else if (data.type === 'output') {
+      for (const entry of data.lines) {
+        sendPayload(entry[0] === 'err' ? 'RUNTIME_ERROR' : 'CONSOLE_LOG', entry[1]);
+      }
+    } else if (data.type === 'output-limit') {
+      stopRun('Output limit reached: the program printed more than ${PYTHON_OUTPUT_LINE_LIMIT} lines.');
+    } else if (data.type === 'done') {
+      if (!current || data.id !== current.id) return;
+      if (data.error) sendPayload('RUNTIME_ERROR', data.error);
+      finishRun();
+      if (data.fatal) startWorker(true);
+    } else if (data.type === 'boot-error') {
+      if (data.fromSnapshot && !snapshotBroken) {
+        snapshotBroken = true;
+        snapshot = null;
+        startWorker(false);
+      } else {
+        fail(data.message);
+      }
+    }
+  }
+
+  function startWorker(fromSnapshot) {
+    if (worker) worker.terminate();
+    clearTimeout(bootTimer);
+    setStatus('loading');
+    let created;
+    try {
+      created = new Worker(WORKER_URL, { type: 'module' });
+    } catch (error) {
+      fail(String((error && error.message) || error));
+      return;
+    }
+    worker = created;
+    bootTimer = setTimeout(function () {
+      if (worker === created && status.state === 'loading') fail('Timed out after ' + BOOT_TIMEOUT_MS + ' ms.');
+    }, BOOT_TIMEOUT_MS);
+    created.onmessage = function (event) { if (worker === created) handle(event.data); };
+    created.onerror = function (event) {
+      if (worker !== created) return;
+      if (event && event.preventDefault) event.preventDefault();
+      const message = (event && event.message) || 'Worker error';
+      if (status.state === 'loading') fail(message);
+      else { sendPayload('RUNTIME_ERROR', 'Python stopped unexpectedly: ' + message); finishRun(); startWorker(true); }
+    };
+    if (fromSnapshot && snapshot && !snapshotBroken) {
+      const copy = snapshot.slice();
+      created.postMessage({ type: 'boot', snapshot: copy }, [copy.buffer]);
+    } else {
+      created.postMessage({ type: 'boot' });
+    }
+  }
+
+  window.__RUN_MODE__ = function (code, root, payload) {
+    return new Promise(function (resolve) {
+      if (status.state !== 'ready' || !worker) {
+        sendPayload('RUNTIME_ERROR', status.state === 'failed' ? LOAD_FAILED : 'Python is still loading. Try again in a moment.');
+        resolve();
+        return;
+      }
+      if (current) finishRun();
+      runCount += 1;
+      const id = runCount;
+      current = {
+        id: id,
+        resolve: resolve,
+        timer: setTimeout(function () {
+          stopRun('Stopped after ' + (RUN_TIME_LIMIT_MS / 1000) + ' seconds. Is there a loop that never ends?');
+        }, RUN_TIME_LIMIT_MS),
+      };
+      const stdin = payload && typeof payload.stdin === 'string' ? payload.stdin : '';
+      worker.postMessage({ type: 'run', id: id, code: String(code), stdin: stdin });
+    });
+  };
+
+  window.__STOP_MODE__ = function () { stopRun('Program stopped.'); };
+  window.__RETRY_MODE__ = function () { if (status.state === 'failed') startWorker(true); };
+  // Status sent before the host's port existed was lost; send it again.
+  window.__ON_PORT_READY__ = function () { sendPayload('RUNTIME_STATUS', status); };
+
+  startWorker(false);
+})();
+`;
+
 // runtime/runner.ts
 var SANDBOX_ATTRIBUTES = "allow-scripts allow-modals allow-forms";
 var BABEL_CDN = '<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>';
@@ -2318,11 +2595,11 @@ var PAGE_BRIDGE_SOURCE = `
     else ready();
   })();
 `;
-var toScriptLiteral = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
+var toScriptLiteral2 = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
 var buildHtmlPageLogic = ({ cssTab, mockFetch }) => `
   const PAGE_HAS_CSS_TAB = ${cssTab};
-  const PAGE_FRAME_SANDBOX = ${toScriptLiteral(SANDBOX_ATTRIBUTES)};
-  const PAGE_BRIDGE = ${toScriptLiteral((mockFetch ? FETCH_MOCK_SETUP : "") + FORMAT_RUNTIME_VALUE_SOURCE + PAGE_BRIDGE_SOURCE)};
+  const PAGE_FRAME_SANDBOX = ${toScriptLiteral2(SANDBOX_ATTRIBUTES)};
+  const PAGE_BRIDGE = ${toScriptLiteral2((mockFetch ? FETCH_MOCK_SETUP : "") + FORMAT_RUNTIME_VALUE_SOURCE + PAGE_BRIDGE_SOURCE)};
   let activePage = null;
 
   window.addEventListener('message', (event) => {
@@ -3008,6 +3285,13 @@ var ENV_RECIPES = {
     `
   }
 };
+ENV_RECIPES.python = {
+  name: "Python (Console)",
+  showPlaceholder: false,
+  headless: true,
+  contentSecurityPolicy: PYTHON_CONTENT_SECURITY_POLICY,
+  logic: PYTHON_RECIPE_LOGIC
+};
 ENV_RECIPES["html-js-css-media"] = {
   ...ENV_RECIPES["html-css-js"],
   name: "HTML, CSS, JavaScript & Media (4 tabs)"
@@ -3032,6 +3316,9 @@ var executeCodeInSandbox = (iframeContentWindow, code, options, executionId) => 
     ...executionId === void 0 ? {} : { executionId }
   };
   iframeContentWindow.postMessage(message, "*");
+};
+var postSandboxControl = (iframeContentWindow, type) => {
+  iframeContentWindow.postMessage({ type }, "*");
 };
 
 // components/PreviewContainer.tsx
@@ -3367,9 +3654,14 @@ var OutputFrame = ({
   isBlurred = false,
   isPredictionMode = false,
   debugMode = false,
-  onExecutionComplete
+  onExecutionComplete,
+  onRuntimeStatus,
+  stopTrigger = 0,
+  retryTrigger = 0,
+  pythonInput = ""
 }) => {
   const iframeRef = (0, import_react3.useRef)(null);
+  const programInputId = (0, import_react3.useId)();
   const containerRef = (0, import_react3.useRef)(null);
   const channelRef = (0, import_react3.useRef)(null);
   const executionRef = (0, import_react3.useRef)({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
@@ -3377,7 +3669,10 @@ var OutputFrame = ({
   const [logs, setLogs] = (0, import_react3.useState)([]);
   const [consoleHeight, setConsoleHeight] = (0, import_react3.useState)(150);
   const [isDragging, setIsDragging] = (0, import_react3.useState)(false);
-  const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts";
+  const isPython = environmentMode === "python";
+  const isHeadless = environmentMode === "node-js" || environmentMode === "node-ts" || isPython;
+  const [programInput, setProgramInput] = (0, import_react3.useState)(pythonInput);
+  const programInputRef = (0, import_react3.useRef)(programInput);
   const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
   const iframeReadyRef = (0, import_react3.useRef)(false);
   const pendingReactRunRef = (0, import_react3.useRef)(null);
@@ -3408,18 +3703,26 @@ var OutputFrame = ({
       }));
     } else if (type === "READY_SIGNAL" && debugMode) {
       addSystemLog("Sandbox Iframe Ready Signal Received via MessageChannel.");
-    } else if (type === "EXECUTION_COMPLETE" && mockApiEnabled && payload?.executionId === latestExecutionIdRef.current) {
+    } else if (type === "RUNTIME_STATUS" && isPython && payload && typeof payload.state === "string") {
+      if (debugMode && payload.detail) addSystemLog(`Python runtime: ${payload.detail}`, "warn");
+      onRuntimeStatus?.(payload);
+    } else if (type === "EXECUTION_COMPLETE" && (mockApiEnabled || isPython) && payload?.executionId === latestExecutionIdRef.current) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, mockApiEnabled, onExecutionComplete]);
+  }, [debugMode, addSystemLog, mockApiEnabled, isPython, onExecutionComplete, onRuntimeStatus]);
   const kernelMessageRef = (0, import_react3.useRef)(handleKernelMessage);
   (0, import_react3.useEffect)(() => {
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
+  const runtimeStatusRef = (0, import_react3.useRef)(onRuntimeStatus);
+  (0, import_react3.useEffect)(() => {
+    runtimeStatusRef.current = onRuntimeStatus;
+  }, [onRuntimeStatus]);
   (0, import_react3.useEffect)(() => {
     iframeReadyRef.current = false;
     latestExecutionIdRef.current = null;
     pendingReactRunRef.current = null;
+    if (environmentMode === "python") runtimeStatusRef.current?.({ state: "loading" });
     return () => {
       channelRef.current?.port1.close();
       channelRef.current = null;
@@ -3437,6 +3740,14 @@ var OutputFrame = ({
         const executionUsesFetch = isMockApiEnabled(execution.environmentMode, execution.mockApi);
         if (execution.environmentMode === "react-app" && !iframeReadyRef.current) {
           pendingReactRunRef.current = { execution, id: runTrigger };
+          return;
+        }
+        if (execution.environmentMode === "python") {
+          latestExecutionIdRef.current = runTrigger;
+          executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+            stdin: programInputRef.current
+          }, runTrigger);
+          if (execution.debugMode) addSystemLog("EXECUTE message dispatched.");
           return;
         }
         if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
@@ -3459,6 +3770,16 @@ var OutputFrame = ({
       }
     }
   }, [runTrigger, addSystemLog]);
+  (0, import_react3.useEffect)(() => {
+    if (stopTrigger > 0 && isPython && iframeRef.current?.contentWindow) {
+      postSandboxControl(iframeRef.current.contentWindow, "STOP");
+    }
+  }, [stopTrigger, isPython]);
+  (0, import_react3.useEffect)(() => {
+    if (retryTrigger > 0 && isPython && iframeRef.current?.contentWindow) {
+      postSandboxControl(iframeRef.current.contentWindow, "RETRY");
+    }
+  }, [retryTrigger, isPython]);
   (0, import_react3.useEffect)(() => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type: "THEME", mode: themeMode }, "*");
@@ -3552,7 +3873,25 @@ var OutputFrame = ({
             children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_lucide_react4.GripHorizontal, { className: "w-3 h-3" })
           }
         ),
-        !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { height: isHeadless ? "100%" : consoleHeight }, className: "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
+        isPython && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: `shrink-0 px-3 py-2 border-b ${themeMode === "dark" ? "bg-[#1e1e1e] border-white/10" : "bg-white border-gray-200"}`, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: programInputId, className: "block text-[10px] font-bold uppercase tracking-wider opacity-60 mb-1", children: "Program input \u2014 one line per input()" }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "textarea",
+            {
+              id: programInputId,
+              value: programInput,
+              onChange: (event) => {
+                programInputRef.current = event.target.value;
+                setProgramInput(event.target.value);
+              },
+              rows: 3,
+              spellCheck: false,
+              placeholder: "Type the answers your program will read, one per line",
+              className: `w-full resize-y p-2 rounded border font-mono text-xs outline-none focus:ring-1 focus:ring-blue-500 ${themeMode === "dark" ? "bg-black/20 border-white/10 text-white" : "bg-white border-gray-200 text-gray-900"}`
+            }
+          )
+        ] }),
+        !isStaticHtmlMode && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: isPython ? void 0 : { height: isHeadless ? "100%" : consoleHeight }, className: isPython ? "flex-1 min-h-0" : "shrink-0 min-h-0", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Console, { logs, onClear: () => setLogs([]), themeMode }) }),
         isHeadless && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "iframe",
           {
@@ -3563,7 +3902,7 @@ var OutputFrame = ({
             className: "hidden",
             onLoad: handleIframeLoad
           },
-          `headless-${environmentMode}`
+          `headless-${environmentMode}-${isPredictionMode}-${mockApiEnabled}`
         )
       ] })
     }
@@ -3943,17 +4282,19 @@ var BUNDLE_MODE_CONFIG = {
   "html-css-js": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: false },
   "html-js-css-media": { files: HTML_CSS_JS_FILE_NAMES, hasMediaTab: true }
 };
-var getDisplayFilename = (mode) => mode === "html" ? "index.html" : mode === "react-app" ? "App.jsx" : `${mode}.script`;
+var getDisplayFilename = (mode) => mode === "html" ? "index.html" : mode === "react-app" ? "App.jsx" : mode === "python" ? "main.py" : `${mode}.script`;
 var getCodeLanguage = (mode, filename) => {
   if (filename?.endsWith(".html")) return "html";
   if (filename?.endsWith(".css")) return "css";
   if (filename?.endsWith(".js")) return "javascript";
   if (mode === "html") return "html";
+  if (mode === "python") return "python";
   if (["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"].includes(mode)) {
     return "typescript";
   }
   return "javascript";
 };
+var READY_STATUS = { state: "ready" };
 var CodeEditor2 = import_react10.default.lazy(() => Promise.resolve().then(() => (init_CodeEditor(), CodeEditor_exports)).then((module2) => ({
   default: module2.CodeEditor
 })));
@@ -3974,7 +4315,14 @@ var CodingEnvironment = ({
   sessionId,
   predictionPrompt,
   debugMode = false,
-  onExecutionComplete
+  onExecutionComplete,
+  runtimeStatus = READY_STATUS,
+  onRuntimeStatus,
+  onStop,
+  onRetry,
+  stopTrigger = 0,
+  retryTrigger = 0,
+  pythonInput
 }) => {
   const [predictionAnswer, setPredictionAnswer] = (0, import_react10.useState)("");
   const [isPredictionLocked, setIsPredictionLocked] = (0, import_react10.useState)(false);
@@ -4079,6 +4427,7 @@ var CodingEnvironment = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
   const isServerMode = environmentMode.startsWith("express") || environmentMode.startsWith("hono");
+  const isPython = environmentMode === "python";
   return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: `flex-1 flex flex-col overflow-hidden ${themeMode === "dark" ? "bg-[#1e1e1e]" : "bg-white"}`, children: [
     predictionPrompt && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: `p-4 border-b flex gap-4 ${themeMode === "dark" ? "bg-[#252526] border-white/10" : "bg-blue-50 border-blue-100"}`, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "flex-1", children: [
       /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { className: "text-xs font-bold uppercase tracking-wider text-purple-500 mb-2", children: "Knowledge Check" }),
@@ -4147,7 +4496,26 @@ var CodingEnvironment = ({
             }
           )
         ] }),
-        !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        isPython && runtimeStatus.state !== "ready" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+          Button,
+          {
+            onClick: runtimeStatus.state === "failed" ? onRetry : void 0,
+            disabled: runtimeStatus.state === "loading",
+            variant: "primary",
+            className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
+            icon: runtimeStatus.state === "loading" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_lucide_react6.LoaderCircle, { className: "animate-spin", size: 14 }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_lucide_react6.RotateCcw, { size: 14 }),
+            children: runtimeStatus.state === "loading" ? "LOADING PYTHON\u2026" : "RETRY LOADING"
+          }
+        ) : isPython && isRunning ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+          Button,
+          {
+            onClick: onStop,
+            variant: "primary",
+            className: "h-8 !px-5 text-xs font-bold shadow-lg shadow-blue-500/20",
+            icon: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(import_lucide_react6.Square, { size: 14 }),
+            children: "STOP"
+          }
+        ) : !isServerMode && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           Button,
           {
             onClick: handleRunClick,
@@ -4233,7 +4601,11 @@ var CodingEnvironment = ({
           isBlurred: !isPredictionFulfilled,
           isPredictionMode: !!predictionPrompt,
           debugMode,
-          onExecutionComplete: mockApiEnabled ? onExecutionComplete : void 0
+          onExecutionComplete: mockApiEnabled || isPython ? onExecutionComplete : void 0,
+          onRuntimeStatus: isPython ? onRuntimeStatus : void 0,
+          stopTrigger,
+          retryTrigger,
+          pythonInput
         }
       ) }) })
     ] })
@@ -4256,16 +4628,24 @@ var CodeShoebox = ({
   themeMode,
   sessionId = 0,
   prediction_prompt,
-  debugMode = false
+  debugMode = false,
+  pythonInput
 }) => {
   const [runTrigger, setRunTrigger] = (0, import_react11.useState)(0);
   const [isRunning, setIsRunning] = (0, import_react11.useState)(false);
+  const [runtimeStatus, setRuntimeStatus] = (0, import_react11.useState)(() => initialRuntimeStatus(environmentMode));
+  const [stopTrigger, setStopTrigger] = (0, import_react11.useState)(0);
+  const [retryTrigger, setRetryTrigger] = (0, import_react11.useState)(0);
   const runFallbackRef = (0, import_react11.useRef)(null);
+  const isPython = environmentMode === "python";
   (0, import_react11.useEffect)(() => {
     setRunTrigger(0);
     setIsRunning(false);
+    setStopTrigger(0);
+    setRetryTrigger(0);
+    setRuntimeStatus(initialRuntimeStatus(environmentMode));
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
-  }, [sessionId]);
+  }, [sessionId, environmentMode]);
   (0, import_react11.useEffect)(() => () => {
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
   }, []);
@@ -4276,7 +4656,12 @@ var CodeShoebox = ({
     runFallbackRef.current = setTimeout(() => {
       setIsRunning(false);
       runFallbackRef.current = null;
-    }, isMockApiEnabled(environmentMode, mockApi) ? 1e4 : 500);
+    }, isPython ? PYTHON_RUN_TIME_LIMIT_MS + 5e3 : isMockApiEnabled(environmentMode, mockApi) ? 1e4 : 500);
+  };
+  const handleStop = () => setStopTrigger((prev) => prev + 1);
+  const handleRetry = () => {
+    setRuntimeStatus({ state: "loading" });
+    setRetryTrigger((prev) => prev + 1);
   };
   const handleExecutionComplete = () => {
     if (runFallbackRef.current) clearTimeout(runFallbackRef.current);
@@ -4323,13 +4708,21 @@ var CodeShoebox = ({
           mockApi,
           predictionPrompt: prediction_prompt,
           debugMode,
-          onExecutionComplete: handleExecutionComplete
+          onExecutionComplete: handleExecutionComplete,
+          runtimeStatus,
+          onRuntimeStatus: setRuntimeStatus,
+          onStop: handleStop,
+          onRetry: handleRetry,
+          stopTrigger,
+          retryTrigger,
+          pythonInput
         },
         sessionId
       )
     }
   );
 };
+var initialRuntimeStatus = (mode) => ({ state: mode === "python" ? "loading" : "ready" });
 
 // hooks/useSandboxState.ts
 var import_react12 = require("react");
@@ -5059,6 +5452,28 @@ myTodos.addTask("Learn TypeScript Types");
 myTodos.addTask("Master the Console");
 myTodos.showTasks();
 `;
+var PYTHON_STARTER_CODE = `# Welcome to Python!
+# Click RUN CODE. Answers for input() come from the Program input box.
+
+def describe_scores(name, scores):
+    best = max(scores)
+    average = sum(scores) / len(scores)
+    print(f"{name}: best {best}, average {average:.1f}")
+    return average
+
+name = input("What is your name? ")
+print(f"Hi, {name}! Here are this week's quiz scores.")
+
+scores = [7, 9, 8, 10, 6]
+for day, score in enumerate(scores, start=1):
+    print(f"Day {day}: {'*' * score} ({score})")
+
+average = describe_scores(name, scores)
+if average >= 8:
+    print("Great week!")
+else:
+    print("Keep practicing!")
+`;
 
 // hooks/useSandboxState.ts
 var VALID_MODES = [
@@ -5081,7 +5496,8 @@ var VALID_MODES = [
   "hono",
   "hono-ts",
   "node-js",
-  "node-ts"
+  "node-ts",
+  "python"
 ];
 var getStarterCode = (mode) => {
   switch (mode) {
@@ -5123,6 +5539,8 @@ var getStarterCode = (mode) => {
       return NODE_JS_STARTER_CODE;
     case "node-ts":
       return NODE_TS_STARTER_CODE;
+    case "python":
+      return PYTHON_STARTER_CODE;
     default:
       return STARTER_CODE;
   }
