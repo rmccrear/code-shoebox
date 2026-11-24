@@ -11,7 +11,7 @@ import { getPredictionPrompt } from './prompts';
 import { APP_NAME } from './constants';
 import { useSandboxState } from './hooks/useSandboxState';
 import { useEditorHashPresets } from './hooks/useEditorHashPresets';
-import { getPresetMediaAssetsForMode, getPresetMockApiForMode, resolvePresetFromHash } from './demoPresets';
+import { getPresetMediaAssetsForMode, getPresetMockApiForMode, getPresetPythonInputForMode, resolvePresetFromHash } from './demoPresets';
 
 const App: React.FC = () => {
   const {
@@ -69,6 +69,9 @@ const App: React.FC = () => {
   const mockApi = hashPreset?.mode === environmentMode
     ? hashPreset.mockApi
     : getPresetMockApiForMode(environmentMode);
+  const pythonInput = hashPreset?.mode === environmentMode
+    ? hashPreset.pythonInput
+    : getPresetPythonInputForMode(environmentMode);
 
   return (
     <div className={`h-screen w-screen flex flex-col transition-colors duration-300 ${themeMode === 'dark' ? 'bg-[#1e1e1e] text-gray-200' : 'bg-gray-50 text-gray-900'}`}>
@@ -138,6 +141,7 @@ const App: React.FC = () => {
                   <optgroup label="Logic & Console" className="text-black">
                     <option value="node-js">JavaScript (Console)</option>
                     <option value="node-ts">TypeScript (Console)</option>
+                    <option value="python">Python (Console)</option>
                   </optgroup>
                   <optgroup label="Modern Server (Hono)" className="text-black">
                     <option value="hono">Hono (JS)</option>
@@ -223,6 +227,7 @@ const App: React.FC = () => {
             environmentMode={environmentMode}
             mediaAssets={getPresetMediaAssetsForMode(environmentMode)}
             mockApi={mockApi}
+            pythonInput={pythonInput}
             themeMode={themeMode}
             theme={activeTheme}
             sessionId={sessionId}
