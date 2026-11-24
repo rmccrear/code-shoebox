@@ -25,6 +25,7 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
   - `hono-ts`: Hono environment with TypeScript support.
   - `node-js`: Pure JavaScript environment optimized for logic and algorithms (Console only).
   - `node-ts`: Pure TypeScript environment optimized for logic and algorithms (Console only).
+  - `python`: Real Python 3.14 via Pyodide in a Web Worker (Console only), with a Program input box for `input()`.
 - **Themable**: Full support for light/dark modes and custom color themes.
 - **State Management**: Built-in hook `useSandboxState` for easy persistence and mode switching.
 - **Pedagogical Tools**: Built-in support for code prediction exercises (PRIMM).
@@ -32,12 +33,12 @@ CodeShoebox is a self-contained, secure code playground component for React. It 
 
 ## Installation
 
-To install version **v1.0.39**:
+To install version **v1.0.40**:
 
 ```bash
-npm install github:rmccrear/code-shoebox#v1.0.39
+npm install github:rmccrear/code-shoebox#v1.0.40
 # or
-yarn add github:rmccrear/code-shoebox#v1.0.39
+yarn add github:rmccrear/code-shoebox#v1.0.40
 ```
 
 ## Maintenance & Releases
@@ -346,6 +347,28 @@ const mediaAssets: readonly MediaAsset[] = [
 
 Media descriptors remain host state: they are not uploaded, added to the code envelope, persisted to localStorage, or sent in iframe execution messages. Learners paste a shown snippet into an editable file and press Run. Only the first three assets are shown; an empty list produces a read-only empty state. MP3/WAV and video playback depend on browser codec support. Absolute HTTPS or data URLs are the most portable; relative URLs resolve against the host page, external URLs make browser requests to their origin, and Canvas/Web Audio access may still be restricted by CORS.
 
+## Python Mode
+
+`python` runs real CPython (Pyodide 314.0.8, Python 3.14) in a Web Worker inside the sandbox. Nothing runs on a server.
+
+```tsx
+<CodeShoebox
+  code={state.code}
+  onCodeChange={state.setCode}
+  environmentMode="python"
+  pythonInput={'Ada\n7'}
+  theme={activeTheme}
+  themeMode="dark"
+  sessionId={state.sessionId}
+/>
+```
+
+- **Loading:** Python starts downloading when the component mounts. RUN CODE reads **LOADING PYTHON…** until it is ready: about 2 s with a warm browser cache, and up to ~10 s on a first visit (~6 MB from `cdn.jsdelivr.net`). If it cannot load within 30 s, the button becomes **RETRY LOADING**. School networks must allow `cdn.jsdelivr.net`.
+- **Input:** `input()` reads the next line of the Program input box above the console and echoes it after the prompt. Running out of lines raises `EOFError` with a hint. Input cannot be typed while a program runs.
+- **Stop and limits:** RUN CODE becomes **STOP** while a program runs. A run is also stopped after 10 seconds or 5,000 output lines. Python restarts from a memory snapshot in well under a second.
+- **Isolation:** every Run gets a fresh namespace. Learner code cannot reach browser APIs (`import js` is empty) or the network; packages such as numpy are not available.
+- **Errors:** tracebacks show only the learner's `main.py` lines.
+
 ## Prediction Templates (Pedagogy)
 
 CodeShoebox natively supports the **Predict** phase of the PRIMM model. By passing the `prediction_prompt` prop, you transform the editor into a prediction challenge.
@@ -446,7 +469,7 @@ when local CSS should apply.
 |------|------|----------|-------------|
 | `code` | `string` | Yes | The source code to display in the editor. |
 | `onCodeChange` | `(code: string) => void` | Yes | Callback function invoked whenever the user types in the editor. |
-| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-js-fetch' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-app' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts'` | Yes | Determines the runtime environment. |
+| `environmentMode` | `'html' \| 'html-css' \| 'html-js' \| 'html-js-fetch' \| 'html-css-js' \| 'html-js-css-media' \| 'dom' \| 'fetch' \| 'typescript' \| 'p5' \| 'p5-ts' \| 'p5play' \| 'react' \| 'react-app' \| 'react-ts' \| 'express' \| 'express-ts' \| 'hono' \| 'hono-ts' \| 'node-js' \| 'node-ts' \| 'python'` | Yes | Determines the runtime environment. |
 | `fixtureHtml` | `string` | No | Trusted host-authored markup restored before every Run in `dom` mode; shown as a read-only `index.html` tab. |
 | `fixtureCss` | `string` | No | Trusted host-authored styles restored before every Run in `dom` mode; shown as a read-only `style.css` tab. |
 | `mediaAssets` | `readonly MediaAsset[]` | No | Host-authored image/audio/video descriptors shown read-only in `html-js-css-media`; the first 3 are displayed. |
@@ -457,6 +480,7 @@ when local CSS should apply.
 | `sessionId` | `number` | No | A unique identifier. Incrementing this forces a hard-reset of the editor. |
 | `prediction_prompt` | `string \| React.ReactNode` | No | If provided, shows immutable source in a static viewer for prediction exercises. |
 | `debugMode` | `boolean` | No | Enables verbose `[System]` logs in the console to help debug setup issues. |
+| `pythonInput` | `string` | No | Initial text of `python` mode's Program input box; each line answers one `input()` call. Learners can edit it; it is not persisted. |
 
 ## Contributing
 

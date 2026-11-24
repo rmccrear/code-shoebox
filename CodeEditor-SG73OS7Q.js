@@ -141,6 +141,8 @@ var CodeEditor = ({
         return `${basePath}.tsx`;
       case "html":
         return `${basePath}.html`;
+      case "python":
+        return `${basePath}.py`;
       case "react":
       case "react-app":
         return `${basePath}.jsx`;
@@ -157,6 +159,7 @@ var CodeEditor = ({
     if (activeFile?.endsWith(".jsx")) return "jsx";
     if (environmentMode === "html") return "html";
     if (environmentMode === "react-app") return "jsx";
+    if (environmentMode === "python") return "python";
     const tsModes = ["typescript", "react-ts", "express-ts", "hono-ts", "node-ts", "p5-ts"];
     if (tsModes.includes(environmentMode)) return "typescript";
     return "javascript";

@@ -27,7 +27,15 @@ interface ExecutionMessage {
     payload: string;
 }
 type ThemeMode = 'light' | 'dark';
-type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'react-app' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts';
+/** Load state of a mode's runtime. Only python reports anything but 'ready'. */
+interface RuntimeStatus {
+    state: 'loading' | 'ready' | 'failed';
+    /** Learner-facing explanation, e.g. why loading failed. */
+    message?: string;
+    /** Technical detail shown only in debug mode. */
+    detail?: string;
+}
+type EnvironmentMode = 'html' | 'html-css' | 'html-js' | 'html-js-fetch' | 'html-css-js' | 'html-js-css-media' | 'dom' | 'fetch' | 'p5' | 'p5-ts' | 'p5play' | 'react' | 'react-app' | 'typescript' | 'react-ts' | 'express' | 'express-ts' | 'node-js' | 'node-ts' | 'hono' | 'hono-ts' | 'python';
 type JsonValue = null | boolean | number | string | readonly JsonValue[] | {
     readonly [key: string]: JsonValue;
 };
@@ -100,6 +108,11 @@ interface CodeShoeboxProps {
     prediction_prompt?: react__default.ReactNode;
     /** Enables verbose system logging for debugging communication issues */
     debugMode?: boolean;
+    /**
+     * Initial text for python mode's Program input box. Each line answers one
+     * input() call. Learners can edit it; it is not persisted.
+     */
+    pythonInput?: string;
 }
 
 declare const CodeShoebox: react__default.FC<CodeShoeboxProps>;
@@ -140,4 +153,4 @@ type ReactAppBundleInput = {
 /** Serialize and validate the public, bounded `react-app` workspace format. */
 declare const serializeReactAppBundle: (files: Readonly<ReactAppBundleInput>) => string;
 
-export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type JsonValue, type MediaAsset, type MockApiConfig, type MockApiMethod, type MockApiRoute, type ReactAppBundleInput, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, serializeReactAppBundle, themes, useAutoKey, useSandboxState };
+export { CodeShoebox, type CodeShoeboxProps, type EditorProps, type EnvironmentMode, type ExecutionMessage, type JsonValue, type MediaAsset, type MockApiConfig, type MockApiMethod, type MockApiRoute, type ReactAppBundleInput, type RuntimeStatus, type Theme, type ThemeColors, type ThemeMode, baseTheme, borisTheme, modernLabTheme, serializeReactAppBundle, themes, useAutoKey, useSandboxState };
