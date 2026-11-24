@@ -72,12 +72,15 @@ const servePyodideLocally = async (context, indexUrl, version) => {
   const pkg = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf8'));
   assert.equal(pkg.version, version, `node_modules/pyodide is ${pkg.version}; the recipe pins ${version}`);
   const served = [];
+  served.started = Date.now();
+  served.log = [];
   await context.route(`${indexUrl}**`, async (route) => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     const headers = { 'access-control-allow-origin': '*', 'content-type': CONTENT_TYPES[extname(name)] || 'application/octet-stream' };
     try {
       const body = await readFile(join(pkgDir, name));
       served.push(name);
+      served.log.push(`${Date.now() - served.started}ms ${name}`);
       await route.fulfill({ status: 200, headers, body });
     } catch {
       await route.fulfill({ status: 404, headers, body: `not in node_modules/pyodide: ${name}` });
@@ -288,12 +291,16 @@ try {
     const lines = [];
     const log = (line) => { lines.push(line); console.log(line); };
     let browser;
+    const diagnostics = {};
     try {
       browser = await LAUNCHERS[name]();
       log(`python [${name} ${browser.version()}, pyodide from ${pyodideSource}]`);
       const context = await browser.newContext();
       const served = pyodideSource === 'local' ? await servePyodideLocally(context, PYODIDE_INDEX_URL, PYODIDE_VERSION) : null;
       const page = await context.newPage();
+      diagnostics.page = page;
+      diagnostics.served = served;
+      page.on('console', (message) => { if (message.type() === 'error') log(`    [${name} console] ${message.text().slice(0, 300)}`); });
       const pageErrors = [];
       page.on('pageerror', (error) => pageErrors.push(error.message));
       await page.goto(`${origin}/__python-check`);
@@ -320,6 +327,14 @@ try {
       summary.push({ name, version: browser.version(), ok: true, ...timings });
     } catch (error) {
       log(`  ✗ ${name}: ${error.message.split('\n')[0]}`);
+      // Diagnostics: which Pyodide files each boot fetched, and the status history.
+      if (diagnostics.served) log(`    pyodide requests: ${diagnostics.served.log.join(' | ')}`);
+      if (diagnostics.page) {
+        const history = await diagnostics.page.evaluate(() => (window.__messages || [])
+          .filter((m) => m.type === 'RUNTIME_STATUS' || m.type === 'CONSOLE_WARN')
+          .map((m) => `${Math.round(m.at)}ms ${m.type === 'RUNTIME_STATUS' ? m.payload.state + (m.payload.detail ? ' (' + m.payload.detail + ')' : '') : m.payload}`)).catch(() => []);
+        log(`    status history: ${history.join(' | ')}`);
+      }
       summary.push({ name, version: browser?.version?.() ?? '-', ok: false, error: error.message.split('\n')[0] });
     } finally {
       await browser?.close();
