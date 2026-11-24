@@ -7,6 +7,7 @@ import { indentWithTab } from '@codemirror/commands';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { javascript } from '@codemirror/lang-javascript';
+import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { CodeEditorProps } from './editorTypes';
 import { codeMirrorKeys } from './codeMirrorKeys';
@@ -20,6 +21,7 @@ const externalChange = Annotation.define<boolean>();
 export function editorFilename({ activeFile, environmentMode }: Pick<CodeEditorProps, 'activeFile' | 'environmentMode'>) {
   if (activeFile) return `/${activeFile}`;
   if (environmentMode === 'html') return '/index.html';
+  if (environmentMode === 'python') return '/main.py';
   if (environmentMode === 'react-ts') return '/App.tsx';
   if (['react', 'react-app'].includes(environmentMode)) return '/App.jsx';
   return ['typescript', 'express-ts', 'hono-ts', 'p5-ts', 'node-ts'].includes(environmentMode) ? '/script.ts' : '/script.js';
@@ -28,6 +30,7 @@ export function editorFilename({ activeFile, environmentMode }: Pick<CodeEditorP
 export function editorLanguage({ activeFile, environmentMode }: Pick<CodeEditorProps, 'activeFile' | 'environmentMode'>): Extension {
   if (activeFile?.endsWith('.html') || environmentMode === 'html') return html();
   if (activeFile?.endsWith('.css')) return css();
+  if (activeFile?.endsWith('.py') || environmentMode === 'python') return python();
   const typescript = activeFile ? /\.tsx?$/.test(activeFile) : ['typescript', 'react-ts', 'express-ts', 'hono-ts', 'p5-ts', 'node-ts'].includes(environmentMode);
   const jsx = activeFile ? /\.[jt]sx$/.test(activeFile) : ['react', 'react-app', 'react-ts'].includes(environmentMode);
   return javascript({ typescript, jsx });

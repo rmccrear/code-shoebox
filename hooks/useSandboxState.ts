@@ -21,12 +21,13 @@ import {
   HONO_STARTER_CODE,
   HONO_TS_STARTER_CODE,
   NODE_JS_STARTER_CODE,
-  NODE_TS_STARTER_CODE
+  NODE_TS_STARTER_CODE,
+  PYTHON_STARTER_CODE
 } from '../constants';
 
 const VALID_MODES: readonly EnvironmentMode[] = [
   'html', 'html-css', 'html-js', 'html-js-fetch', 'html-css-js', 'html-js-css-media', 'dom', 'fetch', 'typescript', 'p5', 'p5-ts', 'react', 'react-app', 'react-ts',
-  'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts'
+  'express', 'express-ts', 'hono', 'hono-ts', 'node-js', 'node-ts', 'python'
 ];
 
 const getStarterCode = (mode: EnvironmentMode): string => {
@@ -50,6 +51,7 @@ const getStarterCode = (mode: EnvironmentMode): string => {
     case 'hono-ts': return HONO_TS_STARTER_CODE;
     case 'node-js': return NODE_JS_STARTER_CODE;
     case 'node-ts': return NODE_TS_STARTER_CODE;
+    case 'python': return PYTHON_STARTER_CODE;
     default: return STARTER_CODE;
   }
 };

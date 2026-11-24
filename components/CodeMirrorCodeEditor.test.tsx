@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
 import { undo } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
-import { CodeMirrorCodeEditor, editorLanguage } from './CodeMirrorCodeEditor';
+import { CodeMirrorCodeEditor, editorFilename, editorLanguage } from './CodeMirrorCodeEditor';
 import type { CodeEditorProps } from './editorTypes';
 import { CompletionContext, type CompletionSource } from '@codemirror/autocomplete';
 import { emmetCompletionSource } from '@emmetio/codemirror6-plugin';
@@ -99,5 +99,17 @@ describe('CodeMirror prototype', () => {
     const errors: string[] = [];
     syntaxTree(state).iterate({ enter: node => { if (node.type.isError) errors.push(node.name); } });
     expect(errors).toEqual([]);
+  });
+
+  it('edits python mode as main.py with the Python grammar', () => {
+    expect(editorFilename({ environmentMode: 'python' })).toBe('/main.py');
+    const code = 'def greet(name):\n    print(f"hi {name}")\n\ngreet(input("Name? "))\n';
+    const state = EditorState.create({ doc: code, extensions: [editorLanguage({ environmentMode: 'python' })] });
+    const errors: string[] = [];
+    const nodes = new Set<string>();
+    syntaxTree(state).iterate({ enter: node => { nodes.add(node.name); if (node.type.isError) errors.push(node.name); } });
+    expect(errors).toEqual([]);
+    expect(nodes.has('FunctionDefinition')).toBe(true);
+    expect(nodes.has('FormatString')).toBe(true);
   });
 });

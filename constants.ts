@@ -666,3 +666,26 @@ myTodos.addTask("Learn TypeScript Types");
 myTodos.addTask("Master the Console");
 myTodos.showTasks();
 `;
+
+export const PYTHON_STARTER_CODE = `# Welcome to Python!
+# Click RUN CODE. Answers for input() come from the Program input box.
+
+def describe_scores(name, scores):
+    best = max(scores)
+    average = sum(scores) / len(scores)
+    print(f"{name}: best {best}, average {average:.1f}")
+    return average
+
+name = input("What is your name? ")
+print(f"Hi, {name}! Here are this week's quiz scores.")
+
+scores = [7, 9, 8, 10, 6]
+for day, score in enumerate(scores, start=1):
+    print(f"Day {day}: {'*' * score} ({score})")
+
+average = describe_scores(name, scores)
+if average >= 8:
+    print("Great week!")
+else:
+    print("Keep practicing!")
+`;

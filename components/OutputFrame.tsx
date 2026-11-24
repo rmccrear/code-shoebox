@@ -1,7 +1,7 @@
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { getSandboxHtml, executeCodeInSandbox, SANDBOX_ATTRIBUTES } from '../runtime/runner';
-import { ThemeMode, EnvironmentMode, MockApiConfig } from '../types';
+import React, { useEffect, useId, useRef, useState, useCallback, useMemo } from 'react';
+import { getSandboxHtml, executeCodeInSandbox, postSandboxControl, SANDBOX_ATTRIBUTES } from '../runtime/runner';
+import { ThemeMode, EnvironmentMode, MockApiConfig, RuntimeStatus } from '../types';
 import { isMockApiEnabled } from '../runtime/mockApi';
 import { PreviewContainer } from './PreviewContainer';
 import { Console, LogEntry, toLogParts } from './Console';
@@ -25,6 +25,14 @@ interface OutputFrameProps {
   isPredictionMode?: boolean;
   debugMode?: boolean;
   onExecutionComplete?: () => void;
+  /** python only: runtime load state reported by the sandbox. */
+  onRuntimeStatus?: (status: RuntimeStatus) => void;
+  /** Incremented to stop the running python program. */
+  stopTrigger?: number;
+  /** Incremented to retry loading python after a failure. */
+  retryTrigger?: number;
+  /** Initial Program input text for python's input() calls. */
+  pythonInput?: string;
 }
 
 export const OutputFrame: React.FC<OutputFrameProps> = ({ 
@@ -39,8 +47,13 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   isPredictionMode = false,
   debugMode = false,
   onExecutionComplete,
+  onRuntimeStatus,
+  stopTrigger = 0,
+  retryTrigger = 0,
+  pythonInput = '',
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const programInputId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<MessageChannel | null>(null);
   const executionRef = useRef({ code, environmentMode, fixtureHtml, fixtureCss, mockApi, debugMode });
@@ -50,7 +63,11 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
   const [consoleHeight, setConsoleHeight] = useState(150); 
   const [isDragging, setIsDragging] = useState(false);
 
-  const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts';
+  const isPython = environmentMode === 'python';
+  const isHeadless = environmentMode === 'node-js' || environmentMode === 'node-ts' || isPython;
+  const [programInput, setProgramInput] = useState(pythonInput);
+  // Read by the run effect without re-running it on every keystroke.
+  const programInputRef = useRef(programInput);
   const mockApiEnabled = isMockApiEnabled(environmentMode, mockApi);
   const iframeReadyRef = useRef(false);
   const pendingReactRunRef = useRef<{ execution: typeof executionRef.current; id: number } | null>(null);
@@ -88,14 +105,17 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
       }));
     } else if (type === 'READY_SIGNAL' && debugMode) {
       addSystemLog('Sandbox Iframe Ready Signal Received via MessageChannel.');
+    } else if (type === 'RUNTIME_STATUS' && isPython && payload && typeof payload.state === 'string') {
+      if (debugMode && payload.detail) addSystemLog(`Python runtime: ${payload.detail}`, 'warn');
+      onRuntimeStatus?.(payload as RuntimeStatus);
     } else if (
       type === 'EXECUTION_COMPLETE'
-      && mockApiEnabled
+      && (mockApiEnabled || isPython)
       && payload?.executionId === latestExecutionIdRef.current
     ) {
       onExecutionComplete?.();
     }
-  }, [debugMode, addSystemLog, mockApiEnabled, onExecutionComplete]);
+  }, [debugMode, addSystemLog, mockApiEnabled, isPython, onExecutionComplete, onRuntimeStatus]);
 
   // Keep the latest message handler without recreating the transferred port.
   const kernelMessageRef = useRef(handleKernelMessage);
@@ -103,10 +123,17 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
 
+  const runtimeStatusRef = useRef(onRuntimeStatus);
+  useEffect(() => {
+    runtimeStatusRef.current = onRuntimeStatus;
+  }, [onRuntimeStatus]);
+
   useEffect(() => {
     iframeReadyRef.current = false;
     latestExecutionIdRef.current = null;
     pendingReactRunRef.current = null;
+    // A new iframe means a new Python runtime; the old 'ready' no longer applies.
+    if (environmentMode === 'python') runtimeStatusRef.current?.({ state: 'loading' });
     return () => {
       channelRef.current?.port1.close();
       channelRef.current = null;
@@ -125,6 +152,14 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
              const executionUsesFetch = isMockApiEnabled(execution.environmentMode, execution.mockApi);
              if (execution.environmentMode === 'react-app' && !iframeReadyRef.current) {
                pendingReactRunRef.current = { execution, id: runTrigger };
+               return;
+             }
+             if (execution.environmentMode === 'python') {
+               latestExecutionIdRef.current = runTrigger;
+               executeCodeInSandbox(iframeRef.current.contentWindow, execution.code, {
+                 stdin: programInputRef.current,
+               }, runTrigger);
+               if (execution.debugMode) addSystemLog('EXECUTE message dispatched.');
                return;
              }
              if (executionUsesFetch) latestExecutionIdRef.current = runTrigger;
@@ -148,6 +183,18 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
         }
     }
   }, [runTrigger, addSystemLog]);
+
+  useEffect(() => {
+    if (stopTrigger > 0 && isPython && iframeRef.current?.contentWindow) {
+      postSandboxControl(iframeRef.current.contentWindow, 'STOP');
+    }
+  }, [stopTrigger, isPython]);
+
+  useEffect(() => {
+    if (retryTrigger > 0 && isPython && iframeRef.current?.contentWindow) {
+      postSandboxControl(iframeRef.current.contentWindow, 'RETRY');
+    }
+  }, [retryTrigger, isPython]);
 
   useEffect(() => {
     if (iframeRef.current?.contentWindow) {
@@ -256,15 +303,37 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
           </div>
         )}
 
+        {isPython && (
+          <div className={`shrink-0 px-3 py-2 border-b ${themeMode === 'dark' ? 'bg-[#1e1e1e] border-white/10' : 'bg-white border-gray-200'}`}>
+            <label htmlFor={programInputId} className="block text-[10px] font-bold uppercase tracking-wider opacity-60 mb-1">
+              Program input — one line per input()
+            </label>
+            <textarea
+              id={programInputId}
+              value={programInput}
+              onChange={(event) => {
+                programInputRef.current = event.target.value;
+                setProgramInput(event.target.value);
+              }}
+              rows={3}
+              spellCheck={false}
+              placeholder="Type the answers your program will read, one per line"
+              className={`w-full resize-y p-2 rounded border font-mono text-xs outline-none focus:ring-1 focus:ring-blue-500 ${themeMode === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+            />
+          </div>
+        )}
+
         {!isStaticHtmlMode && (
-          <div style={{ height: isHeadless ? '100%' : consoleHeight }} className="shrink-0 min-h-0">
+          <div style={isPython ? undefined : { height: isHeadless ? '100%' : consoleHeight }} className={isPython ? 'flex-1 min-h-0' : 'shrink-0 min-h-0'}>
                <Console logs={logs} onClear={() => setLogs([])} themeMode={themeMode} />
           </div>
         )}
 
         {isHeadless && (
           <iframe
-            key={`headless-${environmentMode}`}
+            // Same remount inputs as the visible iframe: the channel reset effect
+            // above closes the old port whenever any of these change.
+            key={`headless-${environmentMode}-${isPredictionMode}-${mockApiEnabled}`}
             ref={iframeRef}
             srcDoc={sandboxHtml}
             title="Headless Execution"

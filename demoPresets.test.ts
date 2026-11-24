@@ -5,6 +5,7 @@ import {
   getPresetHashForMode,
   getPresetMediaAssetsForMode,
   getPresetMockApiForMode,
+  getPresetPythonInputForMode,
 } from './demoPresets';
 import {
   HTML_CSS_JS_FILE_NAMES,
@@ -160,5 +161,14 @@ describe('demoPresets', () => {
   it('keeps preset ids unique', () => {
     const ids = EDITOR_DEMO_PRESETS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('resolves the python preset with its Program input', () => {
+    const preset = resolvePresetFromHash('#python-console-demo');
+    expect(preset?.mode).toBe('python');
+    expect(preset?.code).toContain('input(');
+    expect(getPresetHashForMode('python')).toBe('python-console-demo');
+    expect(getPresetPythonInputForMode('python')).toBe('Ada');
+    expect(getPresetPythonInputForMode('dom')).toBeUndefined();
   });
 });
