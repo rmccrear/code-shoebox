@@ -122,10 +122,17 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
     kernelMessageRef.current = handleKernelMessage;
   }, [handleKernelMessage]);
 
+  const runtimeStatusRef = useRef(onRuntimeStatus);
+  useEffect(() => {
+    runtimeStatusRef.current = onRuntimeStatus;
+  }, [onRuntimeStatus]);
+
   useEffect(() => {
     iframeReadyRef.current = false;
     latestExecutionIdRef.current = null;
     pendingReactRunRef.current = null;
+    // A new iframe means a new Python runtime; the old 'ready' no longer applies.
+    if (environmentMode === 'python') runtimeStatusRef.current?.({ state: 'loading' });
     return () => {
       channelRef.current?.port1.close();
       channelRef.current = null;
@@ -323,7 +330,9 @@ export const OutputFrame: React.FC<OutputFrameProps> = ({
 
         {isHeadless && (
           <iframe
-            key={`headless-${environmentMode}`}
+            // Same remount inputs as the visible iframe: the channel reset effect
+            // above closes the old port whenever any of these change.
+            key={`headless-${environmentMode}-${isPredictionMode}-${mockApiEnabled}`}
             ref={iframeRef}
             srcDoc={sandboxHtml}
             title="Headless Execution"

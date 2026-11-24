@@ -17,7 +17,6 @@ export const PYTHON_CONTENT_SECURITY_POLICY = 'connect-src https://cdn.jsdelivr.
 export const PYTHON_BOOT_TIMEOUT_MS = 30000;
 export const PYTHON_RUN_TIME_LIMIT_MS = 10000;
 export const PYTHON_OUTPUT_LINE_LIMIT = 5000;
-const OUTPUT_FLUSH_MS = 50;
 
 // JSON for embedding inside an inline <script>.
 const LINE_SEPARATOR = String.fromCharCode(0x2028);
@@ -79,31 +78,21 @@ export const PYTHON_WORKER_SOURCE = String.raw`
 const INDEX_URL = ${toScriptLiteral(PYODIDE_INDEX_URL)};
 const SETUP = ${toScriptLiteral(PYTHON_SETUP_SOURCE)};
 const LINE_LIMIT = ${PYTHON_OUTPUT_LINE_LIMIT};
-const FLUSH_MS = ${OUTPUT_FLUSH_MS};
 let pyodide = null;
-let buffer = [];
-let lastFlush = 0;
 let lineCount = 0;
 let limitHit = false;
 
-function flush() {
-  if (buffer.length) postMessage({ type: 'output', lines: buffer });
-  buffer = [];
-  lastFlush = Date.now();
-}
-
-// Python runs synchronously, so timers never fire mid-run; flush by time.
+// Python blocks this worker while it runs, so a buffered line could wait
+// forever behind a long loop. Post every line as soon as it is printed.
 function emit(stream, text) {
   if (limitHit) return;
   lineCount += 1;
   if (lineCount > LINE_LIMIT) {
     limitHit = true;
-    flush();
     postMessage({ type: 'output-limit' });
     return;
   }
-  buffer.push([stream, text]);
-  if (Date.now() - lastFlush >= FLUSH_MS) flush();
+  postMessage({ type: 'output', lines: [[stream, text]] });
 }
 
 async function boot(snapshot) {
@@ -127,10 +116,8 @@ async function boot(snapshot) {
 }
 
 function run(id, code, stdin) {
-  buffer = [];
   lineCount = 0;
   limitHit = false;
-  lastFlush = Date.now();
   const text = String(stdin || '').replace(/\r\n?/g, '\n');
   const lines = text === '' ? [] : text.split('\n');
   if (text.endsWith('\n')) lines.pop();
@@ -148,7 +135,6 @@ function run(id, code, stdin) {
   } finally {
     if (runner && runner.destroy) runner.destroy();
   }
-  flush();
   postMessage({ type: 'done', id, error, fatal });
 }
 

@@ -171,6 +171,8 @@ try {
   await scenario('STOP ends an infinite loop and restores quickly from the snapshot', async () => {
     const { logs } = await run('print("looping")\nwhile True:\n    pass', { stopAfterMs: 700 });
     assert.ok(texts(logs, 'CONSOLE_WARN').includes('Program stopped.'));
+    // Output printed before a long loop must arrive before the program ends.
+    assert.deepEqual(texts(logs, 'CONSOLE_LOG'), ['looping']);
     stopRestartMs = await restartTime('Program stopped.');
     assert.ok(stopRestartMs < 2000, `restart took ${Math.round(stopRestartMs)} ms`);
     const after = await run('print("after stop")');

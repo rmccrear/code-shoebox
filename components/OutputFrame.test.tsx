@@ -535,6 +535,31 @@ describe('OutputFrame', () => {
       expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'failed', message: 'blocked' });
     });
 
+    it('reports loading again when the sandbox iframe is recreated', () => {
+      const onRuntimeStatus = vi.fn();
+      const props = { ...pythonProps, themeMode: 'dark' as const, runTrigger: 0, onRuntimeStatus };
+      const { container, rerender } = renderOutputFrame(props);
+      const { iframe, channel } = loadFrame(container);
+      act(() => channel.port2.postMessage({ type: 'RUNTIME_STATUS', payload: { state: 'ready' } }));
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'ready' });
+
+      rerender(<OutputFrame {...props} isPredictionMode />);
+      expect(container.querySelector('iframe')).not.toBe(iframe);
+      expect(onRuntimeStatus).toHaveBeenLastCalledWith({ state: 'loading' });
+    });
+
+    it('reconnects headless console modes after prediction mode toggles', () => {
+      const props = { code: 'console.log(1)', environmentMode: 'node-js' as const, themeMode: 'dark' as const, runTrigger: 0 };
+      const { container, rerender } = renderOutputFrame(props);
+      const { iframe, channel } = loadFrame(container);
+      rerender(<OutputFrame {...props} isPredictionMode />);
+      expect(channel.port1.closed).toBe(true);
+      expect(container.querySelector('iframe')).not.toBe(iframe);
+      const { channel: newChannel } = loadFrame(container);
+      act(() => newChannel.port2.postMessage({ type: 'CONSOLE_LOG', payload: 'after toggle' }));
+      expect(screen.getByText('after toggle')).toBeInTheDocument();
+    });
+
     it('ignores runtime status reports outside python mode', () => {
       const onRuntimeStatus = vi.fn();
       const { container } = renderOutputFrame({ onRuntimeStatus });
