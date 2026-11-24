@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.40 — 2026-11-24
+
+- New `python` mode ([#32](https://github.com/rmccrear/code-shoebox/pull/32)):
+  real Python 3.14 (Pyodide 314.0.8) in a Web Worker inside the sandbox,
+  console only. RUN CODE reads **LOADING PYTHON…** until Python is ready,
+  becomes **STOP** while a program runs, and offers **RETRY LOADING** if
+  `cdn.jsdelivr.net` cannot be reached within 30 s.
+- A **Program input** box answers `input()` one line at a time; the new
+  optional `pythonInput` prop pre-fills it. It is never persisted.
+- Programs stop after 10 seconds or 5,000 output lines; Python restarts from a
+  memory snapshot in about a quarter of a second. Each Run gets a fresh
+  namespace, tracebacks show only `main.py` lines, and learner code cannot
+  reach the network or browser APIs.
+- Fix: toggling prediction mode no longer cuts off console output in
+  `node-js` and `node-ts` (the hidden sandbox iframe now remounts with its
+  message channel).
+- CI now runs on `ubuntu-24.04`, where Playwright can install Chromium.
+
 ## 1.0.39 — 2026-10-28
 
 - Fix [#26](https://github.com/rmccrear/code-shoebox/issues/26) ([#27](https://github.com/rmccrear/code-shoebox/pull/27)):
