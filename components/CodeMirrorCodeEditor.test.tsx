@@ -7,7 +7,7 @@ import { syntaxTree } from '@codemirror/language';
 import { CodeMirrorCodeEditor, editorLanguage } from './CodeMirrorCodeEditor';
 import type { CodeEditorProps } from './editorTypes';
 import { CompletionContext, type CompletionSource } from '@codemirror/autocomplete';
-import { emmetCompletionSource } from '@emmetio/codemirror6-plugin';
+import { htmlEmmetCompletions } from './codeMirrorEmmet';
 
 const defaults: CodeEditorProps = {
   code: 'const count = 1;', onChange: () => {}, themeMode: 'dark', environmentMode: 'html-css-js', sessionId: 1, activeFile: 'script.js',
@@ -51,7 +51,7 @@ describe('CodeMirror prototype', () => {
   it('scopes Emmet to opted-in editable HTML and removes it when disabled', async () => {
     const props = { ...defaults, activeFile: 'index.html', code: 'div.test' };
     const editor = render(<CodeMirrorCodeEditor {...props} enableEmmet />);
-    const hasEmmet = () => viewFor(editor.container).state.languageDataAt('autocomplete', 0).includes(emmetCompletionSource);
+    const hasEmmet = () => viewFor(editor.container).state.languageDataAt('autocomplete', 0).includes(htmlEmmetCompletions);
     await waitFor(() => expect(hasEmmet()).toBe(true));
     editor.rerender(<CodeMirrorCodeEditor {...props} enableEmmet={false} />);
     expect(hasEmmet()).toBe(false);
