@@ -20,7 +20,7 @@
 - **Depends on**: none
 - **Category**: feature
 - **Planned at**: commit `eb6dcc0`, 2026-11-24
-- **Implementation status**: TODO
+- **Implementation status**: DONE on `codex/python-pyodide-mode` (2026-11-24); see Implementation results
 
 ## Why this matters
 
@@ -142,9 +142,11 @@ console-only mode like `node-js`:
     there a loop that never ends?"), resolve the pending run so
     `EXECUTION_COMPLETE` fires, then restore from the snapshot with status
     `loading` → `ready`.
-12. **Output limits.** The worker batches stdout/stderr lines and flushes them
-    to the iframe at most every 50 ms. After **5,000 lines in one run**, it
-    stops the program the same way as decision 11 with "Output limit reached."
+12. **Output limits.** The worker posts every stdout/stderr line to the
+    iframe as soon as it is printed. (Batching by time was tried and dropped:
+    Python blocks the worker, so a buffered line printed before a long loop
+    never arrived.) After **5,000 lines in one run**, it stops the program the
+    same way as decision 11 with "Output limit reached."
     Stdout → `CONSOLE_LOG`; stderr and the trimmed traceback →
     `RUNTIME_ERROR`. The host's existing 500-entry console cap stays.
 13. **Lock down JS access.** Pass `jsglobals: {}` to `loadPyodide` so learner
@@ -441,4 +443,26 @@ Report and stop instead of widening scope if:
 
 ## Implementation results
 
-_Not started._
+Implemented 2026-11-24 on `codex/python-pyodide-mode` from `eb6dcc0`.
+
+- Gates: `npm ci` (lockfile unchanged), typecheck, lint, 240 unit tests,
+  `npm run build`, `npm run build:demo`, `npm run test:styles`, and
+  `npm run test:python` twice (10/10 scenarios both times).
+- Measured in headless Chromium: first boot ready in 2–3.5 s with a warm HTTP
+  cache; restart after STOP 200–252 ms; snapshot-failure fallback recovers
+  with a full boot in ~2.6 s.
+- Manual smoke (`npm run dev`, `#python-console-demo`): LOADING PYTHON… then
+  RUN CODE; starter runs with Program input; STOP during an infinite loop;
+  mode switch away and back re-boots; gallery instance reaches ready among
+  29 sections; prediction mode reloads Python, gates Run until answered, and
+  runs.
+- Deviations from the plan:
+  - Decision 12: output lines are posted immediately instead of batched
+    (see the decision for why).
+  - The kernel gained a third optional hook, `__ON_PORT_READY__`, so status
+    sent before the host's port connects is re-sent.
+  - Fixed a pre-existing bug found in smoke testing: the hidden headless
+    iframe's key omitted prediction/mock state, so toggling prediction mode
+    closed the message channel without recreating the iframe (also affected
+    `node-js`/`node-ts` console output).
+- Not verified: Firefox and Safari (Chromium only).
