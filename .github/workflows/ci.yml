@@ -21,3 +21,37 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:styles
+
+  # Runs the python sandbox scenarios (npm run test:python) in each browser
+  # engine. Pyodide is served from node_modules/pyodide, so no CDN access is
+  # needed. Runner images are pinned so an image change can't silently break
+  # Playwright's browser installs.
+  python-browsers:
+    name: python (${{ matrix.browser }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, browser: chromium }
+          - { os: ubuntu-24.04, browser: firefox }
+          - { os: ubuntu-24.04, browser: webkit }
+          - { os: windows-2025, browser: firefox }
+          # Microsoft Edge comes preinstalled on Windows runners.
+          - { os: windows-2025, browser: msedge }
+          - { os: macos-15, browser: webkit }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright ${{ matrix.browser }}
+        if: matrix.browser != 'msedge'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:python -- --browsers=${{ matrix.browser }}

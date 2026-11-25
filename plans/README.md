@@ -48,7 +48,7 @@ your row when done.
 | 018  | Persistence-key lifecycle contract: docs, save guard, tests | P2 | S–M | — | DONE (2026-08-17; 101 tests + typecheck/lint/build/package/browser checks pass) |
 | 019  | Isolate distributed styles from host applications (issue #20) | P1 | M | — | DONE (2026-10-09; 174 tests, 16 browser scenarios + editable smoke; host QA passed; font inheritance corrected; 1.0.35 prepared) |
 | 020  | Allow external stylesheet links across HTML modes | P2 | S–M | 016 | DONE — 2026-10-18; 191 tests + Chromium checks pass; see [plan](020-html-stylesheet-link-parity.md) |
-| 021  | Add a Python console mode powered by Pyodide | P1 | L | — | DONE — 2026-11-24 on `codex/python-pyodide-mode`; 240 tests + `test:python` (Chromium) pass; Firefox/Safari unverified; see [plan](021-python-pyodide-mode.md) |
+| 021  | Add a Python console mode powered by Pyodide | P1 | L | — | DONE — 2026-11-24 on `codex/python-pyodide-mode`; 240 tests + `test:python` pass; cross-browser CI (Chromium, Firefox, WebKit, Edge) added as a follow-up; see [plan](021-python-pyodide-mode.md) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 

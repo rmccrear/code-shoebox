@@ -465,4 +465,9 @@ Implemented 2026-11-24 on `codex/python-pyodide-mode` from `eb6dcc0`.
     iframe's key omitted prediction/mock state, so toggling prediction mode
     closed the message channel without recreating the iframe (also affected
     `node-js`/`node-ts` console output).
-- Not verified: Firefox and Safari (Chromium only).
+- Not verified at release: Firefox and Safari (Chromium only).
+- Follow-up (2026-11-24, `codex/cross-browser-python-tests`): `test:python`
+  now runs in Chromium, Firefox and WebKit, serves Pyodide from the pinned
+  `pyodide` dev dependency instead of jsDelivr, and runs in CI's
+  `python-browsers` matrix (Ubuntu: Chromium/Firefox/WebKit; Windows:
+  Firefox/Edge; macOS: WebKit). Locally on macOS, WebKit 26 passed 10/10.

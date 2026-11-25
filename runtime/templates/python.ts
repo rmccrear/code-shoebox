@@ -15,6 +15,8 @@ export const PYODIDE_INDEX_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VE
 export const PYTHON_CONTENT_SECURITY_POLICY = 'connect-src https://cdn.jsdelivr.net';
 
 export const PYTHON_BOOT_TIMEOUT_MS = 30000;
+// A snapshot restore normally takes well under 2 s; past this, do a full boot.
+export const PYTHON_SNAPSHOT_RESTORE_TIMEOUT_MS = 10000;
 export const PYTHON_RUN_TIME_LIMIT_MS = 10000;
 export const PYTHON_OUTPUT_LINE_LIMIT = 5000;
 
@@ -155,6 +157,7 @@ export const PYTHON_RECIPE_LOGIC = String.raw`
 (function () {
   const WORKER_URL = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(${toScriptLiteral(PYTHON_WORKER_SOURCE)});
   const BOOT_TIMEOUT_MS = ${PYTHON_BOOT_TIMEOUT_MS};
+  const SNAPSHOT_RESTORE_TIMEOUT_MS = ${PYTHON_SNAPSHOT_RESTORE_TIMEOUT_MS};
   const RUN_TIME_LIMIT_MS = ${PYTHON_RUN_TIME_LIMIT_MS};
   const LOAD_FAILED = 'Python could not load. Check that this device can reach cdn.jsdelivr.net, then click RETRY LOADING.';
   let worker = null;
@@ -216,14 +219,17 @@ export const PYTHON_RECIPE_LOGIC = String.raw`
       finishRun();
       if (data.fatal) startWorker(true);
     } else if (data.type === 'boot-error') {
-      if (data.fromSnapshot && !snapshotBroken) {
-        snapshotBroken = true;
-        snapshot = null;
-        startWorker(false);
-      } else {
-        fail(data.message);
-      }
+      if (data.fromSnapshot && !snapshotBroken) abandonSnapshot();
+      else fail(data.message);
     }
+  }
+
+  // A restore that errors, crashes, or hangs must not leave Python unusable:
+  // stop using the snapshot and do a full boot instead.
+  function abandonSnapshot() {
+    snapshotBroken = true;
+    snapshot = null;
+    startWorker(false);
   }
 
   function startWorker(fromSnapshot) {
@@ -238,18 +244,24 @@ export const PYTHON_RECIPE_LOGIC = String.raw`
       return;
     }
     worker = created;
+    const restoring = !!(fromSnapshot && snapshot && !snapshotBroken);
+    const timeoutMs = restoring ? SNAPSHOT_RESTORE_TIMEOUT_MS : BOOT_TIMEOUT_MS;
     bootTimer = setTimeout(function () {
-      if (worker === created && status.state === 'loading') fail('Timed out after ' + BOOT_TIMEOUT_MS + ' ms.');
-    }, BOOT_TIMEOUT_MS);
+      if (worker !== created || status.state !== 'loading') return;
+      if (restoring) abandonSnapshot();
+      else fail('Timed out after ' + timeoutMs + ' ms.');
+    }, timeoutMs);
     created.onmessage = function (event) { if (worker === created) handle(event.data); };
     created.onerror = function (event) {
       if (worker !== created) return;
       if (event && event.preventDefault) event.preventDefault();
       const message = (event && event.message) || 'Worker error';
-      if (status.state === 'loading') fail(message);
-      else { sendPayload('RUNTIME_ERROR', 'Python stopped unexpectedly: ' + message); finishRun(); startWorker(true); }
+      if (status.state === 'loading') {
+        if (restoring) abandonSnapshot();
+        else fail(message);
+      } else { sendPayload('RUNTIME_ERROR', 'Python stopped unexpectedly: ' + message); finishRun(); startWorker(true); }
     };
-    if (fromSnapshot && snapshot && !snapshotBroken) {
+    if (restoring) {
       const copy = snapshot.slice();
       created.postMessage({ type: 'boot', snapshot: copy }, [copy.buffer]);
     } else {
